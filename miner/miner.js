@@ -38,7 +38,6 @@ const mineBlock = (block) => {
 		// console.log('data', data, '\n--->', hash);
 		hash = SHA256(data);
 	}
-	console.log('success!', hash);
 
 	return {
 		blockDataHash: block.blockDataHash,
@@ -59,7 +58,7 @@ const postBlockCandidate = async (blockCandidate) => {
 
 	// console.log(message);
 	return {
-		status: postJob.status === 200,
+		status: postJob.status,
 		...message
 	};
 }
@@ -69,16 +68,18 @@ const miner = async () => {
 		//1. take a mining job:
 		//	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
 		const newBlock = await getNewJob();
-		console.log({newBlock});
+		console.log('New Job:', newBlock);
 
 		//2. Mine the mining job!
 		//	Increment nonce until hash matches the block difficulty
 		const minedBlockCandidate = await mineBlock(newBlock);
+		console.log('hash candidate:', minedBlockCandidate.blockHash);
 
 		// //3. Submit the mined job
 		// //	post block to nodeUrl/mining/submit-mined-block
 		const result = await postBlockCandidate(minedBlockCandidate);
-		console.log({result});
+		console.log('accepted?', result);
+		console.log('\n---------\n');
 	}
 }
 
