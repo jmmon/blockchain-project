@@ -74,15 +74,26 @@ class Blockchain {
 		this.newBlock("1", 100); // create genesis block
 	}
 
-	newBlock(previousHash = null, proof = 0) {
-		const block = {
-			index: this.chain.length + 1,
-			timestamp: Date.now().toString(),
-			transactions: this.pendingTransactions,
-			proof: proof,
-			previousHash:
-				previousHash || this.hash(this.chain[this.chain.length - 1]),
-		};
+	newBlock(previousHash = null, nonce = 0) {
+		const block = new Block(
+			this.chain.length+1,
+			this.pendingTransactions,
+			"receivedJob_Difficulty",
+			previousHash || this.hash(this.chain[this.chain.length - 1]),
+			"receivedJob_MinerAddress",
+			"receivedJob_BlockDataHash",
+			nonce,
+			"receivedJob_DateCreated",
+			"receivedJob_hash");
+
+		// const block = {
+		// 	index: this.chain.length + 1,
+		// 	timestamp: Date.now().toString(),
+		// 	transactions: this.pendingTransactions,
+		// 	proof: proof,
+		// 	previousHash:
+		// 		previousHash || this.hash(this.chain[this.chain.length - 1]),
+		// };
 
 		// reset pending transactions since they were added to our block
 		this.pendingTransactions = [];
@@ -117,7 +128,7 @@ class Blockchain {
 			console.log("\n--------\n");
 
 			//check hash of previous block
-			if (block["previousHash"] !== this.hash(lastBlock)) {
+			if (block["prevBlockHash"] !== this.hash(lastBlock)) {
 				console.log("Previous hash does not match!");
 				return false;
 			}
@@ -189,7 +200,7 @@ class Blockchain {
 	proofOfWork(block) {
 		//iterate the "proof" field until conditions are satisfied
 		while (!this.validProof(block)) {
-			block["proof"] += 1;
+			block["nonce"] += 1;
 		}
 	}
 

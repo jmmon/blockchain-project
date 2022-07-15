@@ -65,12 +65,12 @@ app.get('/info', (req, res) => {
 		nodeId: nodeIdentifier,
 		chainId: "chain identifier based on genesis block",
 		nodeUrl: "url of this node",
-		peers: "number of connected peers",
-		currentDifficulty: "difficulty of the network",
-		blocksCount: "number of blocks in the chain",
+		peers: blockchain.nodes.size,
+		currentDifficulty: blockchain.difficulty,
+		blocksCount: blockchain.chain.length,
 		cumulativeDifficulty: "running total of difficulty for mined blocks?",
 		confirmedTransactions: "number of transactions in blocks",
-		pendingTransactions: "number of transactions in the mempool",
+		pendingTransactions: blockchain.pendingTransactions.length,
 	}
 
 	res.status(200).send(JSON.stringify(data));
