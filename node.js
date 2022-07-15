@@ -15,6 +15,40 @@ getMethods = (obj) => Object.getOwnPropertyNames(obj).filter(item => typeof obj[
 console.log(getMethods(blockchain));
 
 
+
+
+/* 
+REQUIRED ROUTES:
+
+GET {
+	"/",
+	"/info",
+	"/debug",
+	"/debug/reset-chain",
+	"/debug/mine/:minerAddress/:difficulty",
+	"/blocks",
+	"/blocks/:index",
+	"/transactions/pending",
+	"/transactions/confirmed",
+	"/transactions/:tranHash",
+	"/balances",
+	"/address/:address/transactions",
+	"/address/:address/balance",
+	"/peers",
+	"/mining/get-mining-job/:address",
+}
+
+POST {
+	"/transactions/send",
+	"/peers/connect",
+	"/peers/notify-new-block",
+	"/mining/submit-mined-block",
+}
+
+
+*/
+
+
 app.get('/chain', (req, res) => {
 	const response = {
 		chain: blockchain.chain,

@@ -1,0 +1,16 @@
+Example block json:
+
+{"index":1,"transactions":[{"from":"0000000000000000000000000000000000000000","to":"84ede81c58f5c490fc6e1a3035789eef897b5b35","value":5000020,"fee":0,"dateCreated":"2022-07-15T16:17:47.706Z","data":"coinbase tx","senderPubKey":"00000000000000000000000000000000000000000000000000000000000000000","transactionDataHash":"43317ab45fb920465309c841b3e22dd45ddd2613176609b205f9e7fc2cc2c8c7","senderSignature":["0000000000000000000000000000000000000000000000000000000000000000","0000000000000000000000000000000000000000000000000000000000000000"],"minedInBlockIndex":1,"transferSuccessful":true},{"from":"f3a1e69b6176052fcc4a3248f1c5a91dea308ca9","to":"a1de0763f26176c6d68cc77e0a1c2c42045f2314","value":500000,"fee":10,"dateCreated":"2022-07-15T16:02:47.620Z","data":"Faucet -> Alice","senderPubKey":"8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0","transactionDataHash":"a43241340f9d0213aabc683a2cd8d7c71ece6d9f701561556c9a48090ae976e6","senderSignature":["ae274b53f9c3a7299bf5682ab307f8c74432cad7ad8daf764ff678008027838","1e3f479b456c8b07f2b483fac92cc8fb89e76ede98e6e969aec979ba48493298"],"minedInBlockIndex":1,"transferSuccessful":true},{"from":"f3a1e69b6176052fcc4a3248f1c5a91dea308ca9","to":"b3d72ad831b3e9cdbdaeda5ff4ae8e9cf182e548","value":700000,"fee":10,"dateCreated":"2022-07-15T16:04:27.634Z","data":"Faucet -> Bob","senderPubKey":"8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0","transactionDataHash":"0ba154e03202da5d62cc3048a32059e7478c759a00c03db41119965f5c37eead","senderSignature":["348ee3273d0e07c8effe1b389977b7bbc92c60fee695358d4015a854f148df6e","74a5008d0d6cc9af6b298043f70730b1f8a648ba9da8e5f3ba2d53ac979e5008"],"minedInBlockIndex":1,"transferSuccessful":true}],"difficulty":1,"prevBlockHash":"c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f","minedBy":"84ede81c58f5c490fc6e1a3035789eef897b5b35","blockDataHash":"2065e4351693dd83874baee3bb646c22ca2d58bcfd2703998b33a18248cb4cf6","nonce":24,"dateCreated":"2022-07-15T16:17:47.707Z","blockHash":"0e5f82cfa980c35b5d36112a3473293da8d8f4fd8e3c22b4055ab062364dae1d"}
+
+Parsed to object:
+block: {
+	index: 1,
+	transactions: [ [Object], [Object], [Object] ],
+	difficulty: 1,
+	prevBlockHash: 'c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f',
+	minedBy: '84ede81c58f5c490fc6e1a3035789eef897b5b35',
+	blockDataHash: '2065e4351693dd83874baee3bb646c22ca2d58bcfd2703998b33a18248cb4cf6',
+	nonce: 24,
+	dateCreated: '2022-07-15T16:17:47.707Z',
+	blockHash: '0e5f82cfa980c35b5d36112a3473293da8d8f4fd8e3c22b4055ab062364dae1d'
+}
