@@ -4,7 +4,7 @@ const app = express();
 const port = 5000;
 
 const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
-const Blockchain = require('./BlockchainJs/blockchain.js');
+const Blockchain = require('../BlockchainJs/blockchain.js');
 const blockchain = new Blockchain();
 
 console.log({nodeIdentifier});
@@ -15,6 +15,17 @@ getMethods = (obj) => Object.getOwnPropertyNames(obj).filter(item => typeof obj[
 console.log(getMethods(blockchain));
 
 
+
+/* 
+NODE:
+The node should hold:
+
+the Chain,
+the Peers, and
+the REST endpoints (to access node functionality)
+
+
+*/
 
 
 /* 
@@ -47,6 +58,23 @@ POST {
 
 
 */
+
+app.get('/info', (req, res) => {
+	const data = {
+		about: "name of the node",
+		nodeId: nodeIdentifier,
+		chainId: "chain identifier based on genesis block",
+		nodeUrl: "url of this node",
+		peers: "number of connected peers",
+		currentDifficulty: "difficulty of the network",
+		blocksCount: "number of blocks in the chain",
+		cumulativeDifficulty: "running total of difficulty for mined blocks?",
+		confirmedTransactions: "number of transactions in blocks",
+		pendingTransactions: "number of transactions in the mempool",
+	}
+
+	res.status(200).send(JSON.stringify(data));
+})
 
 
 app.get('/chain', (req, res) => {
