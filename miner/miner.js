@@ -9,68 +9,77 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const crypto = require("crypto");
 const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
 
-const myAddress = "testAddress";
+const myAddress = "testAddress"; // address of my miner
 
 const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
 const getMiningJobUrl = `mining/get-mining-job/${myAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
-
-
-
-// while (true) {
-	//1. take a mining job:
-	//	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
-(async function() {
-
+const getNewJob = async () => {
 	const newJob = await fetch(`${nodeUrl}${getMiningJobUrl}`);
-	const newBlock = await newJob.json();
+	return await newJob.json();
+}
 
-	console.log(newBlock);
+const validProof = (hash, difficulty) => {
+	return hash.slice(0, difficulty) === "0".repeat(difficulty);
+}
 
-
-	const validProof = (hash) => {
-		return hash.slice(0, newBlock.difficulty) === "0".repeat(newBlock.difficulty);
-	}
-
-
-	//2. Mine the mining job!
-	//	Increment nonce until hash matches the block difficulty
+const mineBlock = (block) => {
 	let timestamp = Date.now().toString();
 	let nonce = 0;
-	let data = newBlock.blockDataHash+"|"+timestamp+"|"+nonce;
+	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 	let hash = SHA256(data);
 	// console.log('data', data, '\n--->', hash);
 	
-	while (!validProof(hash)) {
+	while (!validProof(hash, block.difficulty)) {
 		timestamp = Date.now().toString();
 		nonce += 1;
-		data = newBlock.blockDataHash+"|"+timestamp+"|"+nonce;
+		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 		// console.log('data', data, '\n--->', hash);
 		hash = SHA256(data);
 	}
+	console.log('success!', hash);
 
-	console.log('success! Got hash', hash);
-
-	//3. Submit the mined job
-	//	post block to nodeUrl/mining/submit-mined-block
-	let minedBlockCandidate = {
-		blockDataHash: newBlock.blockDataHash,
+	return {
+		blockDataHash: block.blockDataHash,
 		dateCreated: timestamp,
 		nonce: nonce,
 		blockHash: hash,
-	}
+	};
+}
+
+const postBlockCandidate = async (blockCandidate) => {
 	const postJob = await fetch(`${nodeUrl}${postMiningJobUrl}`, {
 		method: "POST",
-		body: JSON.stringify(minedBlockCandidate),
+		body: JSON.stringify(blockCandidate),
 		headers: { "Content-Type": "application/json" },
 	});
 
 	const message = await postJob.json();
-	const status = postJob.status;
 
-	console.log(status);
-	console.log(message);
-// }
+	// console.log(message);
+	return {
+		status: postJob.status === 200,
+		...message
+	};
+}
 
-})()
+const miner = async () => {
+	while(true) {
+		//1. take a mining job:
+		//	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
+		const newBlock = await getNewJob();
+		console.log({newBlock});
+
+		//2. Mine the mining job!
+		//	Increment nonce until hash matches the block difficulty
+		const minedBlockCandidate = await mineBlock(newBlock);
+
+		// //3. Submit the mined job
+		// //	post block to nodeUrl/mining/submit-mined-block
+		const result = await postBlockCandidate(minedBlockCandidate);
+		console.log({result});
+	}
+}
+
+miner();
