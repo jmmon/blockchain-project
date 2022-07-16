@@ -6,7 +6,6 @@ const crypto = require("crypto");
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
 
-
 const sortByObjectKeys = (object) => {
 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
 	let newObject = {};
@@ -25,6 +24,7 @@ class Block {
 		nonce,
 		dateCreated,
 		blockHash
+		// blockTime,
 	) {
 		this.index = index;
 		this.transactions = transactions;
@@ -35,6 +35,7 @@ class Block {
 		this.nonce = nonce;
 		this.dateCreated = dateCreated;
 		this.blockHash = blockHash.toString();
+		// this.blockTime = blockTime;
 	}
 }
 
@@ -49,8 +50,9 @@ class Transaction {
 		senderPubKey,
 		transactionDataHash,
 		senderSignature,
-		minedInBlockIndex,
-		transferSuccessful
+			// last two "appear" only after transaction is mined
+		// minedInBlockIndex,
+		// transferSuccessful
 	) {
 		this.from = from;
 		this.to = to;
@@ -61,17 +63,21 @@ class Transaction {
 		this.senderPubKey = senderPubKey;
 		this.transactionDataHash = transactionDataHash;
 		this.senderSignature = senderSignature;
-		this.minedInBlockIndex = minedInBlockIndex;
-		this.transferSuccessful = transferSuccessful;
+		// this.minedInBlockIndex = minedInBlockIndex;
+		// this.transferSuccessful = transferSuccessful;
 	}
 }
 
 class Blockchain {
-	constructor() {
+	constructor(difficulty = 5) {
 		this.chain = [];
-		this.difficulty = 2;
 		this.pendingTransactions = [];
 		this.nodes = new Set();
+        this.blockReward = 5000350;
+
+		this.difficulty = difficulty;
+		this.lastDifficulty = difficulty;
+		this.blockTimeGoal = 15; // seconds
 
 		this.newBlock("1", 100); // create genesis block
 	}
@@ -89,8 +95,9 @@ class Blockchain {
 	}
 
 	newBlock(previousHash = null, nonce = 0) {
+		// const blockTime =
 		const block = new Block(
-			this.chain.length+1,
+			this.chain.length + 1,
 			this.pendingTransactions,
 			"receivedJob_Difficulty",
 			previousHash || this.hash(this.chain[this.chain.length - 1]),
@@ -117,10 +124,18 @@ class Blockchain {
 		return block;
 	}
 
-
-	createTransaction({from, to, value, fee, dateCreated, data, senderPubKey, senderSignature}) {
+	createTransaction({
+		from,
+		to,
+		value,
+		fee,
+		dateCreated,
+		data,
+		senderPubKey,
+		senderSignature,
+	}) {
 		// const nextBlockIndex = this.getLastBlock()["index"] + 1;
-        // console.log('creating transaction');
+		// console.log('creating transaction');
 
 		const sortedTransactionData = sortByObjectKeys({
 			from,
@@ -129,31 +144,32 @@ class Blockchain {
 			fee,
 			dateCreated,
 			data,
-			senderPubKey
+			senderPubKey,
 		});
 
-		const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
+		const transactionDataHash = SHA256(
+			JSON.stringify(sortedTransactionData)
+		);
 
-        const newTransaction = new Transaction(
-            from,
-            to,
-            value,
-            fee,
-            dateCreated,
-            data,
-            senderPubKey,
-            transactionDataHash,
-            senderSignature,
-            // last two "appear" only after transaction is mined
-            null, // minedInBlockIndex
-            null  // transferSuccessful
-        );
+		const newTransaction = new Transaction(
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
+			transactionDataHash,
+			senderSignature,
+			// last two "appear" only after transaction is mined
+			// null, // minedInBlockIndex
+			// null // transferSuccessful
+		);
 
 		this.pendingTransactions.push(newTransaction);
 
-		return {transactionDataHash};
+		return { transactionDataHash };
 	}
-
 
 	// // OLD
 	// newTransaction(sender, recipient, amount) {
@@ -189,7 +205,7 @@ class Blockchain {
 	// 			`signature from ${sender}`,
 	// 			// last two "appear" only after transaction is mined
 	// 			null,
-	// 			null 
+	// 			null
 	// 		));
 
 	// 	return nextBlockIndex;
@@ -198,9 +214,9 @@ class Blockchain {
 	registerNode(nodeUrl) {
 		const parsedUrl = new URL(nodeUrl);
 		this.nodes.add(parsedUrl.host); //hostname and port
-        const nodesList = [];
-        this.nodes.forEach(node => nodesList.push(node));
-        console.log('node added\n' +  JSON.stringify(nodesList));
+		const nodesList = [];
+		this.nodes.forEach((node) => nodesList.push(node));
+		console.log("node added\n" + JSON.stringify(nodesList));
 	}
 
 	validChain(chain) {
@@ -282,27 +298,49 @@ class Blockchain {
 
 	validProof(block) {
 		//check if hash starts with 4 zeros; 4 being the difficulty
-		const isValid = this.hash(block).toString().slice(0, this.difficulty) ===
-		"0".repeat(this.difficulty);
+		const isValid =
+			this.hash(block).toString().slice(0, this.difficulty) ===
+			"0".repeat(this.difficulty);
 		return isValid;
 	}
 
-    getTransactionConfirmationCount(transaction, lastBlockIndex = null) {
-        const transactionBlockIndex = transaction?.minedInBlockIndex;
-
-        if (!transactionBlockIndex) {
-            //transaction is not confirmed (not mined)
-            return 0;
-        }
+	getTransactionConfirmationCount(transaction, lastBlockIndex = getLastBlock().index) {
         // allow passing in last block index, so we don't need to call getLastBlock on every iteration
-        if (!lastBlockIndex) {
-            lastBlockIndex = getLastBlock().index;
-        }
-        // if block 10 is mined, and transaction happened in block 10, difference is 0 but confirmation is (+1);
-        const confirmationCount = lastBlockIndex - transactionBlockIndex + 1;
+        
+		const transactionBlockIndex = transaction?.minedInBlockIndex;
 
-        return confirmationCount;
-    }
+        //transaction is not confirmed (not mined)
+		if (!transactionBlockIndex) return 0;
+		
+		// if block 10 is mined, and transaction happened in block 10, difference is 0 but confirmation is (+1);
+		return lastBlockIndex - transactionBlockIndex + 1;
+	}
+
+    // difficulty should be adjusted when?
+    // AFTER a new block is added to the chain (most likely)
+	adjustDifficulty() {
+        //adjust our ema weighted by this many blocks
+		const maxBlocksToCheck = 4 * 60; // supposed to be == 1 hour
+		const k = 2 / (maxBlocksToCheck + 1);
+		// difficultyEMA = blockTime(today) * k + difficultyEMA(lastBlock) * (1 - k)
+		const maxDifficultyChange = 3;
+		const minDifficultyChange = 0.33;
+		const lastBlockTime = getLastBlock().blockTime; // TODO
+		let newDifficulty = lastBlockTime * k + this.lastDifficulty * (1 - k);
+
+		// check if it's within our change range, compared to current difficulty
+		if (this.difficulty * maxDifficultyChange < newDifficulty) {
+            newDifficulty = this.difficulty * maxDifficultyChange;
+		}
+
+		if (this.difficulty * minDifficultyChange > newDifficulty) {
+            newDifficulty = this.difficulty * minDifficultyChange;
+		}
+
+        // we are now within range, so save the last value (for next time) and set our new value
+        this.lastDifficulty = this.difficulty;
+        this.difficulty = newDifficulty;
+	}
 }
 
 module.exports = Blockchain;
