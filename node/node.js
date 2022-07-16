@@ -7,6 +7,9 @@ const port = 5000;
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const Blockchain = require("../BlockchainJs/blockchain.js");
 const blockchain = new Blockchain();
+app.set('blockchain', blockchain);
+
+const nodeAddress = "the address for this node"
 
 console.log({ nodeIdentifier });
 console.log(blockchain);
@@ -71,37 +74,8 @@ app.get("/info", (req, res) => {
 	res.status(200).send(JSON.stringify(data));
 });
 
+app.use("/debug", require("./routes/debug"));
 
-app.get("/debug", (req, res) => {
-	//debug info
-	const debugInfo = {
-		selfUrl: "url of this node",
-		chain: blockchain.chain,
-		pendingTransactions: blockchain.pendingTransactions,
-		confirmedBalances: "get transactions with 1 confirmation??",
-	};
-
-	res.status(200).send(JSON.stringify(debugInfo));
-});
-
-
-// works:
-app.get("/debug/reset-chain", (req, res) => { 
-	const success = blockchain.reset();
-	if (success) {
-		console.log("Chain reset\n" + JSON.stringify(blockchain.chain));
-		res.status(200).send("yes chain was reset to genesis block");
-	} else {
-		res.status(400).send("no chain was not reset");
-	}
-});
-
-
-app.get("/debug/mine/:minerAddress/:difficulty", (req, res) => {
-	const { minerAddress, difficulty } = req.params;
-	//mine a block for miner address at difficulty??
-	// or generate a mining job at address && difficulty??
-});
 
 
 // works:
@@ -241,15 +215,17 @@ app.get("/mining/get-mining-job/:address", (req, res) => {
 	// (miner then finds nonce and sends it back)
 	const {address: minerAddress} = req.params;
 
+	const blockDataHash = "hash of block without nonce; miner takes this and increments nonce to find correct hash";
 
 	const response = {
 		index: blockchain.chain.length + 1,	// index of next block
 		transactionsIncluded: blockchain.pendingTransactions,	// # of transactions in next block
 		difficulty: 5,	// difficulty of next block
-		expectedReward: 5000350, // standard reward
+		expectedReward: blockchain.blockReward,
 		rewardAddress: minerAddress,
-		blockDataHash: "hash of block without nonce; miner takes this and increments nonce to find correct hash"
+		blockDataHash
 	};
+
 	res.status(200).send(JSON.stringify(response));
 });
 
@@ -257,9 +233,13 @@ app.get("/mining/get-mining-job/:address", (req, res) => {
 
 
 
+
+
+
+
 // POST ROUTES
 
-
+// works
 app.post("/transactions/send", (req, res) => {
 	// console.log('received transaction request');
 	const transactionData = req.body;
@@ -310,7 +290,7 @@ app.post("/peers/connect", (req, res) => {
 });
 
 
-// started
+// TODO:
 app.post("/peers/notify-new-block", (req, res) => {
 	// receive new block notification
 	const data = req.body;
@@ -325,6 +305,7 @@ app.post("/peers/notify-new-block", (req, res) => {
 });
 
 
+// TODO:
 app.post("/mining/submit-mined-block", (req, res) => {
 	const data = req.body;
 	/* 
@@ -368,33 +349,32 @@ app.post("/mining/submit-mined-block", (req, res) => {
 
 /* OLD ROUTES BELOW */
 
-app.get("/chain", (req, res) => {
-	const response = {
-		chain: blockchain.chain,
-		length: blockchain.chain.length,
-	};
-
-	res.status(200).send(JSON.stringify(response));
-});
-
 
 app.get("/mine", (req, res) => {
-	//add our mining reward
-	blockchain.newTransaction(
-		(sender = "0"),
-		(recipient = nodeIdentifier),
-		(amount = 1)
-	);
+	//add our mining reward transaction
+	blockchain.createTransaction({
+		from: "0".repeat(40),
+		to: nodeAddress,
+		value: blockchain.blockReward,
+		fee: 0,
+		dateCreated: Date.now().toString(),
+		data: "coinbase tx",
+		senderPubKey: "0".repeat(40),
+		senderSignature: [
+			"0".repeat(20),
+			"0".repeat(20)
+		],
+	});
 
 	//create the block and attempt to mine it
-	const block = blockchain.newBlock((proof = 0));
+	const block = blockchain.newBlock((nonce = 0));
 	blockchain.proofOfWork(block);
 
 	const response = {
 		message: "New block mined!",
 		index: block["index"],
 		transactions: block["transactions"],
-		proof: block["proof"],
+		nonce: block["nonce"],
 		previousHash: block["previousHash"],
 	};
 
