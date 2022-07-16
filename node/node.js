@@ -8,6 +8,7 @@ const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const Blockchain = require("../BlockchainJs/blockchain.js");
 const blockchain = new Blockchain();
 app.set('blockchain', blockchain);
+app.set('nodeIdentifier', nodeIdentifier);
 
 const nodeAddress = "the address for this node"
 
@@ -75,6 +76,7 @@ app.get("/info", (req, res) => {
 });
 
 app.use("/debug", require("./routes/debug"));
+app.use("/peers", require("./routes/peers"));
 
 
 
@@ -204,10 +206,10 @@ app.get("/address/:address/balance", (req, res) => {
 });
 
 
-app.get("/peers", (req, res) => {
-	//responds with object holding {nodeId1: nodeUrl1, ...}
-	res.status(200).send(JSON.stringify(blockchain.nodes));
-});
+// app.get("/peers", (req, res) => {
+// 	//responds with object holding {nodeId1: nodeUrl1, ...}
+// 	res.status(200).send(JSON.stringify(blockchain.nodes));
+// });
 
 
 app.get("/mining/get-mining-job/:address", (req, res) => {
@@ -272,37 +274,37 @@ app.post("/transactions/send", (req, res) => {
 });
 
 
-// works
-app.post("/peers/connect", (req, res) => {
-	const {peerUrl} = req.body;
-	// takes peerUrl and adds it to our list of nodes
-	if (!peerUrl || peerUrl === null) {
-		res.status(400).send("Error: Missing Peer Node URL");
-	}
+// // works
+// app.post("/peers/connect", (req, res) => {
+// 	const {peerUrl} = req.body;
+// 	// takes peerUrl and adds it to our list of nodes
+// 	if (!peerUrl || peerUrl === null) {
+// 		res.status(400).send("Error: Missing Peer Node URL");
+// 	}
 
-	blockchain.registerNode(peerUrl); // add it to the list
+// 	blockchain.registerNode(peerUrl); // add it to the list
 
-	const response = {
-		message: `Connected to peer ${peerUrl}`
-	};
+// 	const response = {
+// 		message: `Connected to peer ${peerUrl}`
+// 	};
 
-	res.status(201).send(JSON.stringify(response));
-});
+// 	res.status(201).send(JSON.stringify(response));
+// });
 
 
-// TODO:
-app.post("/peers/notify-new-block", (req, res) => {
-	// receive new block notification
-	const data = req.body;
-	//data == {blocksCount: number, cumulativeDifficulty: number, nodeUrl: nodeUrl}
+// // TODO:
+// app.post("/peers/notify-new-block", (req, res) => {
+// 	// receive new block notification
+// 	const data = req.body;
+// 	//data == {blocksCount: number, cumulativeDifficulty: number, nodeUrl: nodeUrl}
 
-	//what then???
+// 	//what then???
 
-	const response = {
-		message: `Thank you for the notification.`
-	}
-	res.status(200).send(JSON.stringify(response));
-});
+// 	const response = {
+// 		message: `Thank you for the notification.`
+// 	}
+// 	res.status(200).send(JSON.stringify(response));
+// });
 
 
 // TODO:

@@ -211,9 +211,15 @@ class Blockchain {
 	// 	return nextBlockIndex;
 	// }
 
-	registerNode(nodeUrl) {
-		const parsedUrl = new URL(nodeUrl);
-		this.nodes.add(parsedUrl.host); //hostname and port
+	registerNode({nodeIdentifier, peerUrl}) {
+		// const parsedUrl = new URL(peerUrl);
+        // console.log('url input:', peerUrl, "\nparsed url:", parsedUrl);
+        const peerObject = {
+            [nodeIdentifier]: peerUrl
+        };
+		this.nodes.add(peerObject); //hostname and port
+
+
 		const nodesList = [];
 		this.nodes.forEach((node) => nodesList.push(node));
 		console.log("node added\n" + JSON.stringify(nodesList));
