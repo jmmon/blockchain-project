@@ -169,6 +169,17 @@ app.get("/transactions/:tranHash", (req, res) => { // not working
 
 
 app.get("/balances", (req, res) => {
+	// list all accounts that have non-zero CONFIRMED balance
+	// (The all-0's address - genesis address - will have a NEGATIVE balance)
+
+	/**
+	{
+		00000...: -9999999,
+		address1: 12345,
+		address2: 1234,
+		address3: 123, 
+	}
+	*/
 	res.status(200).send("supposed to get balances ??of all addresses on the network??");
 });
 
@@ -177,6 +188,20 @@ app.get("/address/:address/transactions", (req, res) => {
 	const {address} = req.params;
 	//return transactions array of address
 	//	crawl blockchain and build transaction list related to address
+
+	//returns ALL transactions associated with the given address
+	// (confirmed regardless of successful; && pending transactions)
+	// sort transactions by "date and time" (ascending)
+	// pending transactions will not have "minedInBlockIndex" -- should I remove it from the class?
+
+	/**
+	 * {
+	 * 	address: theAddress,
+	 * 	transactions: [
+	 * 		{}, {}, {}
+	 * 	]
+	 * }
+	 */
 	res.status(200).send("get transactions related to address "+address);
 });
 
@@ -185,6 +210,22 @@ app.get("/address/:address/balance", (req, res) => {
 	const {address} = req.params;
 	//return balance of address	
 	//	crawl blockchain and build balance of address
+
+	// each successful RECEIVED transaction will ADD value
+	// all SPENT transactions SUBTRACT the transaction fee
+	// each successful SPENT transaction will SUBTRACT value
+
+
+	// return {0, 0, 0} for non-active addresses (addresses with no transactions) ?? address must be valid but still does not appear??
+	// return {status: 404, errorMsg: "Invalid address"} for invalid addresses
+
+
+	const result = {
+		safeBalance: "balance of txs with >= 6 confirmations",
+		confirmedBalance: "txs with >=1 confirmations;",
+		pendingBalance: "all txs, including pending"
+	};
+
 	res.status(200).send("get balance of particular address "+address);
 });
 
@@ -251,7 +292,7 @@ app.post("/transactions/send", (req, res) => {
 });
 
 
-// done, need to check
+// works
 app.post("/peers/connect", (req, res) => {
 	const {peerUrl} = req.body;
 	// takes peerUrl and adds it to our list of nodes
@@ -336,40 +377,6 @@ app.get("/chain", (req, res) => {
 	res.status(200).send(JSON.stringify(response));
 });
 
-// app.post("/transactions/new", (req, res) => {
-// 	console.log(req.body);
-// 	const transactionData = req.body;
-
-// 	if (!transactionData) {
-// 		res.status(400).send("Missing Body");
-// 	}
-
-// 	const required = ["sender", "recipient", "amount"];
-
-// 	let missing = false;
-// 	for (const each of required) {
-// 		if (!Object.keys(transactionData).includes(each)) {
-// 			missing = true;
-// 			console.log("Missing", each);
-// 			break;
-// 		}
-// 	}
-// 	if (missing) {
-// 		res.status(400).send("Missing Values");
-// 	}
-
-// 	const index = blockchain.newTransaction(
-// 		transactionData["sender"],
-// 		transactionData["recipient"],
-// 		transactionData["amount"]
-// 	);
-
-// 	const response = {
-// 		message: `Transaction will be added to block #${index}`,
-// 	};
-
-// 	res.status(201).send(JSON.stringify(response));
-// });
 
 app.get("/mine", (req, res) => {
 	//add our mining reward
@@ -394,25 +401,6 @@ app.get("/mine", (req, res) => {
 	res.status(200).send(JSON.stringify(response));
 });
 
-app.post("/nodes/register", (req, res) => {
-	const data = req.body;
-	const nodes = data["nodes"];
-
-	if (!nodes || nodes == null) {
-		res.status(400).send("Error: Please supply a valid list of nodes");
-	}
-
-	for (const node of nodes) {
-		blockchain.registerNode(node);
-	}
-
-	const response = {
-		message: "new nodes have been added!",
-		total_nodes: [...blockchain.nodes],
-	};
-
-	res.status(201).send(JSON.stringify(response));
-});
 
 app.get("/nodes/resolve", (req, res) => {
 	const replaced = blockchain.resolveConflict();
