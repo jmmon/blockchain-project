@@ -322,6 +322,8 @@ class Blockchain {
 		return lastBlockIndex - transactionBlockIndex + 1;
 	}
 
+    // Loosely based on Dark Gravity Wave
+    //      uses an EMA over the last 240 blocks (1 hour == 15s * 240), and restricts each difficulty change occurrence to 3x or 0.33x
     // difficulty should be adjusted when?
     // AFTER a new block is added to the chain (most likely)
 	adjustDifficulty() {
