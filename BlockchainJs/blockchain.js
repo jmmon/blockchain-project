@@ -198,6 +198,9 @@ class Blockchain {
 	registerNode(nodeUrl) {
 		const parsedUrl = new URL(nodeUrl);
 		this.nodes.add(parsedUrl.host); //hostname and port
+        const nodesList = [];
+        this.nodes.forEach(node => nodesList.push(node));
+        console.log('node added\n' +  JSON.stringify(nodesList));
 	}
 
 	validChain(chain) {
@@ -283,6 +286,23 @@ class Blockchain {
 		"0".repeat(this.difficulty);
 		return isValid;
 	}
+
+    getTransactionConfirmationCount(transaction, lastBlockIndex = null) {
+        const transactionBlockIndex = transaction?.minedInBlockIndex;
+
+        if (!transactionBlockIndex) {
+            //transaction is not confirmed (not mined)
+            return 0;
+        }
+        // allow passing in last block index, so we don't need to call getLastBlock on every iteration
+        if (!lastBlockIndex) {
+            lastBlockIndex = getLastBlock().index;
+        }
+        // if block 10 is mined, and transaction happened in block 10, difference is 0 but confirmation is (+1);
+        const confirmationCount = lastBlockIndex - transactionBlockIndex + 1;
+
+        return confirmationCount;
+    }
 }
 
 module.exports = Blockchain;
