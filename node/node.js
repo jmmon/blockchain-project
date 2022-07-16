@@ -37,7 +37,6 @@ GET {
 	"/info", 		started
 	"/debug",		started
 	"/debug/mine/:minerAddress/:difficulty",	started
-	"/transactions/:tranHash",	works?
 	"/balances", started
 	"/address/:address/transactions", started
 	"/address/:address/balance", started
@@ -72,6 +71,7 @@ app.get("/info", (req, res) => {
 	res.status(200).send(JSON.stringify(data));
 });
 
+
 app.get("/debug", (req, res) => {
 	//debug info
 	const debugInfo = {
@@ -84,8 +84,9 @@ app.get("/debug", (req, res) => {
 	res.status(200).send(JSON.stringify(debugInfo));
 });
 
-app.get("/debug/reset-chain", (req, res) => {
-	// works
+
+// works:
+app.get("/debug/reset-chain", (req, res) => { 
 	const success = blockchain.reset();
 	if (success) {
 		console.log("Chain reset\n" + JSON.stringify(blockchain.chain));
@@ -95,30 +96,35 @@ app.get("/debug/reset-chain", (req, res) => {
 	}
 });
 
+
 app.get("/debug/mine/:minerAddress/:difficulty", (req, res) => {
 	const { minerAddress, difficulty } = req.params;
 	//mine a block for miner address at difficulty??
 	// or generate a mining job at address && difficulty??
 });
 
+
+// works:
 app.get("/blocks", (req, res) => {
-	// works
 	res.status(200).send(JSON.stringify(blockchain.chain));
 });
 
+
+// works:
 app.get("/blocks/:id", (req, res) => {
-	// works
 	res.status(200).send(JSON.stringify(blockchain.chain[req.params.id - 1]));
 });
 
+
+// works:
 app.get("/transactions/pending", (req, res) => {
-	// works
 	//return pending transactions, in mempool
 	res.status(200).send(JSON.stringify(blockchain.pendingTransactions));
 });
 
+
+// works:
 app.get("/transactions/confirmed", (req, res) => {
-	// works
 	//display all transactions in blocks
 	//	crawl blocks and build list to return
 	let transactionsJson = "[";
@@ -134,6 +140,7 @@ app.get("/transactions/confirmed", (req, res) => {
 
 	res.status(200).send(transactionsJson);
 });
+
 
 app.get("/transactions/:tranHash", (req, res) => { // not working
 	const {tranHash: transactionDataHash} = req.params;
@@ -160,23 +167,33 @@ app.get("/transactions/:tranHash", (req, res) => { // not working
 	}
 });
 
+
 app.get("/balances", (req, res) => {
 	res.status(200).send("supposed to get balances ??of all addresses on the network??");
 });
 
+
 app.get("/address/:address/transactions", (req, res) => {
 	const {address} = req.params;
+	//return transactions array of address
+	//	crawl blockchain and build transaction list related to address
 	res.status(200).send("get transactions related to address "+address);
 });
 
+
 app.get("/address/:address/balance", (req, res) => {
 	const {address} = req.params;
+	//return balance of address	
+	//	crawl blockchain and build balance of address
 	res.status(200).send("get balance of particular address "+address);
 });
 
+
 app.get("/peers", (req, res) => {
+	//responds with object holding {nodeId1: nodeUrl1, ...}
 	res.status(200).send(JSON.stringify(blockchain.nodes));
 });
+
 
 app.get("/mining/get-mining-job/:address", (req, res) => {
 	// prepare block candidate and send to miner
@@ -185,8 +202,8 @@ app.get("/mining/get-mining-job/:address", (req, res) => {
 
 
 	const response = {
-		index: "new block index",	// index of next block
-		transactionsIncluded: 22,	// # of transactions in next block
+		index: blockchain.chain.length + 1,	// index of next block
+		transactionsIncluded: blockchain.pendingTransactions,	// # of transactions in next block
 		difficulty: 5,	// difficulty of next block
 		expectedReward: 5000350, // standard reward
 		rewardAddress: minerAddress,
@@ -199,26 +216,94 @@ app.get("/mining/get-mining-job/:address", (req, res) => {
 
 
 
+// POST ROUTES
 
 
 app.post("/transactions/send", (req, res) => {
+	const transactionData = req.body;
+	/* 
+	{
+		"from" : "c3293572dbe6ebc60de4a20ed0e21446cae66b17",
+		"to" : "f51362b7351ef62253a227a77751ad9b2302f911",
+		"value" : 25000, 
+		"fee" : 10, 
+		"dateCreated" : "2018-02-10T17:53:48.972Z",
+		"data" : "first payment (50%)", 
+		"senderPubKey": "c74a8458cd7a7e48f4b7ae6f4ae9f56c5c88c0f03e7c59cb4132b9d9d1600bba1",
+		"senderSignature" : [
+			"1aaf55dcb1...68b0", 
+			"87250a2841...7960"
+		]
+	}
+
+	output: {
+		transactionDataHash: "the hash"
+	}
+	*/
 	res.status(200).send('test');
 });
+
+
+// done, need to check
 app.post("/peers/connect", (req, res) => {
-	//same as nodes/register???
-	res.status(200).send('test');
+	const {peerUrl} = req.body;
+	// takes peerUrl and adds it to our list of nodes
+	if (!peerUrl || peerUrl === null) {
+		res.status(400).send("Error: Missing Peer Node URL");
+	}
+
+	blockchain.registerNode(peerUrl); // add it to the list
+
+	const response = {
+		message: `Connected to peer ${peerUrl}`
+	};
+
+	res.status(201).send(JSON.stringify(response));
 });
+
+
+// started
 app.post("/peers/notify-new-block", (req, res) => {
-	//receive new leading block from peers;
-	//should verify it and then use it as the leading chain
-	res.status(200).send('test');
+	// receive new block notification
+	const data = req.body;
+	//data == {blocksCount: number, cumulativeDifficulty: number, nodeUrl: nodeUrl}
+
+	//what then???
+
+	const response = {
+		message: `Thank you for the notification.`
+	}
+	res.status(200).send(JSON.stringify(response));
 });
+
+
 app.post("/mining/submit-mined-block", (req, res) => {
-	//receive completed (hashed) mining job from miner
+	const data = req.body;
+	/* 
+	// receive completed (hashed) mining job from miner:
+
+	data: {
+		blockDataHash: block.blockDataHash,
+		dateCreated: timestamp,
+		nonce: nonce,
+		blockHash: hash,
+	};
+	*/
 	//should verify it and use it and propagate to other nodes?
-	
-	res.status(200).send('test');
+
+	const response = {};
+	const valid = true;
+
+	if (valid) {
+		response.message = `Block accepted, reward paid: 500350 microcoins`;
+	} else {
+		response.message = `...Too slow! Block not accepted. Better luck next time!`;
+	}
+
+	res.status(200).send(JSON.stringify(response));
 });
+
+
 
 
 

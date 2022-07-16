@@ -2,6 +2,7 @@
 // import crypto from "node:crypto"
 const fetch = import("node-fetch");
 const crypto = require("crypto");
+
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
 
@@ -115,6 +116,43 @@ class Blockchain {
 		return block;
 	}
 
+
+	createTransaction({from, to, value, fee, dateCreated, data, senderPubKey, senderSignature}) {
+		const nextBlockIndex = this.getLastBlock()["index"] + 1;
+
+		const sortedTransactionData = sortByObjectKeys({
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey
+		});
+
+		const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
+
+		this.pendingTransactions.push(
+			new Transaction(
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+				transactionDataHash,
+				senderSignature,
+				// last two "appear" only after transaction is mined
+				null, // minedInBlockIndex
+				null  // transferSuccessful
+			));
+
+		// return nextBlockIndex;
+	}
+
+
+	// OLD
 	newTransaction(sender, recipient, amount) {
 		const nextBlockIndex = this.getLastBlock()["index"] + 1;
 		const dateCreated = Date.now().toString();
@@ -144,7 +182,7 @@ class Blockchain {
 				dateCreated,
 				data,
 				senderPubKey,
-				transactionDataHash, 								// is this  transactionHash? Is this needed?
+				transactionDataHash,
 				`signature from ${sender}`,
 				// last two "appear" only after transaction is mined
 				null,
@@ -155,16 +193,16 @@ class Blockchain {
 	}
 
 	registerNode(nodeUrl) {
-		parsedUrl = new URL(nodeUrl);
+		const parsedUrl = new URL(nodeUrl);
 		this.nodes.add(parsedUrl.host); //hostname and port
 	}
 
 	validChain(chain) {
-		lastBlock = chain[0];
-		currentIndex = 1;
+		let lastBlock = chain[0];
+		let currentIndex = 1;
 
 		while (currentIndex < chain.length) {
-			block = chain[currentIndex];
+			const block = chain[currentIndex];
 			console.log(lastBlock);
 			console.log(block);
 			console.log("\n--------\n");
@@ -191,17 +229,17 @@ class Blockchain {
 		//Consensus Algo: replaces our chain with the longest one in the network.
 		//Returns true if chain was replaced; false if not (if we have the longest)
 
-		neighbors = this.nodes;
-		newChain = null;
+		const neighbors = this.nodes;
+		let newChain = null;
 
 		// must be longer than our chain
-		maxLength = this.chain.length;
+		let maxLength = this.chain.length;
 
 		for (node in neighbors) {
-			response = fetch(`http://${node}/chain`);
+			const response = fetch(`http://${node}/chain`);
 			if (response.statusCode === 200) {
-				length = response.json()["length"];
-				chain = response.json()["chain"];
+				let length = response.json()["length"];
+				let chain = response.json()["chain"];
 
 				if (length > maxLength && this.validChain(chain)) {
 					maxLength = length; // update our length to new longest
@@ -230,7 +268,7 @@ class Blockchain {
 	}
 
 	proofOfWork(block) {
-		//iterate the "proof" field until conditions are satisfied
+		// increase block nonce until block hash is valid
 		while (!this.validProof(block)) {
 			block["nonce"] += 1;
 		}
@@ -238,10 +276,9 @@ class Blockchain {
 
 	validProof(block) {
 		//check if hash starts with 4 zeros; 4 being the difficulty
-		return (
-			this.hash(block).toString().slice(0, this.difficulty) ===
-			"0".repeat(this.difficulty)
-		);
+		const isValid = this.hash(block).toString().slice(0, this.difficulty) ===
+		"0".repeat(this.difficulty);
+		return isValid;
 	}
 }
 
