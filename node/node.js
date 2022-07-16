@@ -1,20 +1,22 @@
-const express = require('express');
-const crypto = require('node:crypto');
+const express = require("express");
+const crypto = require("node:crypto");
 const app = express();
+app.use(express.json());
 const port = 5000;
 
-const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
-const Blockchain = require('../BlockchainJs/blockchain.js');
+const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
+const Blockchain = require("../BlockchainJs/blockchain.js");
 const blockchain = new Blockchain();
 
-console.log({nodeIdentifier});
+console.log({ nodeIdentifier });
 console.log(blockchain);
 
-getMethods = (obj) => Object.getOwnPropertyNames(obj).filter(item => typeof obj[item] === 'function')
+getMethods = (obj) =>
+	Object.getOwnPropertyNames(obj).filter(
+		(item) => typeof obj[item] === "function"
+	);
 
 console.log(getMethods(blockchain));
-
-
 
 /* 
 NODE:
@@ -27,39 +29,33 @@ the REST endpoints (to access node functionality)
 
 */
 
-
 /* 
 REQUIRED ROUTES:
 
 GET {
-	"/",
-	"/info",
-	"/debug",
-	"/debug/reset-chain",
-	"/debug/mine/:minerAddress/:difficulty",
-	"/blocks",
-	"/blocks/:index",
-	"/transactions/pending",
-	"/transactions/confirmed",
-	"/transactions/:tranHash",
-	"/balances",
-	"/address/:address/transactions",
-	"/address/:address/balance",
-	"/peers",
-	"/mining/get-mining-job/:address",
+	"/", 				?? homepage for api?
+	"/info", 		started
+	"/debug",		started
+	"/debug/mine/:minerAddress/:difficulty",	started
+	"/transactions/:tranHash",	works?
+	"/balances", started
+	"/address/:address/transactions", started
+	"/address/:address/balance", started
+	"/peers", started
+	"/mining/get-mining-job/:address", started
 }
 
 POST {
-	"/transactions/send",
-	"/peers/connect",
-	"/peers/notify-new-block",
-	"/mining/submit-mined-block",
+	"/transactions/send", started
+	"/peers/connect", started
+	"/peers/notify-new-block", started
+	"/mining/submit-mined-block", started
 }
 
 
 */
 
-app.get('/info', (req, res) => {
+app.get("/info", (req, res) => {
 	const data = {
 		about: "name of the node",
 		nodeId: nodeIdentifier,
@@ -71,28 +67,188 @@ app.get('/info', (req, res) => {
 		cumulativeDifficulty: "running total of difficulty for mined blocks?",
 		confirmedTransactions: "number of transactions in blocks",
 		pendingTransactions: blockchain.pendingTransactions.length,
-	}
+	};
 
 	res.status(200).send(JSON.stringify(data));
-})
+});
+
+app.get("/debug", (req, res) => {
+	//debug info
+	const debugInfo = {
+		selfUrl: "url of this node",
+		chain: blockchain.chain,
+		pendingTransactions: blockchain.pendingTransactions,
+		confirmedBalances: "get transactions with 1 confirmation??",
+	};
+
+	res.status(200).send(JSON.stringify(debugInfo));
+});
+
+app.get("/debug/reset-chain", (req, res) => {
+	// works
+	const success = blockchain.reset();
+	if (success) {
+		console.log("Chain reset\n" + JSON.stringify(blockchain.chain));
+		res.status(200).send("yes chain was reset to genesis block");
+	} else {
+		res.status(400).send("no chain was not reset");
+	}
+});
+
+app.get("/debug/mine/:minerAddress/:difficulty", (req, res) => {
+	const { minerAddress, difficulty } = req.params;
+	//mine a block for miner address at difficulty??
+	// or generate a mining job at address && difficulty??
+});
+
+app.get("/blocks", (req, res) => {
+	// works
+	res.status(200).send(JSON.stringify(blockchain.chain));
+});
+
+app.get("/blocks/:id", (req, res) => {
+	// works
+	res.status(200).send(JSON.stringify(blockchain.chain[req.params.id - 1]));
+});
+
+app.get("/transactions/pending", (req, res) => {
+	// works
+	//return pending transactions, in mempool
+	res.status(200).send(JSON.stringify(blockchain.pendingTransactions));
+});
+
+app.get("/transactions/confirmed", (req, res) => {
+	// works
+	//display all transactions in blocks
+	//	crawl blocks and build list to return
+	let transactionsJson = "[";
+	for (const block of blockchain.chain) {
+		for (const transaction of block.transactions) {
+			thisTransaction = JSON.stringify(transaction);
+			transactionsJson += thisTransaction + ",";
+		}
+	}
+	// slice off last comma
+	transactionsJson = transactionsJson.slice(0, transactionsJson.length - 1);
+	transactionsJson += "]";
+
+	res.status(200).send(transactionsJson);
+});
+
+app.get("/transactions/:tranHash", (req, res) => { // not working
+	const {tranHash: transactionDataHash} = req.params;
+	console.log('Searching for tx', transactionDataHash);
+	const result = {
+		status: 200,
+	}
+
+	for (const block of blockchain.chain) {
+		for (const transaction of block.transactions) {
+			if (transaction?.transactionDataHash === transactionDataHash) {
+				result.foundTransaction = JSON.stringify(transaction);
+				break;
+			}
+		}
+	}
+
+	// slice off last comma
+	if (!result.foundTransaction) {
+		result.message = "Error: Transaction not found";
+		res.status(result.status).send(JSON.stringify(result.message));
+	} else {
+		res.status(result.status).send(result.foundTransaction);
+	}
+});
+
+app.get("/balances", (req, res) => {
+	res.status(200).send("supposed to get balances ??of all addresses on the network??");
+});
+
+app.get("/address/:address/transactions", (req, res) => {
+	const {address} = req.params;
+	res.status(200).send("get transactions related to address "+address);
+});
+
+app.get("/address/:address/balance", (req, res) => {
+	const {address} = req.params;
+	res.status(200).send("get balance of particular address "+address);
+});
+
+app.get("/peers", (req, res) => {
+	res.status(200).send(JSON.stringify(blockchain.nodes));
+});
+
+app.get("/mining/get-mining-job/:address", (req, res) => {
+	// prepare block candidate and send to miner
+	// (miner then finds nonce and sends it back)
+	const {address: minerAddress} = req.params;
 
 
-app.get('/chain', (req, res) => {
+	const response = {
+		index: "new block index",	// index of next block
+		transactionsIncluded: 22,	// # of transactions in next block
+		difficulty: 5,	// difficulty of next block
+		expectedReward: 5000350, // standard reward
+		rewardAddress: minerAddress,
+		blockDataHash: "hash of block without nonce; miner takes this and increments nonce to find correct hash"
+	};
+	res.status(200).send(JSON.stringify(response));
+});
+
+
+
+
+
+
+
+app.post("/transactions/send", (req, res) => {
+	res.status(200).send('test');
+});
+app.post("/peers/connect", (req, res) => {
+	//same as nodes/register???
+	res.status(200).send('test');
+});
+app.post("/peers/notify-new-block", (req, res) => {
+	//receive new leading block from peers;
+	//should verify it and then use it as the leading chain
+	res.status(200).send('test');
+});
+app.post("/mining/submit-mined-block", (req, res) => {
+	//receive completed (hashed) mining job from miner
+	//should verify it and use it and propagate to other nodes?
+	
+	res.status(200).send('test');
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* OLD ROUTES BELOW */
+
+app.get("/chain", (req, res) => {
 	const response = {
 		chain: blockchain.chain,
-		length: blockchain.chain.length
+		length: blockchain.chain.length,
 	};
 
 	res.status(200).send(JSON.stringify(response));
 });
 
+app.post("/transactions/new", (req, res) => {
+	console.log(req.body);
+	const transactionData = req.body;
 
-app.post('/transactions/new', (req, res) => {
-	const data = req.body;
-	console.log({values: data});
-	console.log('typeof values', typeof data);
-
-	if (!data) {
+	if (!transactionData) {
 		res.status(400).send("Missing Body");
 	}
 
@@ -100,54 +256,58 @@ app.post('/transactions/new', (req, res) => {
 
 	let missing = false;
 	for (const each of required) {
-		if (!Object.keys(data).includes(each)) {
+		if (!Object.keys(transactionData).includes(each)) {
 			missing = true;
-			console.log('Missing', each);
+			console.log("Missing", each);
 			break;
 		}
 	}
 	if (missing) {
-		res.status(400).send('Missing Values');
+		res.status(400).send("Missing Values");
 	}
 
-	const index = blockchain.newTransaction(data["sender"], data["recipient"], data["amount"]);
+	const index = blockchain.newTransaction(
+		transactionData["sender"],
+		transactionData["recipient"],
+		transactionData["amount"]
+	);
 
-	const response = {message: `Transaction will be added to block #${index}`};
+	const response = {
+		message: `Transaction will be added to block #${index}`,
+	};
 
 	res.status(201).send(JSON.stringify(response));
 });
 
-
-app.get('/mine', (req, res) => {
+app.get("/mine", (req, res) => {
 	//add our mining reward
 	blockchain.newTransaction(
-		sender = "0",
-		recipient = nodeIdentifier,
-		amount = 1,
+		(sender = "0"),
+		(recipient = nodeIdentifier),
+		(amount = 1)
 	);
-	
+
 	//create the block and attempt to mine it
-	const block = blockchain.newBlock(proof = 0);
+	const block = blockchain.newBlock((proof = 0));
 	blockchain.proofOfWork(block);
 
 	const response = {
-		message: 			"New block mined!",
-		index: 				block["index"],
+		message: "New block mined!",
+		index: block["index"],
 		transactions: block["transactions"],
-		proof: 				block["proof"],
+		proof: block["proof"],
 		previousHash: block["previousHash"],
 	};
 
 	res.status(200).send(JSON.stringify(response));
 });
 
-
-app.post('/nodes/register', (req, res) => {
+app.post("/nodes/register", (req, res) => {
 	const data = req.body;
 	const nodes = data["nodes"];
 
 	if (!nodes || nodes == null) {
-		res.status(400).send('Error: Please supply a valid list of nodes');
+		res.status(400).send("Error: Please supply a valid list of nodes");
 	}
 
 	for (const node of nodes) {
@@ -155,35 +315,32 @@ app.post('/nodes/register', (req, res) => {
 	}
 
 	const response = {
-		message: 'new nodes have been added!',
+		message: "new nodes have been added!",
 		total_nodes: [...blockchain.nodes],
 	};
 
 	res.status(201).send(JSON.stringify(response));
 });
 
-
-app.get('/nodes/resolve', (req, res) => {
+app.get("/nodes/resolve", (req, res) => {
 	const replaced = blockchain.resolveConflict();
 
 	let response;
 	if (replaced) {
 		response = {
-			message: 'Our chain was replaced',
-			newChain: blockchain.chain
+			message: "Our chain was replaced",
+			newChain: blockchain.chain,
 		};
 	} else {
 		response = {
-			message: 'Our chain is authoritative',
-			chain: blockchain.chain
+			message: "Our chain is authoritative",
+			chain: blockchain.chain,
 		};
 	}
 
 	res.status(200).send(JSON.stringify(response));
 });
 
-
-
 app.listen(port, () => {
 	console.log(`node listening on port ${port}`);
-})
+});

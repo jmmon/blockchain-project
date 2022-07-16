@@ -74,6 +74,18 @@ class Blockchain {
 		this.newBlock("1", 100); // create genesis block
 	}
 
+	reset() {
+		this.chain = [this.chain[0]]; // save genesis block
+		this.difficulty = 2;
+		this.pendingTransactions = [];
+		this.nodes = new Set();
+
+		// // alternately
+		// this.chain = [];
+		// this.newBlock("1", 100); // create genesis block
+		return true;
+	}
+
 	newBlock(previousHash = null, nonce = 0) {
 		const block = new Block(
 			this.chain.length+1,
@@ -84,7 +96,8 @@ class Blockchain {
 			"receivedJob_BlockDataHash",
 			nonce,
 			"receivedJob_DateCreated",
-			"receivedJob_hash");
+			"receivedJob_hash"
+		);
 
 		// const block = {
 		// 	index: this.chain.length + 1,
@@ -103,13 +116,42 @@ class Blockchain {
 	}
 
 	newTransaction(sender, recipient, amount) {
-		this.pendingTransactions.push({
-			sender,
-			recipient,
-			amount,
+		const nextBlockIndex = this.getLastBlock()["index"] + 1;
+		const dateCreated = Date.now().toString();
+		const data = "Faucet -- to || coinbase transaction || etc?"
+		const senderPubKey = `pubKey from ${sender}`;
+		const fee = 0;
+
+		const sortedTransactionData = sortByObjectKeys({
+			from: sender,
+			to: recipient,
+			value: amount,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey
 		});
 
-		return this.getLastBlock()["index"] + 1;
+		//txdatahash: from, to, value, fee, dateCreated, data, senderPubKey
+		const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
+
+		this.pendingTransactions.push(
+			new Transaction(
+				sender,
+				recipient,
+				amount,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+				transactionDataHash, 								// is this  transactionHash? Is this needed?
+				`signature from ${sender}`,
+				// last two "appear" only after transaction is mined
+				null,
+				null 
+			));
+
+		return nextBlockIndex;
 	}
 
 	registerNode(nodeUrl) {
@@ -179,17 +221,7 @@ class Blockchain {
 
 	// static methods (exist on the class itself, not on an instantiation of the class)
 	hash(block) {
-		//need to sort our block object by keys to make hashes consistent
-		// console.log('UNsorted block', {block});
-
-		// const sortedKeys = Object.keys(block).sort((a, b) => a - b);
-		// let sortedBlock = {};
-		// sortedKeys.forEach(key => sortedBlock[key] = block[key]);
-
 		const sortedBlock = sortByObjectKeys(block);
-
-		// console.log('sorted block', {sortedBlock});
-
 		return SHA256(JSON.stringify(sortedBlock));
 	}
 
