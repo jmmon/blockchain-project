@@ -14,3 +14,27 @@ block: {
 	dateCreated: '2022-07-15T16:17:47.707Z',
 	blockHash: '0e5f82cfa980c35b5d36112a3473293da8d8f4fd8e3c22b4055ab062364dae1d'
 }
+
+
+
+
+
+	/* transaction example
+	{
+		"from" : "c3293572dbe6ebc60de4a20ed0e21446cae66b17",
+		"to" : "f51362b7351ef62253a227a77751ad9b2302f911",
+		"value" : 25000, 
+		"fee" : 10, 
+		"dateCreated" : "2018-02-10T17:53:48.972Z",
+		"data" : "first payment (50%)", 
+		"senderPubKey": "c74a8458cd7a7e48f4b7ae6f4ae9f56c5c88c0f03e7c59cb4132b9d9d1600bba1",
+		"senderSignature" : [
+			"1aaf55dcb1...68b0", 
+			"87250a2841...7960"
+		]
+	}
+
+	output: {
+		transactionDataHash: "the hash"
+	}
+	*/

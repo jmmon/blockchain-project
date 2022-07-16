@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
 
+
 const sortByObjectKeys = (object) => {
 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
 	let newObject = {};
@@ -58,7 +59,7 @@ class Transaction {
 		this.dateCreated = dateCreated;
 		this.data = data;
 		this.senderPubKey = senderPubKey;
-		this.transactionDataHash = transactionDataHash.toString();
+		this.transactionDataHash = transactionDataHash;
 		this.senderSignature = senderSignature;
 		this.minedInBlockIndex = minedInBlockIndex;
 		this.transferSuccessful = transferSuccessful;
@@ -118,7 +119,8 @@ class Blockchain {
 
 
 	createTransaction({from, to, value, fee, dateCreated, data, senderPubKey, senderSignature}) {
-		const nextBlockIndex = this.getLastBlock()["index"] + 1;
+		// const nextBlockIndex = this.getLastBlock()["index"] + 1;
+        // console.log('creating transaction');
 
 		const sortedTransactionData = sortByObjectKeys({
 			from,
@@ -132,65 +134,66 @@ class Blockchain {
 
 		const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
 
-		this.pendingTransactions.push(
-			new Transaction(
-				from,
-				to,
-				value,
-				fee,
-				dateCreated,
-				data,
-				senderPubKey,
-				transactionDataHash,
-				senderSignature,
-				// last two "appear" only after transaction is mined
-				null, // minedInBlockIndex
-				null  // transferSuccessful
-			));
+        const newTransaction = new Transaction(
+            from,
+            to,
+            value,
+            fee,
+            dateCreated,
+            data,
+            senderPubKey,
+            transactionDataHash,
+            senderSignature,
+            // last two "appear" only after transaction is mined
+            null, // minedInBlockIndex
+            null  // transferSuccessful
+        );
 
-		// return nextBlockIndex;
+		this.pendingTransactions.push(newTransaction);
+
+		return {transactionDataHash};
 	}
 
 
-	// OLD
-	newTransaction(sender, recipient, amount) {
-		const nextBlockIndex = this.getLastBlock()["index"] + 1;
-		const dateCreated = Date.now().toString();
-		const data = "Faucet -- to || coinbase transaction || etc?"
-		const senderPubKey = `pubKey from ${sender}`;
-		const fee = 0;
+	// // OLD
+	// newTransaction(sender, recipient, amount) {
+	// 	const nextBlockIndex = this.getLastBlock()["index"] + 1;
+	// 	const dateCreated = Date.now().toString();
+	// 	const data = "Faucet -- to || coinbase transaction || etc?"
+	// 	const senderPubKey = `pubKey from ${sender}`;
+	// 	const fee = 0;
 
-		const sortedTransactionData = sortByObjectKeys({
-			from: sender,
-			to: recipient,
-			value: amount,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey
-		});
+	// 	const sortedTransactionData = sortByObjectKeys({
+	// 		from: sender,
+	// 		to: recipient,
+	// 		value: amount,
+	// 		fee,
+	// 		dateCreated,
+	// 		data,
+	// 		senderPubKey
+	// 	});
 
-		//txdatahash: from, to, value, fee, dateCreated, data, senderPubKey
-		const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
+	// 	//txdatahash: from, to, value, fee, dateCreated, data, senderPubKey
+	// 	const transactionDataHash = SHA256(JSON.stringify(sortedTransactionData));
 
-		this.pendingTransactions.push(
-			new Transaction(
-				sender,
-				recipient,
-				amount,
-				fee,
-				dateCreated,
-				data,
-				senderPubKey,
-				transactionDataHash,
-				`signature from ${sender}`,
-				// last two "appear" only after transaction is mined
-				null,
-				null 
-			));
+	// 	this.pendingTransactions.push(
+	// 		new Transaction(
+	// 			sender,
+	// 			recipient,
+	// 			amount,
+	// 			fee,
+	// 			dateCreated,
+	// 			data,
+	// 			senderPubKey,
+	// 			transactionDataHash,
+	// 			`signature from ${sender}`,
+	// 			// last two "appear" only after transaction is mined
+	// 			null,
+	// 			null 
+	// 		));
 
-		return nextBlockIndex;
-	}
+	// 	return nextBlockIndex;
+	// }
 
 	registerNode(nodeUrl) {
 		const parsedUrl = new URL(nodeUrl);
