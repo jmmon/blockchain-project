@@ -1,0 +1,286 @@
+{
+	"node": {
+		"nodeId": "182112f22a5d86fcfe4bfd7d",
+		"host": "localhost",
+		"port": "25446",
+		"selfUrl": "http://localhost:25446",
+		"peers": {},
+		"chain": {
+			"blocks": [
+				{
+					"index": 0,
+					"transactions": [
+						{
+							"from": "0000000000000000000000000000000000000000",
+							"to": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+							"value": 1000000000000,
+							"fee": 0,
+							"dateCreated": "2018-01-01T00:00:00.000Z",
+							"data": "genesis tx",
+							"senderPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+							"transactionDataHash": "8a684cb8491ee419e7d46a0fd2438cad82d1278c340b5d01974e7beb6b72ecc2",
+							"senderSignature": [
+								"0000000000000000000000000000000000000000000000000000000000000000",
+								"0000000000000000000000000000000000000000000000000000000000000000"
+							],
+							"minedInBlockIndex": 0,
+							"transferSuccessful": true
+						}
+					],
+					"difficulty": 0,
+					"minedBy": "0000000000000000000000000000000000000000",
+					"blockDataHash": "15cc5052fb3c307dd2bfc6bcaa057632250ee05104e4fb7cc75e59db1a92cefc",
+					"nonce": 0,
+					"dateCreated": "2018-01-01T00:00:00.000Z",
+					"blockHash": "c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f"
+				},
+				{
+					"index": 1,
+					"transactions": [
+						{
+							"from": "0000000000000000000000000000000000000000",
+							"to": "84ede81c58f5c490fc6e1a3035789eef897b5b35",
+							"value": 5000020,
+							"fee": 0,
+							"dateCreated": "2022-07-18T12:01:17.848Z",
+							"data": "coinbase tx",
+							"senderPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+							"transactionDataHash": "6a661dbddca7481b93a53a3b0b1e861e67c79bf009acc22d9ad82e34fbf3920f",
+							"senderSignature": [
+								"0000000000000000000000000000000000000000000000000000000000000000",
+								"0000000000000000000000000000000000000000000000000000000000000000"
+							],
+							"minedInBlockIndex": 1,
+							"transferSuccessful": true
+						},
+						{
+							"from": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+							"to": "a1de0763f26176c6d68cc77e0a1c2c42045f2314",
+							"value": 500000,
+							"fee": 10,
+							"dateCreated": "2022-07-18T11:46:17.798Z",
+							"data": "Faucet -> Alice",
+							"senderPubKey": "8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0",
+							"transactionDataHash": "5fdbd84d7db5b766a37f0b4505c1740a9f077604f864385ba0941a8cd6ec1051",
+							"senderSignature": [
+								"b818ea4f2db10fd449923894e3aef6be999f984aa3b32d30cee0f24ecd4e176d",
+								"a7a24445bd2197fb4fed7085f5121f7e54763fdeca160f4ba3b131271337f2f5"
+							],
+							"minedInBlockIndex": 1,
+							"transferSuccessful": true
+						},
+						{
+							"from": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+							"to": "b3d72ad831b3e9cdbdaeda5ff4ae8e9cf182e548",
+							"value": 700000,
+							"fee": 10,
+							"dateCreated": "2022-07-18T11:47:57.807Z",
+							"data": "Faucet -> Bob",
+							"senderPubKey": "8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0",
+							"transactionDataHash": "bf8dc84f8bd5fb912bbce2f1bf5466d1f8dca7dd10dca78aa9a26efd18fcf0ee",
+							"senderSignature": [
+								"f3d199b4209a1684a49652a1c33bfd38e958b899547fcb6ad9f78c721db03893",
+								"7915726cc6f3b8d7ce207a9550a867ce1236482f90a92a48321258f9b69e9765"
+							],
+							"minedInBlockIndex": 1,
+							"transferSuccessful": true
+						}
+					],
+					"difficulty": 1,
+					"prevBlockHash": "c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f",
+					"minedBy": "84ede81c58f5c490fc6e1a3035789eef897b5b35",
+					"blockDataHash": "46a9ae8ad4ad71e09dd15be5ea1fca42f25f864258f535d6864c9a941e9ddc41",
+					"nonce": 1,
+					"dateCreated": "2022-07-18T12:01:17.849Z",
+					"blockHash": "01199a0c25701f19e8cf2645404279753f5bac3b7dc97528fb28f8443650c01e"
+				},
+				{
+					"index": 2,
+					"transactions": [
+						{
+							"from": "0000000000000000000000000000000000000000",
+							"to": "84ede81c58f5c490fc6e1a3035789eef897b5b35",
+							"value": 5000040,
+							"fee": 0,
+							"dateCreated": "2022-07-18T12:01:17.870Z",
+							"data": "coinbase tx",
+							"senderPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+							"transactionDataHash": "cc82d2d3ce1acb5883614478557ec130ec031379ea62e7314f78653709953e3a",
+							"senderSignature": [
+								"0000000000000000000000000000000000000000000000000000000000000000",
+								"0000000000000000000000000000000000000000000000000000000000000000"
+							],
+							"minedInBlockIndex": 2,
+							"transferSuccessful": true
+						},
+						{
+							"from": "a1de0763f26176c6d68cc77e0a1c2c42045f2314",
+							"to": "b3d72ad831b3e9cdbdaeda5ff4ae8e9cf182e548",
+							"value": 400000,
+							"fee": 20,
+							"dateCreated": "2022-07-18T11:49:37.810Z",
+							"data": "Alice -> Bob",
+							"senderPubKey": "30f9d17cff6b8a182df541e86344516a774c450be73d0a05624a9db7748c74cf1",
+							"transactionDataHash": "b0b09a356e511969349a21542578997466fab29bf336fc1143d6f8cb6bbb5396",
+							"senderSignature": [
+								"c6c296d28e7f93a99587e797302341ed88fe7ff5f5c92e01e8fa4bfe08140b78",
+								"2f91ab835da8a48e63f402b5db8b416ca387e54a70d4f268fb9d0c60f9566c3c"
+							],
+							"minedInBlockIndex": 2,
+							"transferSuccessful": true
+						},
+						{
+							"from": "a1de0763f26176c6d68cc77e0a1c2c42045f2314",
+							"to": "22e2864c613e4f778bb25ddb2b0022d1fbb11c8c",
+							"value": 400000,
+							"fee": 20,
+							"dateCreated": "2022-07-18T11:49:37.813Z",
+							"data": "Alice -> Peter (no funds)",
+							"senderPubKey": "30f9d17cff6b8a182df541e86344516a774c450be73d0a05624a9db7748c74cf1",
+							"transactionDataHash": "2fbe10d044f9398b8e39dfe9009026e1c9bf0362fe8ba1b30c74410bbe9e9d17",
+							"senderSignature": [
+								"4a3d670360b50cd3c8f1b7d4ea30284a47de90980e0f48e541f5f6180612e986",
+								"508949910ff0215ea9536b5e088b4aafdb6e5e1e1d984ef43ded2cd20e177135"
+							],
+							"minedInBlockIndex": 2,
+							"transferSuccessful": false
+						}
+					],
+					"difficulty": 2,
+					"prevBlockHash": "01199a0c25701f19e8cf2645404279753f5bac3b7dc97528fb28f8443650c01e",
+					"minedBy": "84ede81c58f5c490fc6e1a3035789eef897b5b35",
+					"blockDataHash": "9dfe2c3ac7183cc381db57f73dcee3ea9610212cafb1421c5f552e98a7ed2666",
+					"nonce": 316,
+					"dateCreated": "2022-07-18T12:01:17.871Z",
+					"blockHash": "007f22076d1d338c5b5713d534ac45c205934c9385475725bb0953b993947902"
+				}
+			],
+			"pendingTransactions": [
+				{
+					"from": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+					"to": "a1de0763f26176c6d68cc77e0a1c2c42045f2314",
+					"value": 400000,
+					"fee": 10,
+					"dateCreated": "2022-07-18T11:54:37.816Z",
+					"data": "Faucet -> Alice (again)",
+					"senderPubKey": "8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0",
+					"transactionDataHash": "e615f1ebf075e15eebd8fb9fb8665925bfe17bfcac7a3b2848298994000e8a49",
+					"senderSignature": [
+						"3d45e40a58ea80cb498430a66b6ac913a483430e1f57a729e11be5ab7af07a65",
+						"66a029dac2dec8b98ff48dcc87c834e6a731a562cf037b20c22d6f57a8bc73c3"
+					]
+				}
+			],
+			"currentDifficulty": 5,
+			"miningJobs": {
+				"21e46c44065af3c0d0efb76d9c52ec686e3bdd9eb585a35970496f5f80ec7d6d": {
+					"index": 3,
+					"transactions": [
+						{
+							"from": "0000000000000000000000000000000000000000",
+							"to": ":address",
+							"value": 5000010,
+							"fee": 0,
+							"dateCreated": "2022-07-18T12:01:18.514Z",
+							"data": "coinbase tx",
+							"senderPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+							"transactionDataHash": "29f33347f9f570c9439aa634dfcfb0d7fd87fbafb336aca12b45beb123dba721",
+							"senderSignature": [
+								"0000000000000000000000000000000000000000000000000000000000000000",
+								"0000000000000000000000000000000000000000000000000000000000000000"
+							],
+							"minedInBlockIndex": 3,
+							"transferSuccessful": true
+						},
+						{
+							"from": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+							"to": "a1de0763f26176c6d68cc77e0a1c2c42045f2314",
+							"value": 400000,
+							"fee": 10,
+							"dateCreated": "2022-07-18T11:54:37.816Z",
+							"data": "Faucet -> Alice (again)",
+							"senderPubKey": "8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0",
+							"transactionDataHash": "e615f1ebf075e15eebd8fb9fb8665925bfe17bfcac7a3b2848298994000e8a49",
+							"senderSignature": [
+								"3d45e40a58ea80cb498430a66b6ac913a483430e1f57a729e11be5ab7af07a65",
+								"66a029dac2dec8b98ff48dcc87c834e6a731a562cf037b20c22d6f57a8bc73c3"
+							],
+							"minedInBlockIndex": 3,
+							"transferSuccessful": true
+						}
+					],
+					"difficulty": 5,
+					"prevBlockHash": "007f22076d1d338c5b5713d534ac45c205934c9385475725bb0953b993947902",
+					"minedBy": ":address",
+					"blockDataHash": "21e46c44065af3c0d0efb76d9c52ec686e3bdd9eb585a35970496f5f80ec7d6d",
+					"blockHash": "eb685df119227d68a5bb03ae5993fd7ff8d1c10369274426a8f4de71e5a226f5"
+				}
+			}
+		},
+		"chainId": "c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f"
+	},
+
+
+
+
+
+	"config": {
+		"defaultServerHost": "localhost",
+		"defaultServerPort": 5555,
+		"faucetPrivateKey": "838ff8634c41ba62467cc874ca156830ba55efe3e41ceeeeae5f3e77238f4eef",
+		"faucetPublicKey": "8c4431db61e9095d5794ff53a3ae4171c766cadef015f2e11bec22b98a80f74a0",
+		"faucetAddress": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+		"nullAddress": "0000000000000000000000000000000000000000",
+		"nullPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+		"nullSignature": [
+			"0000000000000000000000000000000000000000000000000000000000000000",
+			"0000000000000000000000000000000000000000000000000000000000000000"
+		],
+		"startDifficulty": 5,
+		"minTransactionFee": 10,
+		"maxTransactionFee": 1000000,
+		"blockReward": 5000000,
+		"maxTransferValue": 10000000000000,
+		"safeConfirmCount": 3,
+		"genesisBlock": {
+			"index": 0,
+			"transactions": [
+				{
+					"from": "0000000000000000000000000000000000000000",
+					"to": "f3a1e69b6176052fcc4a3248f1c5a91dea308ca9",
+					"value": 1000000000000,
+					"fee": 0,
+					"dateCreated": "2018-01-01T00:00:00.000Z",
+					"data": "genesis tx",
+					"senderPubKey": "00000000000000000000000000000000000000000000000000000000000000000",
+					"transactionDataHash": "8a684cb8491ee419e7d46a0fd2438cad82d1278c340b5d01974e7beb6b72ecc2",
+					"senderSignature": [
+						"0000000000000000000000000000000000000000000000000000000000000000",
+						"0000000000000000000000000000000000000000000000000000000000000000"
+					],
+					"minedInBlockIndex": 0,
+					"transferSuccessful": true
+				}
+			],
+			"difficulty": 0,
+			"minedBy": "0000000000000000000000000000000000000000",
+			"blockDataHash": "15cc5052fb3c307dd2bfc6bcaa057632250ee05104e4fb7cc75e59db1a92cefc",
+			"nonce": 0,
+			"dateCreated": "2018-01-01T00:00:00.000Z",
+			"blockHash": "c6da93eb4249cb5ff4f9da36e2a7f8d0d61999221ed6910180948153e71cc47f"
+		}
+	},
+
+
+
+
+	
+	"confirmedBalances": {
+		"0000000000000000000000000000000000000000": -1000010000060,
+		"f3a1e69b6176052fcc4a3248f1c5a91dea308ca9": 999998799980,
+		"84ede81c58f5c490fc6e1a3035789eef897b5b35": 10000060,
+		"a1de0763f26176c6d68cc77e0a1c2c42045f2314": 99960,
+		"b3d72ad831b3e9cdbdaeda5ff4ae8e9cf182e548": 1100000,
+		"22e2864c613e4f778bb25ddb2b0022d1fbb11c8c": 0
+	}
+}

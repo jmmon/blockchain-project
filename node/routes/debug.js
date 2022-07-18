@@ -7,11 +7,99 @@ const router = express.Router();
 router.get("/", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	//debug info
+	// const debugInfo = {
+	// 	selfUrl: "url of this node",
+	// 	chain: blockchain.chain,
+	// 	pendingTransactions: blockchain.pendingTransactions,
+	// 	confirmedBalances: "get transactions with 1 confirmation??",
+	// };
+
+	const node = {
+		nodeId: '',
+		host: '',
+		port: '',
+		selfUrl: '',
+		peers: {},
+		chain: {
+			blocks: [
+				{ // genesis block
+					index: 0,
+					transactions: [
+						// ...transaction schema
+					],
+					difficulty: 0,
+					minedBy: '',
+					blockDataHash: '',
+					nonce: 0,
+					dateCreated: '',
+					blockHash: '',
+				}, 
+				{
+					//block 1
+				}
+			],
+			pendingTransactions: [
+				// ... transaction schema
+				// without minedInBlockIndex
+				// without transferSuccessful
+			],
+			currentDifficulty: 5,
+			miningJobs: {
+				'...blockDataHash...': {
+					index: 3,
+					transactions: [
+						{}, {}
+					],
+					difficulty: '',
+					prevBlockHash: '',
+					minedBy: '',
+					blockDataHash: '',
+					blockHash: '',
+				}
+			},
+		},
+		chainId: '(genesis block hash)'
+	};
+
+	const config = {
+		defaultServerHost: '',
+		defaultServerPort: '',
+		faucetPrivateKey: '',
+		faucetPublicKey: '',
+		faucetAddress: '',
+		nullAddress: '',
+		nullPubKey: '',
+		nullSignature: ['', ''],
+		startDifficulty: 5,
+		minTransactionFee: 10,
+		maxTransactionFee: 1000000,
+		blockReward: 5000000,
+		maxTransferValue: 10000000000000,
+		safeConfirmCount: 3,
+		genesisBlock: {
+			index: 0,
+			transactions: [],
+			difficulty: 0,
+			minedBy: '',
+			blockDataHash: '',
+			nonce: 0,
+			dateCreated: '',
+			blockHash: ''
+		}
+	};
+
+	const confirmedBalances = {
+		'00000...0000': -10000000000,
+		'...addr 1...': 123456,
+		'...addr 2...': 23456,
+		'...addr 3...': 3456,
+		'...addr 4...': 0,
+	};
+
 	const debugInfo = {
-		selfUrl: "url of this node",
-		chain: blockchain.chain,
-		pendingTransactions: blockchain.pendingTransactions,
-		confirmedBalances: "get transactions with 1 confirmation??",
+		node,
+		config,
+		confirmedBalances
 	};
 
 	res.status(200).send(JSON.stringify(debugInfo));
