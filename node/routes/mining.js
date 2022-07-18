@@ -19,10 +19,8 @@ router.get("/get-mining-job/:address", (req, res) => {
 // TODO:
 router.post("/submit-mined-block", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	const data = req.body;
+	const {blockDataHash, dateCreated, nonce, blockHash} = req.body;
 	/* 
-	// receive completed (hashed) mining job from miner:
-
 	data: {
 		blockDataHash: block.blockDataHash,
 		dateCreated: timestamp,
@@ -30,11 +28,10 @@ router.post("/submit-mined-block", (req, res) => {
 		blockHash: hash,
 	};
 	*/
-	//should verify it and use it and propagate to other nodes?
-
 
 	// step 1: find block candidate by its blockDataHash
 	// (node should have map of {blockDataHash1: block1 ...})
+	const foundJob = blockchain.miningJobs.get(blockDataHash);
 
 	// step 2: verify hash and difficulty (I guess we just use the provided info to double check the hash matches the block difficulty)
 

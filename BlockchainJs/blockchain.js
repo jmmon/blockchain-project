@@ -113,9 +113,7 @@ class Blockchain {
 		this.chain = [];
 		this.pendingTransactions = [];
 		this.nodes = new Set();
-		this.miningJobs = {
-			// holds block candidates for next block, for each mining request;
-		};
+		this.miningJobs = new Map(); // blockDataHash => blockCandidate
 
 		this.difficulty = this.config.startDifficulty;
 		this.lastDifficulty = this.config.startDifficulty;
@@ -132,6 +130,8 @@ class Blockchain {
 
 		return true;
 	}
+
+
 
 	newBlock(previousHash = null, nonce = 0) {
 		const block = new Block(
@@ -175,32 +175,9 @@ class Blockchain {
 		
 		// next should "mine" the genesis block (hash it)
 
-		const validProof = (hash, difficulty = genesisBlockData.difficulty || 0) => {
-			return hash.slice(0, difficulty) === "0".repeat(difficulty);
-		}
+		
 
-		const mineBlock = (block) => {
-			let timestamp = Date.now().toString();
-			let nonce = 0;
-			let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
-			let hash = SHA256(data);
-			
-			while (!validProof(hash, block.difficulty)) {
-				timestamp = Date.now().toString();
-				nonce += 1;
-				data = block.blockDataHash+"|"+timestamp+"|"+nonce;
-				hash = SHA256(data);
-			}
-
-			return {
-				blockDataHash: block.blockDataHash,
-				dateCreated: timestamp,
-				nonce: nonce,
-				blockHash: hash,
-			};
-		}
-
-		const minedBlockCandidate = mineBlock(genesisBlockCandidate);
+		const minedBlockCandidate = this.mineBlock(genesisBlockCandidate);
 		console.log('"mined" genesis block candidate:', minedBlockCandidate);
 
 		// then we can build our final block with all the info, and push it to the chain
@@ -433,6 +410,62 @@ class Blockchain {
 		return isValid;
 	}
 
+	validHash(hash, difficulty = genesisBlockData.difficulty || 0) {
+		return hash.slice(0, difficulty) === "0".repeat(difficulty);
+	}
+
+	mineBlock(block, startingNonce = 0) {
+		let timestamp = Date.now().toString();
+		let nonce = startingNonce;
+		let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
+		let hash = SHA256(data);
+		
+		while (!this.validHash(hash, block.difficulty)) {
+			timestamp = Date.now().toString();
+			nonce += 1;
+			data = block.blockDataHash+"|"+timestamp+"|"+nonce;
+			hash = SHA256(data);
+		}
+
+		return {
+			blockDataHash: block.blockDataHash,
+			dateCreated: timestamp,
+			nonce: nonce,
+			blockHash: hash,
+		};
+	}
+
+
+	validateBlockHash(timestamp, nonce, blockDataHash) {
+		const data = blockDataHash+"|"+timestamp+"|"+nonce;
+		const hash = SHA256(data);
+		return this.validHash(hash, this.difficulty);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	getTransactionConfirmationCount(transaction, lastBlockIndex = getLastBlock().index) {
         // allow passing in last block index, so we don't need to call getLastBlock on every iteration
         
@@ -475,7 +508,7 @@ class Blockchain {
 
 
 	
-	prepareBlockCandidate(minerAddress) {
+
 		// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
 		// STEP 2: add pendingTransactions to our transactions list
 		// STEP 3: build our data needed for blockDataHash;
@@ -491,14 +524,11 @@ class Blockchain {
 		// 	rewardAddress: minerAddress,
 		// 	blockDataHash
 		// };
-
-		//step 1
+	prepareBlockCandidate(minerAddress) {
 		const coinbaseTransaction = this.createCoinbaseTransaction({to:minerAddress});
 
-		//step 2
 		const transactionList = [coinbaseTransaction, ...this.pendingTransactions]
 
-		// step 3
 		const blockData = {
 			index: coinbaseTransaction.minedInBlockIndex,
 			transactions: transactionList,
@@ -507,10 +537,8 @@ class Blockchain {
 			minedBy: minerAddress,
 		};
 
-		// step 4
 		const blockDataHash = SHA256(JSON.stringify(blockData));
 
-		//step 5:
 		const blockCandidate = {
 			index: coinbaseTransaction.minedInBlockIndex,
 			transactionsIncluded: transactionList.length,
@@ -531,22 +559,29 @@ class Blockchain {
 
 
 	saveMiningJob(blockCandidate) {
-		//get old jobs biggest index
-		// check if new candidate is higher index
-		// if so, wipe this.miningJobs
-		
+		// check if new candidate index is higher than one of the saved ones; if so, wipe this.miningJobs
 		// finally, add our new mining job
 
-		const indexArrayFromOldMiningJobs = Object.values(this.miningJobs).map(blockCandidate => blockCandidate.index).sort((a, b) => b - a);
-		console.log({indexArrayFromOldMiningJobs});
+		const indexOfFirstSavedJob = this.miningJobs.get(this.miningJobs.keys().next().value).index;
+		console.log({indexOfFirstSavedJob});
 
-		const biggestIndex = indexArrayFromOldMiningJobs[0];
-
-		if (blockCandidate.index > biggestIndex) {
-			this.miningJobs = {};
+		if (blockCandidate.index > indexOfFirstSavedJob) {
+			this.miningJobs.clear();
 		}
 
-		this.miningJobs[blockCandidate.blockDataHash] = blockCandidate;
+		this.miningJobs.set(blockCandidate.blockDataHash, blockCandidate);
+
+
+		// const indexArrayFromOldMiningJobs = Object.values(this.miningJobs).map(blockCandidate => blockCandidate.index).sort((a, b) => b - a);
+		// console.log({indexArrayFromOldMiningJobs});
+
+		// const biggestIndex = indexArrayFromOldMiningJobs[0];
+
+		// if (blockCandidate.index > biggestIndex) {
+		// 	this.miningJobs = {};
+		// }
+
+		// this.miningJobs[blockCandidate.blockDataHash] = blockCandidate;
 	}
 
 
