@@ -54,25 +54,21 @@ const postBlockCandidate = async (blockCandidate) => {
 		headers: { "Content-Type": "application/json" },
 	});
 
-	const message = await postJob.json();
+	const response = await postJob.json();
 
-	// console.log(message);
-	return {
-		status: postJob.status,
-		...message
-	};
+	return response;
 }
 
 const miner = async () => {
 	while(true) {
 		//1. take a mining job:
 		//	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
-		const newBlock = await getNewJob();
-		console.log('New Job:', newBlock);
+		const newBlockJob = await getNewJob();
+		console.log('New Job:', newBlockJob);
 
 		//2. Mine the mining job!
 		//	Increment nonce until hash matches the block difficulty
-		const minedBlockCandidate = await mineBlock(newBlock);
+		const minedBlockCandidate = await mineBlock(newBlockJob);
 		console.log('hash candidate:', minedBlockCandidate.blockHash);
 
 		// //3. Submit the mined job

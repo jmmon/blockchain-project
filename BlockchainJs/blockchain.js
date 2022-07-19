@@ -458,7 +458,7 @@ class Blockchain {
 		if (this.difficulty * minDifficultyChange > newDifficulty) {
 			newDifficulty = this.difficulty * minDifficultyChange;
 		}
-		
+
 		newDifficulty = Math.round(newDifficulty); //can't have decimals
 		
 		if (newDifficulty !== this.difficulty) {
@@ -487,7 +487,7 @@ class Blockchain {
 	// 	rewardAddress: minerAddress,
 	// 	blockDataHash
 	// };
-	prepareBlockCandidate(minerAddress) {
+	prepareBlockCandidate(minerAddress, difficulty = this.difficulty) {
 		const coinbaseTransaction = this.createCoinbaseTransaction({
 			to: minerAddress,
 		});
@@ -498,7 +498,7 @@ class Blockchain {
 			JSON.stringify({
 				index: coinbaseTransaction.minedInBlockIndex,
 				transactions,
-				difficulty: this.difficulty,
+				difficulty,
 				prevBlockHash,
 				minedBy: minerAddress,
 			})
@@ -508,7 +508,7 @@ class Blockchain {
 			new Block(
 				coinbaseTransaction.minedInBlockIndex,
 				transactionList,
-				this.difficulty,
+				difficulty,
 				prevBlockHash,
 				minerAddress,
 				blockDataHash
@@ -518,7 +518,7 @@ class Blockchain {
 		const blockCandidateResponse = {
 			index: coinbaseTransaction.minedInBlockIndex,
 			transactionsIncluded: transactions.length,
-			difficulty: this.difficulty,
+			difficulty,
 			expectedReward: coinbaseTransaction.value,
 			rewardAddress: minerAddress,
 			blockDataHash,
@@ -565,6 +565,46 @@ class Blockchain {
 	}
 
 
+
+	// step 1: find block candidate by its blockDataHash
+	// step 2: verify hash and difficulty
+	// step 3: if valid, add the new info to the block
+	// step 4: check if block (index?) is not yet mined;
+	// if not, we add our new verified block and propagate it! (notify other nodes so they may request it?)
+	// if block is already mined, we were too slow so we return a sad error message!
+	submitMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
+		const foundBlock = this.miningJobs.get(blockDataHash);
+		const isValid = this.validateBlockHash(
+			dateCreated,
+			nonce,
+			blockDataHash,
+			foundBlock.difficulty,
+			blockHash
+		);
+
+		if (isValid) {
+			foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
+		}
+
+		const response = {};
+		if (foundBlock.index > (this.chain.length - 1)) {
+			this.chain.addValidBlock(foundBlock);
+			response = {
+				...response,
+				message: `Block accepted, reward paid: 500350 microcoins`,
+				status: 200,
+			};
+			
+		} else {
+			response = {
+				...response,
+				errorMsg: `Block not found or already mined`,
+				message: `...Too slow! Block not accepted. Better luck next time!`,
+				status: 404,
+			};
+		}
+		return response;
+	}
 }
 
 module.exports = Blockchain;

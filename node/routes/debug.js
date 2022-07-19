@@ -119,12 +119,21 @@ router.get("/reset-chain", (req, res) => {
 });
 
 
-router.get("/mine/:minerAddress/:difficulty", (req, res) => {
+// TODO:
+	//Step 1: prepare block
+	//Step 2: mine block
+	//Step 3: submit block
+router.get("/mine/:minerAddress/:difficulty", async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { minerAddress, difficulty } = req.params;
-	//mine a block for miner address at difficulty??
-	// or generate a mining job at address && difficulty??
-	res.status(200).send("this should mine the block at the difficulty");
+
+	const newBlockJob = blockchain.prepareBlockCandidate(minerAddress, difficulty);
+
+	const minedBlockData = await blockchain.mineBlock(newBlockJob);
+
+	const response = blockchain.submitMinedBlock(minedBlockData);
+
+	res.status(response.status).send(JSON.stringify(response));
 });
 
 
