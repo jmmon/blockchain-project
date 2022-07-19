@@ -36,7 +36,7 @@ router.get("/transactions/:tranHash", (req, res) => {
 
 
 
-// works
+// done
 router.post("/transactions/send", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const transactionData = req.body;
