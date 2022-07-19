@@ -410,6 +410,8 @@ class Blockchain {
 	}
 
 
+
+
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
 		const data = blockDataHash + "|" + timestamp + "|" + nonce;
 		const hash = SHA256(data);
@@ -424,16 +426,18 @@ class Blockchain {
 	}
 
 
-	getTransactionConfirmationCount(
+
+
+	getTransactionConfirmations(
 		transaction,
-		lastBlockIndex = getLastBlock().index
+		lastBlockIndex = this.getLastBlock().index
 	) {
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
-
 		if (!transactionBlockIndex) return 0;
-
-		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
+		return (lastBlockIndex - transactionBlockIndex + 1); // if indexes are the same we have 1 confirmation
 	}
+
+
 
 
 	// Loosely based on Dark Gravity Wave

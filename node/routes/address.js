@@ -73,11 +73,10 @@ router.get("/:address/transactions", (req, res) => {
 //		add to pendingBalance
 // (for pending transactions) if {from: ourAddress}: 
 //    subtract (fee + value) from pendingBalance
-
 router.get("/:address/balance", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {address} = req.params;
-	const result = {};
+	const chainTipIndex = blockchain.getLastBlock().index;
 	const balances = {
 		safeBalance: 0,
 		confirmedBalance: 0,
@@ -86,26 +85,64 @@ router.get("/:address/balance", (req, res) => {
 
 	const addressIsValid = (address) => {
 		if (address.length !== 40) return false;
-		//other validations...?
+		// TODO:
+		//   other address validations...?
 		return true;
 	}
 
 	if (!addressIsValid(address)) {
-		result.status = 404;
-		result.errorMsg = "Invalid address";
-		res.status(result.status).send(JSON.stringify(result));
+		res.status(404).send(JSON.stringify({errorMsg: "Invalid address"}));
 		return;
 	}
 
-	// check transactions in block (i.e. confirmed && safe):
-	for (const block of blockchain.chain) {
-		const foundTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful)
-
+	const totalTheIncomingConfirmedTransactions = (block) => {
+		// check transactions in block (i.e. confirmed && safe):
+		//	HANDLING TRANSACTIONS TO OUR ADDRESS:
+		// all transactions with >= 1 confirmation (i.e. in a mined block)
+		const confirmedIncomingSuccessfulTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful);
+		// all transactions with >= 6 confirmations
+		const safeTransactions = confirmedIncomingSuccessfulTransactions.filter(transaction => blockchain.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+		
+		// add values to our balances
+		confirmedIncomingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance += transaction.value);
+		safeTransactions.forEach(transaction => balances.safeBalance += transaction.value);
 	}
 
+	const totalTheOutgoingConfirmedTransactions = (block) => {
+		//	HANDLING TRANSACTIONS FROM OUR ADDRESS:
+		// all transactions with >= 1 confirmation (i.e. in a mined block)
+		const confirmedOutgoingSuccessfulTransactions = block.transactions.filter(transaction => transaction.from === address && transaction.transferSuccessful);
+		// all transactions with >= 6 confirmations
+		const safeTransactions = confirmedOutgoingSuccessfulTransactions.filter(transaction => blockchain.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+		
+		// subtract values && fees from our balances
+		confirmedOutgoingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance -= (transaction.fee + transaction.value));
+		safeTransactions.forEach(transaction => balances.safeBalance -= (transaction.fee + transaction.value));
+	}
 
+	const totalThePendingTransactions = () => {
+		const pendingIncomingTransactions = blockchain.pendingTransactions.filter(transaction => transaction.to === address);
+		pendingIncomingTransactions.forEach(transaction => balances.pendingBalance += transaction.value);
+		
+		const pendingOutgoingTransactions = blockchain.pendingTransactions.filter(transaction => transaction.from === address);
+		pendingOutgoingTransactions.forEach(transaction => balances.pendingBalance -= (transaction.fee + transaction.value));
 
-	res.status(result.status).send(JSON.stringify(result));
+		//finally, add the remaining balance of the address
+		balances.pendingBalance += balances.confirmedBalance;
+	}
+
+	// handles all transactions with confirmations
+	for (const block of blockchain.chain) {
+		totalTheIncomingConfirmedTransactions(block);
+		totalTheOutgoingConfirmedTransactions(block);
+	}
+
+	// handle the pending transactions
+	totalThePendingTransactions();
+
+	console.log(`balances for address ${address}:\n${JSON.stringify(balances)}`)
+
+	res.status(200).send(JSON.stringify(balances));
 });
 
 
