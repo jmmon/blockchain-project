@@ -221,9 +221,24 @@ class Blockchain {
 			// null // transferSuccessful
 		);
 
-		this.pendingTransactions.push(newTransaction);
+		// this.pendingTransactions.push (newTransaction);
 
-		return { transactionDataHash };
+		return newTransaction;
+	}
+
+	addPendingTransaction(transaction) {
+		this.pendingTransactions.push(transaction);
+	}
+
+	findTransactionByHash(transactionDataHash) {
+		for (const block of this.chain) {
+			for (const transaction of block.transactions) {
+				if (transaction?.transactionDataHash === transactionDataHash) {
+					return transaction;
+				}
+			}
+		}
+		return false;
 	}
 
 	createFaucetGenesisTransaction() {
@@ -634,6 +649,206 @@ class Blockchain {
 		if (address.length !== 40) return false;
 		// other validations ....
 		return true;
+	}
+
+
+
+
+
+	//return balance of address	
+	//	crawl blockchain and build balances of address
+
+	// each successful RECEIVED transaction will ADD value
+	// all SPENT transactions SUBTRACT the transaction fee
+	// each successful SPENT transaction will SUBTRACT value
+
+	// return {0, 0, 0} for non-active addresses (addresses with no transactions) ?? address must be valid but still does not appear??
+	// return {status: 404, errorMsg: "Invalid address"} for invalid addresses
+
+	//"safe" transactions == ones with >=6 confirmations
+	//confirmed transactions == ones included in blocks
+	//pending transactions == ALL transactions (i.e. confirmed transactions + pending transactions)
+
+
+
+	// transactions with {to: ourAddress} && successful will add value
+	// 	if transaction has >= 6 confirmations, add to safeBalance
+	// 	if transaction has >= 1 confirmations, add to confirmedBalance
+
+	//transactions with {from: ourAddress}:		
+	//	if transaction has >= 6 confirmations:
+	//     subtract fee from safeBalance
+	//     if successful, also subtract value from safeBalance
+	//	if transaction has >= 1 confirmations:
+	//     subtract fee from confirmedBalance
+	//     if successful, also subtract value from confirmedBalance
+
+	// pending transactions: take confirmedBalance and:
+	// (for pending transactions) if {to: ourAddress}:
+	//		add to pendingBalance
+	// (for pending transactions) if {from: ourAddress}: 
+	//    subtract (fee + value) from pendingBalance
+	oldGetBalancesOfAddress(address) {
+		const chainTipIndex = this.getLastBlock().index;
+		const balances = {
+			safeBalance: 0,
+			confirmedBalance: 0,
+			pendingBalance: 0,
+		};
+
+		const totalTheIncomingConfirmedTransactions = (block) => {
+			// check transactions in block (i.e. confirmed && safe):
+			//	HANDLING TRANSACTIONS TO OUR ADDRESS:
+			// all transactions with >= 1 confirmation (i.e. in a mined block)
+			const confirmedIncomingSuccessfulTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful);
+			// all transactions with >= 6 confirmations
+			const confirmedIncomingSafeTransactions = confirmedIncomingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+			
+			// add values to our balances
+			confirmedIncomingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance += transaction.value);
+			confirmedIncomingSafeTransactions.forEach(transaction => balances.safeBalance += transaction.value);
+		}
+	
+		const totalTheOutgoingConfirmedTransactions = (block) => {
+			//	HANDLING TRANSACTIONS FROM OUR ADDRESS:
+			// all transactions with >= 1 confirmation (i.e. in a mined block)
+			const confirmedOutgoingSuccessfulTransactions = block.transactions.filter(transaction => transaction.from === address && transaction.transferSuccessful);
+			// all transactions with >= 6 confirmations
+			const confirmedOutgoingSafeTransactions = confirmedOutgoingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+			
+			// subtract values && fees from our balances
+			confirmedOutgoingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance -= (transaction.fee + transaction.value));
+			confirmedOutgoingSafeTransactions.forEach(transaction => balances.safeBalance -= (transaction.fee + transaction.value));
+		}
+	
+		const totalThePendingTransactions = () => {
+			const pendingIncomingTransactions = this.pendingTransactions.filter(transaction => transaction.to === address);
+			pendingIncomingTransactions.forEach(transaction => balances.pendingBalance += transaction.value);
+			
+			const pendingOutgoingTransactions = this.pendingTransactions.filter(transaction => transaction.from === address);
+			pendingOutgoingTransactions.forEach(transaction => balances.pendingBalance -= (transaction.fee + transaction.value));
+	
+			//finally, add the remaining balance of the address
+			balances.pendingBalance += balances.confirmedBalance;
+		}
+	
+		// handles all transactions with confirmations
+		for (const block of this.chain) {
+			totalTheIncomingConfirmedTransactions(block);
+			totalTheOutgoingConfirmedTransactions(block);
+		}
+	
+		// handle the pending transactions
+		totalThePendingTransactions();
+	
+		console.log(`balances for address ${address}:\n${JSON.stringify(balances)}`);
+
+		return balances;
+	}
+
+
+	getBalancesOfAddress(address) {
+		const chainTipIndex = this.getLastBlock().index;
+		const balances = {
+			safeBalance: 0,
+			confirmedBalance: 0,
+			pendingBalance: 0,
+		};
+
+		const confirmedTransactions = this.getConfirmedTransactionsByAddress(address);
+
+		balances.confirmedBalance = confirmedTransactions
+			.reduce((acc, transaction) => {
+				if (transaction.to === address && transaction.transferSuccessful) {
+					return acc + transaction.value;
+				}
+				if (transaction.from === address) {
+					if (transaction.transferSuccessful) {
+						return acc - (transaction.value + transaction.fee);
+					} else {
+						return acc - transaction.fee;
+					}
+				}
+			});
+
+		balances.safeBalance = confirmedTransactions
+			.reduce((acc, transaction) => {
+				if (this.getTransactionConfirmations(transaction, chainTipIndex) >= 6) {
+					if (transaction.to === address && transaction.transferSuccessful) {
+						return acc + transaction.value;
+					}
+					if (transaction.from === address) {
+						if (transaction.transferSuccessful) {
+							return acc - (transaction.value + transaction.fee);
+						} else {
+							return acc - transaction.fee;
+						}
+					}
+				}
+				return acc;
+			});
+
+		const pendingTransactions = this.getPendingTransactionsByAddress(address);
+		balances.pendingBalance = balances.confirmedBalance + pendingTransactions
+			.reduce((acc, transaction) => {
+				if (transaction.to === address) {
+					return acc + transaction.value;
+				}
+				if (transaction.from === address) {
+					return acc - (transaction.value + transaction.fee);
+				}
+			});
+
+		console.log(`balances (v2) for address ${address}:\n${JSON.stringify(balances)}`);
+		
+
+		// for testing, double check against previous version (hopefully it's correct lol)
+		const transactionBalancesByAddressV1 = this.oldGetBalancesOfAddress(address);
+		console.log(`balances (v1) for address ${address}:\n${JSON.stringify(transactionBalancesByAddressV1)}`);
+
+
+		return balances;
+	}
+
+	
+
+
+
+
+	//return transactions array of address
+	//	crawl blockchain and build transaction list related to address
+
+	//returns ALL transactions associated with the given address
+	// (confirmed regardless of successful; && pending transactions)
+	// sort transactions by "date and time" (ascending)
+	// pending transactions will not have "minedInBlockIndex"
+	getTransactionsByAddress(address) {
+		const transactions = this.getConfirmedTransactionsByAddress(address);
+
+		transactions = [
+			...transactions, // keep previous ones
+			...this.getPendingTransactionsByAddress(address)
+		];
+
+		// sort by parsed date string
+		transactions.sort((a, b) => Date.parse(a.dateCreated) - Date.parse(b.dateCreated))
+
+		return transactions
+	}
+
+	getConfirmedTransactionsByAddress(address) {
+		const transactions = [];
+		for (const block of this.chain) {
+			transactions = [
+				...transactions, // keep previous ones
+				...block.transactions.filter(transaction => transaction.to === address || transaction.from === address) // add new ones
+			];
+		}
+		return transactions;
+	}
+
+	getPendingTransactionsByAddress(address) {
+		return this.pendingTransactions.filter(transaction => transaction.to === address || transaction.from === address)
 	}
 
 }
