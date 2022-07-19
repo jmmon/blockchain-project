@@ -5,7 +5,7 @@ const router = express.Router();
 //return pending transactions, (in mempool)
 router.get("/transactions/pending", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	return res.status(200).send(JSON.stringify(blockchain.pendingTransactions));
+	return res.status(200).send(JSON.stringify(blockchain.getPendingTransactions()));
 });
 
 
@@ -14,18 +14,7 @@ router.get("/transactions/pending", (req, res) => {
 //	crawl blocks and build list to return
 router.get("/transactions/confirmed", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	let transactionsJson = "[";
-	for (const block of blockchain.chain) {
-		for (const transaction of block.transactions) {
-			thisTransaction = JSON.stringify(transaction);
-			transactionsJson += thisTransaction + ",";
-		}
-	}
-	// slice off last comma
-	transactionsJson = transactionsJson.slice(0, transactionsJson.length - 1);
-	transactionsJson += "]";
-
-	return res.status(200).send(transactionsJson);
+	return res.status(200).send(blockchain.getConfirmedTransactionsJson());
 });
 
 

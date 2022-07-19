@@ -851,6 +851,24 @@ class Blockchain {
 		return this.pendingTransactions.filter(transaction => transaction.to === address || transaction.from === address)
 	}
 
+	getPendingTransactions() {
+		return this.pendingTransactions;
+	}
+
+	getConfirmedTransactionsJson() {
+		let transactionsJson = "[";
+		for (const block of this.chain) {
+			for (const transaction of block.transactions) {
+				thisTransaction = JSON.stringify(transaction);
+				transactionsJson += thisTransaction + ",";
+			}
+		}
+		// slice off last comma
+		transactionsJson = transactionsJson.slice(0, transactionsJson.length - 1);
+		transactionsJson += "]";
+		return transactionsJson;
+	}
+
 }
 
 module.exports = Blockchain;
