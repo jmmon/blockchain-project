@@ -8,20 +8,17 @@ const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const Blockchain = require("../BlockchainJs/blockchain.js");
 const blockchain = new Blockchain();
 app.set('blockchain', blockchain);
-app.set('nodeIdentifier', nodeIdentifier);
+const nodeInfo = {
+	nodeId: nodeIdentifier,
+	host: 'localhost',
+	port: port,
+	selfUrl: `http://${this.host}:${this.port}`
+};
+app.set('nodeInfo', nodeInfo);
 
-const nodeAddress = "the address for this node" // same as identifier??
 
 console.log({ nodeIdentifier });
 console.log(blockchain);
-
-// getMethods = (obj) =>
-// 	Object.getOwnPropertyNames(obj).filter(
-// 		(item) => typeof obj[item] === "function"
-// 	);
-
-// console.log(getMethods(blockchain));
-
 
 
 
@@ -34,30 +31,18 @@ the Peers, and
 the REST endpoints (to access node functionality)
 
 
-*/
-
-/* 
 REQUIRED ROUTES:
 
 GET {
 	"/", 				?? homepage for api?
 	"/info", 		started
 	"/debug",		started
-	"/debug/mine/:minerAddress/:difficulty",	started
 	"/balances", started
-	"/address/:address/transactions", started
-	"/address/:address/balance", started
-	"/peers", started
-	"/mining/get-mining-job/:address", started
 }
 
 POST {
-	"/transactions/send", started
-	"/peers/connect", started
 	"/peers/notify-new-block", started
-	"/mining/submit-mined-block", started
 }
-
 */
 
 
@@ -73,7 +58,7 @@ app.get("/info", (req, res) => {
 		about: "name of the node",
 		nodeId: nodeIdentifier,
 		chainId: "chain identifier based on genesis block",
-		nodeUrl: "url of this node",
+		nodeUrl: nodeInfo.selfUrl,
 		peers: blockchain.nodes.size,
 		currentDifficulty: blockchain.difficulty,
 		blocksCount: blockchain.chain.length,
@@ -111,44 +96,7 @@ app.get("/balances", (req, res) => {
 
 
 
-
-
-
-
 /* OLD ROUTES BELOW */
-
-
-// app.get("/mine", (req, res) => {
-// 	//add our mining reward transaction
-// 	blockchain.createTransaction({
-// 		from: "0".repeat(40),
-// 		to: nodeAddress,
-// 		value: blockchain.blockReward,
-// 		fee: 0,
-// 		dateCreated: Date.now().toISOString(),
-// 		data: "coinbase tx",
-// 		senderPubKey: "0".repeat(40),
-// 		senderSignature: [
-// 			"0".repeat(20),
-// 			"0".repeat(20)
-// 		],
-// 	});
-
-// 	//create the block and attempt to mine it
-// 	const block = blockchain.newBlock((nonce = 0));
-// 	blockchain.proofOfWork(block);
-
-// 	const response = {
-// 		message: "New block mined!",
-// 		index: block["index"],
-// 		transactions: block["transactions"],
-// 		nonce: block["nonce"],
-// 		previousHash: block["previousHash"],
-// 	};
-
-// 	res.status(200).send(JSON.stringify(response));
-// });
-
 
 app.get("/nodes/resolve", (req, res) => {
 	const replaced = blockchain.resolveConflict();
@@ -168,8 +116,6 @@ app.get("/nodes/resolve", (req, res) => {
 
 	res.status(200).send(JSON.stringify(response));
 });
-
-
 
 
 

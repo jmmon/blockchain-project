@@ -6,52 +6,16 @@ const router = express.Router();
 
 router.get("/", (req, res) => {
 	const blockchain = req.app.get('blockchain');
+	const nodeInfo = req.app.get('nodeInfo');
 
 	const node = {
-		nodeId: '',
-		host: '',
-		port: '',
-		selfUrl: '',
-		peers: {},
-		chain: {
-			blocks: [
-				{ // genesis block
-					index: 0,
-					transactions: [
-						// ...transaction schema
-					],
-					difficulty: 0,
-					minedBy: '',
-					blockDataHash: '',
-					nonce: 0,
-					dateCreated: '',
-					blockHash: '',
-				}, 
-				{
-					//block 1
-				}
-			],
-			pendingTransactions: [
-				// ... transaction schema
-				// without minedInBlockIndex
-				// without transferSuccessful
-			],
-			currentDifficulty: 5,
-			miningJobs: {
-				'...blockDataHash...': {
-					index: 3,
-					transactions: [
-						{}, {}
-					],
-					difficulty: '',
-					prevBlockHash: '',
-					minedBy: '',
-					blockDataHash: '',
-					blockHash: '',
-				}
-			},
-		},
-		chainId: '(genesis block hash)'
+		nodeId: nodeInfo.nodeId,
+		host: nodeInfo.host,
+		port: nodeInfo.port,
+		selfUrl: nodeInfo.selfUrl,
+		peers: blockchain.getPeersList(),
+		chain: blockchain.chain,
+		chainId: blockchain.config.genesisBlock.blockHash,
 	};
 
 	const confirmedBalances = {
@@ -92,13 +56,9 @@ router.get("/reset-chain", (req, res) => {
 router.get("/mine/:minerAddress/:difficulty", async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { minerAddress, difficulty } = req.params;
-
 	const newBlockJob = blockchain.prepareBlockCandidate(minerAddress, difficulty);
-
 	const minedBlockData = await blockchain.mineBlock(newBlockJob);
-
 	const response = blockchain.submitMinedBlock(minedBlockData);
-
 	res.status(response.status).send(JSON.stringify(response));
 });
 
