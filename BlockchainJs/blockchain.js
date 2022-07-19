@@ -487,17 +487,33 @@ class Blockchain {
 	// 	rewardAddress: minerAddress,
 	// 	blockDataHash
 	// };
-		//need to add transaction data: mark them as successful? Where? before block candidate is sent to miner? We would assume the miner's successful block would have successful transactions.
+	//need to add transaction data: mark them as successful? Where? before block candidate is sent to miner? We would assume the miner's successful block would have successful transactions.
 	prepareBlockCandidate(minerAddress, difficulty = this.difficulty) {
 		const coinbaseTransaction = this.createCoinbaseTransaction({
 			to: minerAddress,
 		});
-		const transactions = [coinbaseTransaction, ...this.pendingTransactions];
+		const index = coinbaseTransaction.minedInBlockIndex;
+
+		const prepareTransactions = (pendingTransactions, blockIndex) => {
+			return pendingTransactions.map(txData => ({
+				...txData, 
+				transferSuccessful: true,
+				minedInBlockIndex: blockIndex
+			}));
+		};
+
+		const pendingTransactions = prepareTransactions(this.pendingTransactions, index);
+
+		const transactions = [
+			coinbaseTransaction, // prepend
+			...pendingTransactions
+		];
+		
 		const prevBlockHash = this.hash(this.chain[this.chain.length - 1]);
 
 		const blockDataHash = SHA256(
 			JSON.stringify({
-				index: coinbaseTransaction.minedInBlockIndex,
+				index,
 				transactions,
 				difficulty,
 				prevBlockHash,
@@ -507,7 +523,7 @@ class Blockchain {
 
 		this.saveMiningJob(
 			new Block(
-				coinbaseTransaction.minedInBlockIndex,
+				index,
 				transactionList,
 				difficulty,
 				prevBlockHash,
@@ -517,7 +533,7 @@ class Blockchain {
 		);
 
 		const blockCandidateResponse = {
-			index: coinbaseTransaction.minedInBlockIndex,
+			index,
 			transactionsIncluded: transactions.length,
 			difficulty,
 			expectedReward: coinbaseTransaction.value,
