@@ -1,13 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-
-
 router.get("/get-mining-job/:address", (req, res) => {
-	const blockchain = req.app.get('blockchain');
+	const blockchain = req.app.get("blockchain");
 	// prepare block candidate and send to miner
 	// (miner then finds nonce and sends it back)
-	const {address: minerAddress} = req.params;
+	const { address: minerAddress } = req.params;
 
 	const blockCandidate = blockchain.prepareBlockCandidate(minerAddress);
 
@@ -16,12 +14,12 @@ router.get("/get-mining-job/:address", (req, res) => {
 
 
 
-// TODO:
+// Done, needs testing
 router.post("/submit-mined-block", (req, res) => {
-	const blockchain = req.app.get('blockchain');
-	const {blockDataHash, dateCreated, nonce, blockHash} = req.body;
+	const blockchain = req.app.get("blockchain");
+	const { blockDataHash, dateCreated, nonce, blockHash } = req.body;
 	/* 
-	data: {
+	miner sends us: {
 		blockDataHash: block.blockDataHash,
 		dateCreated: timestamp,
 		nonce: nonce,
@@ -30,34 +28,52 @@ router.post("/submit-mined-block", (req, res) => {
 	*/
 
 	// step 1: find block candidate by its blockDataHash
-	// (node should have map of {blockDataHash1: block1 ...})
-	const foundJob = blockchain.miningJobs.get(blockDataHash);
+	const foundBlock = blockchain.miningJobs.get(blockDataHash);
+	/**Block: (
+				coinbaseTransaction.minedInBlockIndex,
+				transactionList,
+				this.difficulty,
+				prevBlockHash,
+				minerAddress,
+				blockDataHash
+			) */
 
-	// step 2: verify hash and difficulty (I guess we just use the provided info to double check the hash matches the block difficulty)
+	// step 2: verify hash and difficulty
+	const isValid = blockchain.validateBlockHash(
+		dateCreated,
+		nonce,
+		blockDataHash,
+		foundBlock.difficulty,
+		blockHash
+	);
 
-	// step 3: build the next block by adding the new info if correct
+	// step 3: if valid, add the new info to the block
+	if (isValid) {
+		foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
+	}
 
 	// step 4: check if block (index?) is not yet mined;
 	// if not, we add our new verified block and propagate it! (notify other nodes so they may request it?)
-
-	//if block is already mined, we were too slow so we return a sad error message!
-
 	const response = {};
-	const valid = true;
-
-	if (valid) {
-		response.message = `Block accepted, reward paid: 500350 microcoins`;
-		response.status = 200;
+	const latestIndex = blockchain.chain.length - 1;
+	if (foundBlock.index > latestIndex) {
+		blockchain.chain.push(foundBlock); // add the block!
+		response = {
+			...response,
+			message: `Block accepted, reward paid: 500350 microcoins`,
+			status: 200,
+		};
 	} else {
-		response.message = `...Too slow! Block not accepted. Better luck next time!`;
-		response.errorMsg = `Block not found or already mined`;
-		response.status = 404;
+		//if block is already mined, we were too slow so we return a sad error message!
+		response = {
+			...response,
+			errorMsg: `Block not found or already mined`,
+			message: `...Too slow! Block not accepted. Better luck next time!`,
+			status: 404,
+		};
 	}
 
 	res.status(response.status).send(JSON.stringify(response));
 });
-
-
-
 
 module.exports = router;

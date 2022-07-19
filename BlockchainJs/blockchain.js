@@ -13,24 +13,20 @@ const sortByObjectKeys = (object) => {
 	return newObject;
 };
 
-
-
-
-
-
 /** CONSTANTS */
 const CONFIG = {
 	defaultServerHost: "localhost",
 	defaultServerPort: "5555",
-	faucetPrivateKey: 'theFaucetPrivateKey',
-	faucetPublicKey: 'theFaucetPublicKey',
-	faucetAddress: 'theFaucetAddress -- send funds to this in genesis block!',
+	faucetPrivateKey: "theFaucetPrivateKey",
+	faucetPublicKey: "theFaucetPublicKey",
+	faucetAddress: "theFaucetAddress -- send funds to this in genesis block!",
 	faucetGenerateValue: 1000000000000,
 	nullAddress: "0000000000000000000000000000000000000000",
-	nullPublicKey: "00000000000000000000000000000000000000000000000000000000000000000",
+	nullPublicKey:
+		"00000000000000000000000000000000000000000000000000000000000000000",
 	nullSignature: [
 		"0000000000000000000000000000000000000000000000000000000000000000",
-		"0000000000000000000000000000000000000000000000000000000000000000"
+		"0000000000000000000000000000000000000000000000000000000000000000",
 	],
 	startDifficulty: 5,
 	targetBlockTime: 15,
@@ -42,8 +38,6 @@ const CONFIG = {
 	genesisBlock: null, //added once we create it
 };
 
-
-
 class Block {
 	constructor(
 		index,
@@ -51,11 +45,11 @@ class Block {
 		difficulty,
 		prevBlockHash,
 		minedBy,
-		blockDataHash,
-		nonce,
-		dateCreated,
-		blockHash
-		// blockTime,
+		blockDataHash
+		
+		// nonce,
+		// dateCreated,
+		// blockHash
 	) {
 		this.index = index;
 		this.transactions = transactions;
@@ -63,16 +57,13 @@ class Block {
 		this.prevBlockHash = prevBlockHash;
 		this.minedBy = minedBy;
 		this.blockDataHash = blockDataHash;
-		this.nonce = nonce;
-		this.dateCreated = dateCreated;
-		this.blockHash = blockHash;
-		// this.blockTime = blockTime;
+		// three below are added separately once we have the data
+
+		// this.nonce = nonce;
+		// this.dateCreated = dateCreated;
+		// this.blockHash = blockHash;
 	}
 }
-
-
-
-
 
 class Transaction {
 	constructor(
@@ -84,8 +75,8 @@ class Transaction {
 		data,
 		senderPubKey,
 		transactionDataHash,
-		senderSignature,
-			// last two "appear" only after transaction is mined
+		senderSignature
+		// last two "appear" only after transaction is mined
 		// minedInBlockIndex,
 		// transferSuccessful
 	) {
@@ -103,10 +94,6 @@ class Transaction {
 	}
 }
 
-
-
-
-
 class Blockchain {
 	constructor() {
 		this.config = CONFIG;
@@ -117,7 +104,7 @@ class Blockchain {
 
 		this.difficulty = this.config.startDifficulty;
 		this.lastDifficulty = this.config.startDifficulty;
-		this.targetBlockTime = this.config.targetBlockTime // in seconds
+		this.targetBlockTime = this.config.targetBlockTime; // in seconds
 
 		this.createGenesisBlock(); // create genesis block
 	}
@@ -131,8 +118,6 @@ class Blockchain {
 		return true;
 	}
 
-
-
 	newBlock(previousHash = null, nonce = 0) {
 		const block = new Block(
 			this.chain.length,
@@ -140,11 +125,12 @@ class Blockchain {
 			"receivedJob_Difficulty",
 			previousHash || this.hash(this.chain[this.chain.length - 1]),
 			"receivedJob_MinerAddress",
-			"receivedJob_BlockDataHash",
-			nonce,
-			"receivedJob_DateCreated",
-			"receivedJob_hash"
+			"receivedJob_BlockDataHash"
 		);
+
+		block.nonce = nonce;
+		block.dateCreated = "receivedJob_DateCreated";
+		block.blockHash = "receivedJob_hash";
 
 		this.pendingTransactions = [];
 		this.chain.push(block);
@@ -159,7 +145,7 @@ class Blockchain {
 			transactions: [faucetFundingTransaction],
 			difficulty: 0,
 			prevBlockHash: "1",
-			minedBy: this.config.nullAddress
+			minedBy: this.config.nullAddress,
 		};
 		const blockDataHash = SHA256(JSON.stringify(genesisBlockData));
 
@@ -169,13 +155,10 @@ class Blockchain {
 			difficulty: genesisBlockData.difficulty,
 			expectedReward: 0, // no mining reward (coinbase tx) on genesis block
 			rewardAddress: null, // no coinbase tx, no reward address
-			blockDataHash
+			blockDataHash,
 		};
 
-		
 		// next should "mine" the genesis block (hash it)
-
-		
 
 		const minedBlockCandidate = this.mineBlock(genesisBlockCandidate);
 		console.log('"mined" genesis block candidate:', minedBlockCandidate);
@@ -188,12 +171,12 @@ class Blockchain {
 			0,
 			"1",
 			this.config.nullAddress,
-			blockDataHash,
-
-			minedBlockCandidate.nonce,
-			minedBlockCandidate.dateCreated,
-			minedBlockCandidate.blockHash 
+			blockDataHash
 		);
+
+		genesisBlock.nonce = minedBlockCandidate.nonce;
+		genesisBlock.dateCreated = minedBlockCandidate.dateCreated;
+		genesisBlock.blockHash = minedBlockCandidate.blockHash;
 
 		this.chain.push(genesisBlock);
 
@@ -201,9 +184,6 @@ class Blockchain {
 
 		//propagate block to peers?
 	}
-
-
-
 
 	createTransaction({
 		from,
@@ -238,7 +218,7 @@ class Blockchain {
 			data,
 			senderPubKey,
 			transactionDataHash,
-			senderSignature,
+			senderSignature
 			// last two "appear" only after transaction is mined
 			// null, // minedInBlockIndex
 			// null // transferSuccessful
@@ -248,7 +228,6 @@ class Blockchain {
 
 		return { transactionDataHash };
 	}
-
 
 	createFaucetGenesisTransaction() {
 		return this.createCoinbaseTransaction({
@@ -272,9 +251,8 @@ class Blockchain {
 		// transactionDataHash: get this inside our function
 		senderSignature = this.config.nullSignature,
 		minedInBlockIndex = this.chain.length,
-		transferSuccessful = true
+		transferSuccessful = true,
 	}) {
-
 		const sortedTransactionData = sortByObjectKeys({
 			from,
 			to,
@@ -298,32 +276,26 @@ class Blockchain {
 			data,
 			senderPubKey,
 			transactionDataHash,
-			senderSignature,
+			senderSignature
 		);
 		newTransaction.minedInBlockIndex = minedInBlockIndex;
 		newTransaction.transferSuccessful = transferSuccessful;
-		
+
 		return newTransaction;
 	}
 
-
-
-	registerNode({nodeIdentifier, peerUrl}) {
+	registerNode({ nodeIdentifier, peerUrl }) {
 		// const parsedUrl = new URL(peerUrl);
-        // console.log('url input:', peerUrl, "\nparsed url:", parsedUrl);
+		// console.log('url input:', peerUrl, "\nparsed url:", parsedUrl);
 		const peerObject = {
-				[nodeIdentifier]: peerUrl
+			[nodeIdentifier]: peerUrl,
 		};
 		this.nodes.add(peerObject); //hostname and port
-
 
 		const nodesList = [];
 		this.nodes.forEach((node) => nodesList.push(node));
 		console.log("node added\n" + JSON.stringify(nodesList));
 	}
-
-
-
 
 	validChain(chain) {
 		let lastBlock = chain[0];
@@ -410,20 +382,20 @@ class Blockchain {
 		return isValid;
 	}
 
-	validHash(hash, difficulty = genesisBlockData.difficulty || 0) {
+	validHash(hash, difficulty = this.config.startDifficulty || 0) {
 		return hash.slice(0, difficulty) === "0".repeat(difficulty);
 	}
 
 	mineBlock(block, startingNonce = 0) {
 		let timestamp = Date.now().toString();
 		let nonce = startingNonce;
-		let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
+		let data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 		let hash = SHA256(data);
-		
+
 		while (!this.validHash(hash, block.difficulty)) {
 			timestamp = Date.now().toString();
 			nonce += 1;
-			data = block.blockDataHash+"|"+timestamp+"|"+nonce;
+			data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 			hash = SHA256(data);
 		}
 
@@ -435,55 +407,36 @@ class Blockchain {
 		};
 	}
 
-
-	validateBlockHash(timestamp, nonce, blockDataHash) {
-		const data = blockDataHash+"|"+timestamp+"|"+nonce;
+	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
+		const data = blockDataHash + "|" + timestamp + "|" + nonce;
 		const hash = SHA256(data);
-		return this.validHash(hash, this.difficulty);
+
+		const isValidBlockHash = {
+			hash: hash === blockHash,
+			difficulty: this.validHash(hash, difficulty),
+		};
+		console.log("Validating mined block hash:", { isValidBlockHash });
+
+		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	getTransactionConfirmationCount(transaction, lastBlockIndex = getLastBlock().index) {
-        // allow passing in last block index, so we don't need to call getLastBlock on every iteration
-        
+	getTransactionConfirmationCount(
+		transaction,
+		lastBlockIndex = getLastBlock().index
+	) {
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
 
-        //transaction is not confirmed (not mined)
 		if (!transactionBlockIndex) return 0;
-		
-		// if block 10 is mined, and transaction happened in block 10, difference is 0 but confirmation is (+1);
-		return lastBlockIndex - transactionBlockIndex + 1;
+
+		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
 
-    // Loosely based on Dark Gravity Wave
-    //      uses an EMA over the last 240 blocks (1 hour == 15s * 240), and restricts each difficulty change occurrence to 3x or 0.33x
-    // difficulty should be adjusted when?
-    // AFTER a new block is added to the chain (most likely)
+	// Loosely based on Dark Gravity Wave
+	//      uses an EMA over the last 240 blocks (1 hour == 15s * 240), and restricts each difficulty change occurrence to 3x or 0.33x
+	// difficulty should be adjusted when?
+	// AFTER a new block is added to the chain (most likely)
 	adjustDifficulty() {
-        //adjust our ema weighted by this many blocks
+		//adjust our ema weighted by this many blocks
 		const maxBlocksToCheck = 4 * 60; // supposed to be == 1 hour
 		const k = 2 / (maxBlocksToCheck + 1);
 		// difficultyEMA = blockTime(today) * k + difficultyEMA(lastBlock) * (1 - k)
@@ -506,64 +459,69 @@ class Blockchain {
 		this.difficulty = newDifficulty;
 	}
 
+	// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
+	// STEP 2: add pendingTransactions to our transactions list
+	// STEP 3: build our data needed for blockDataHash;
+	// sha256(JSON(block fields in order[index, transactions, difficulty, prevBlockHash, minedBy]))
+	// STEP 4: hash the data;
+	// STEP 5: prepare final response to send back to the miner
 
-	
-
-		// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
-		// STEP 2: add pendingTransactions to our transactions list
-		// STEP 3: build our data needed for blockDataHash;
-		// sha256(JSON(block fields in order[index, transactions, difficulty, prevBlockHash, minedBy]))
-		// STEP 4: hash the data;
-		// STEP 5: prepare final response to send back to the miner
-
-		// const blockCandidate = {
-		// 	index: index of next block
-		// 	transactionsIncluded: # of transactions in next block
-		// 	difficulty: difficulty of next block
-		// 	expectedReward: blockReward,
-		// 	rewardAddress: minerAddress,
-		// 	blockDataHash
-		// };
+	// const blockCandidate = {
+	// 	index: index of next block
+	// 	transactionsIncluded: # of transactions in next block
+	// 	difficulty: difficulty of next block
+	// 	expectedReward: blockReward,
+	// 	rewardAddress: minerAddress,
+	// 	blockDataHash
+	// };
 	prepareBlockCandidate(minerAddress) {
-		const coinbaseTransaction = this.createCoinbaseTransaction({to:minerAddress});
+		const coinbaseTransaction = this.createCoinbaseTransaction({
+			to: minerAddress,
+		});
+		const transactions = [coinbaseTransaction, ...this.pendingTransactions];
+		const prevBlockHash = this.hash(this.chain[this.chain.length - 1]);
 
-		const transactionList = [coinbaseTransaction, ...this.pendingTransactions]
+		const blockDataHash = SHA256(
+			JSON.stringify({
+				index: coinbaseTransaction.minedInBlockIndex,
+				transactions,
+				difficulty: this.difficulty,
+				prevBlockHash,
+				minedBy: minerAddress,
+			})
+		);
 
-		const blockData = {
+		this.saveMiningJob(
+			new Block(
+				coinbaseTransaction.minedInBlockIndex,
+				transactionList,
+				this.difficulty,
+				prevBlockHash,
+				minerAddress,
+				blockDataHash
+			)
+		);
+
+		const blockCandidateResponse = {
 			index: coinbaseTransaction.minedInBlockIndex,
-			transactions: transactionList,
-			difficulty: this.difficulty,
-			prevBlockHash: this.hash(this.chain[this.chain.length - 1]),
-			minedBy: minerAddress,
-		};
-
-		const blockDataHash = SHA256(JSON.stringify(blockData));
-
-		const blockCandidate = {
-			index: coinbaseTransaction.minedInBlockIndex,
-			transactionsIncluded: transactionList.length,
+			transactionsIncluded: transactions.length,
 			difficulty: this.difficulty,
 			expectedReward: coinbaseTransaction.value,
 			rewardAddress: minerAddress,
-			blockDataHash
+			blockDataHash,
 		};
 
-		this.saveMiningJob(blockCandidate);
-
-		console.log(`Mining job created! Block candidate prepared for mining.\nCurrent mining jobs:${JSON.stringify(this.miningJobs)}`);
-
-		return blockCandidate;
+		return blockCandidateResponse;
 	}
-
-
-
 
 	saveMiningJob(blockCandidate) {
 		// check if new candidate index is higher than one of the saved ones; if so, wipe this.miningJobs
 		// finally, add our new mining job
 
-		const indexOfFirstSavedJob = this.miningJobs.get(this.miningJobs.keys().next().value).index;
-		console.log({indexOfFirstSavedJob});
+		const indexOfFirstSavedJob = this.miningJobs.get(
+			this.miningJobs.keys().next().value
+		).index;
+		console.log("previous job index", indexOfFirstSavedJob);
 
 		if (blockCandidate.index > indexOfFirstSavedJob) {
 			this.miningJobs.clear();
@@ -571,20 +529,20 @@ class Blockchain {
 
 		this.miningJobs.set(blockCandidate.blockDataHash, blockCandidate);
 
+		console.log(
+			`Mining job saved! Block candidate prepared for mining.\nCurrent mining jobs:${JSON.stringify(
+				this.miningJobs
+			)}`
+		);
 
 		// const indexArrayFromOldMiningJobs = Object.values(this.miningJobs).map(blockCandidate => blockCandidate.index).sort((a, b) => b - a);
 		// console.log({indexArrayFromOldMiningJobs});
-
 		// const biggestIndex = indexArrayFromOldMiningJobs[0];
-
 		// if (blockCandidate.index > biggestIndex) {
 		// 	this.miningJobs = {};
 		// }
-
 		// this.miningJobs[blockCandidate.blockDataHash] = blockCandidate;
 	}
-
-
 }
 
 module.exports = Blockchain;
