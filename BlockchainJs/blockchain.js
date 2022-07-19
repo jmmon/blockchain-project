@@ -118,6 +118,10 @@ class Blockchain {
 		return true;
 	}
 
+	getPeersList() {
+		return Array.from(this.nodes);
+	}
+
 
 
 	//need to ONLY clear pending transactions which were included in the new block!
