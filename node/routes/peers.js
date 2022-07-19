@@ -4,10 +4,7 @@ const router = express.Router();
 router.get("/", (req, res) => {
 	//responds with object holding {nodeId1: nodeUrl1, ...}
 	const blockchain = req.app.get('blockchain');
-	const nodesList = [];
-	blockchain.nodes.forEach(node => nodesList.push(node));
-	// blockchain.nodes.forEach(({nodeIdentifier, peerUrl}) => nodesList.push({[nodeIdentifier]: peerUrl}));
-	res.status(200).send(JSON.stringify(nodesList));
+	res.status(200).send(JSON.stringify(Array.from(blockchain.nodes)));
 });
 
 
