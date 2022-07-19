@@ -41,7 +41,7 @@ router.get("/:address/transactions", (req, res) => {
 
 
 //return balance of address	
-//	crawl blockchain and build balance of address
+//	crawl blockchain and build balances of address
 
 // each successful RECEIVED transaction will ADD value
 // all SPENT transactions SUBTRACT the transaction fee
@@ -52,19 +52,60 @@ router.get("/:address/transactions", (req, res) => {
 
 //"safe" transactions == ones with >=6 confirmations
 //confirmed transactions == ones included in blocks
-//pending transactions == ALL transactions
+//pending transactions == ALL transactions (i.e. confirmed transactions + pending transactions)
+
+
+
+// transactions with {to: ourAddress} && successful will add value
+// 	if transaction has >= 6 confirmations, add to safeBalance
+// 	if transaction has >= 1 confirmations, add to confirmedBalance
+
+//transactions with {from: ourAddress}:		
+//	if transaction has >= 6 confirmations:
+//     subtract fee from safeBalance
+//     if successful, also subtract value from safeBalance
+//	if transaction has >= 1 confirmations:
+//     subtract fee from confirmedBalance
+//     if successful, also subtract value from confirmedBalance
+
+// pending transactions: take confirmedBalance and:
+// (for pending transactions) if {to: ourAddress}:
+//		add to pendingBalance
+// (for pending transactions) if {from: ourAddress}: 
+//    subtract (fee + value) from pendingBalance
+
 router.get("/:address/balance", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {address} = req.params;
-	const result = {
-		safeBalance: "balance of txs with >= 6 confirmations",
-		confirmedBalance: "txs with >=1 confirmations;",
-		pendingBalance: "all txs, including pending"
+	const result = {};
+	const balances = {
+		safeBalance: 0,
+		confirmedBalance: 0,
+		pendingBalance: 0,
 	};
 
+	const addressIsValid = (address) => {
+		if (address.length !== 40) return false;
+		//other validations...?
+		return true;
+	}
+
+	if (!addressIsValid(address)) {
+		result.status = 404;
+		result.errorMsg = "Invalid address";
+		res.status(result.status).send(JSON.stringify(result));
+		return;
+	}
+
+	// check transactions in block (i.e. confirmed && safe):
+	for (const block of blockchain.chain) {
+		const foundTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful)
+
+	}
 
 
-	res.status(200).send(JSON.stringify(result));
+
+	res.status(result.status).send(JSON.stringify(result));
 });
 
 

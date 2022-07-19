@@ -487,6 +487,7 @@ class Blockchain {
 	// 	rewardAddress: minerAddress,
 	// 	blockDataHash
 	// };
+		//need to add transaction data: mark them as successful? Where? before block candidate is sent to miner? We would assume the miner's successful block would have successful transactions.
 	prepareBlockCandidate(minerAddress, difficulty = this.difficulty) {
 		const coinbaseTransaction = this.createCoinbaseTransaction({
 			to: minerAddress,
