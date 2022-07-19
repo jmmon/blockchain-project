@@ -101,10 +101,13 @@ router.post("/transactions/send", (req, res) => {
 	}
 
 	// checks sender account balance >= value + fee
-	// TODO
-	// so get confirmed balance of the 'from' account
+	const balancesOfSender = blockchain.getBalancesOfAddress(transactionData.from);
+	if (balancesOfSender.confirmed < transactionData.value + transactionData.fee) {
+		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'from' address does not have enough funds!`}));
+	}
 
-	
+
+
 
 
 	//validate transaction public key ??

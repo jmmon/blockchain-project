@@ -702,7 +702,7 @@ class Blockchain {
 			// all transactions with >= 1 confirmation (i.e. in a mined block)
 			const confirmedIncomingSuccessfulTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful);
 			// all transactions with >= 6 confirmations
-			const confirmedIncomingSafeTransactions = confirmedIncomingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+			const confirmedIncomingSafeTransactions = confirmedIncomingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount)
 			
 			// add values to our balances
 			confirmedIncomingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance += transaction.value);
@@ -714,7 +714,7 @@ class Blockchain {
 			// all transactions with >= 1 confirmation (i.e. in a mined block)
 			const confirmedOutgoingSuccessfulTransactions = block.transactions.filter(transaction => transaction.from === address && transaction.transferSuccessful);
 			// all transactions with >= 6 confirmations
-			const confirmedOutgoingSafeTransactions = confirmedOutgoingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= 6)
+			const confirmedOutgoingSafeTransactions = confirmedOutgoingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount)
 			
 			// subtract values && fees from our balances
 			confirmedOutgoingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance -= (transaction.fee + transaction.value));
@@ -773,7 +773,7 @@ class Blockchain {
 
 		balances.safeBalance = confirmedTransactions
 			.reduce((acc, transaction) => {
-				if (this.getTransactionConfirmations(transaction, chainTipIndex) >= 6) {
+				if (this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount) {
 					if (transaction.to === address && transaction.transferSuccessful) {
 						return acc + transaction.value;
 					}
