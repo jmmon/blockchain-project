@@ -6,13 +6,6 @@ const router = express.Router();
 
 router.get("/", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	//debug info
-	// const debugInfo = {
-	// 	selfUrl: "url of this node",
-	// 	chain: blockchain.chain,
-	// 	pendingTransactions: blockchain.pendingTransactions,
-	// 	confirmedBalances: "get transactions with 1 confirmation??",
-	// };
 
 	const node = {
 		nodeId: '',
@@ -61,33 +54,6 @@ router.get("/", (req, res) => {
 		chainId: '(genesis block hash)'
 	};
 
-	const config = {
-		defaultServerHost: '',
-		defaultServerPort: '',
-		faucetPrivateKey: '',
-		faucetPublicKey: '',
-		faucetAddress: '',
-		nullAddress: '0000....',
-		nullPubKey: '0000...',
-		nullSignature: ['', ''],
-		startDifficulty: 5,
-		minTransactionFee: 10,
-		maxTransactionFee: 1000000,
-		blockReward: 5000000,
-		maxTransferValue: 10000000000000,
-		safeConfirmCount: 3,
-		genesisBlock: {
-			index: 0,
-			transactions: [],
-			difficulty: 0,
-			minedBy: '',
-			blockDataHash: '',
-			nonce: 0,
-			dateCreated: '',
-			blockHash: ''
-		}
-	};
-
 	const confirmedBalances = {
 		'00000...0000': -10000000000,
 		'...addr 1...': 123456,
@@ -98,7 +64,7 @@ router.get("/", (req, res) => {
 
 	const debugInfo = {
 		node,
-		config,
+		config: blockchain.config,
 		confirmedBalances
 	};
 
@@ -119,10 +85,10 @@ router.get("/reset-chain", (req, res) => {
 });
 
 
-// TODO:
-	//Step 1: prepare block
-	//Step 2: mine block
-	//Step 3: submit block
+
+//Step 1: prepare block
+//Step 2: mine block
+//Step 3: submit block
 router.get("/mine/:minerAddress/:difficulty", async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { minerAddress, difficulty } = req.params;

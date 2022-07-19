@@ -34,7 +34,7 @@ const CONFIG = {
 	maxTransactionFee: 1000000,
 	blockReward: 5000000,
 	maxTransferValue: 10000000000000,
-	safeConfirmCount: 3,
+	safeConfirmCount: 6,
 	genesisBlock: null, //added once we create it
 };
 
@@ -594,7 +594,7 @@ class Blockchain {
 				message: `Block accepted, reward paid: 500350 microcoins`,
 				status: 200,
 			};
-			
+
 		} else {
 			response = {
 				...response,

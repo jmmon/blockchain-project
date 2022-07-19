@@ -2,18 +2,18 @@ const express = require("express");
 const router = express.Router();
 
 // works:
+//return pending transactions, (in mempool)
 router.get("/transactions/pending", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	//return pending transactions, in mempool
 	res.status(200).send(JSON.stringify(blockchain.pendingTransactions));
 });
 
 
 // works:
+//display all transactions in blocks
+//	crawl blocks and build list to return
 router.get("/transactions/confirmed", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	//display all transactions in blocks
-	//	crawl blocks and build list to return
 	let transactionsJson = "[";
 	for (const block of blockchain.chain) {
 		for (const transaction of block.transactions) {
