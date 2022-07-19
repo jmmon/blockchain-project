@@ -46,7 +46,7 @@ class Block {
 		prevBlockHash,
 		minedBy,
 		blockDataHash
-		
+
 		// nonce,
 		// dateCreated,
 		// blockHash
@@ -118,24 +118,20 @@ class Blockchain {
 		return true;
 	}
 
-	newBlock(previousHash = null, nonce = 0) {
-		const block = new Block(
-			this.chain.length,
-			this.pendingTransactions,
-			"receivedJob_Difficulty",
-			previousHash || this.hash(this.chain[this.chain.length - 1]),
-			"receivedJob_MinerAddress",
-			"receivedJob_BlockDataHash"
-		);
 
-		block.nonce = nonce;
-		block.dateCreated = "receivedJob_DateCreated";
-		block.blockHash = "receivedJob_hash";
 
-		this.pendingTransactions = [];
+	//need to ONLY clear pending transactions which were included in the new block!
+	addValidBlock(block) {
+		const remainingTransactions = this.pendingTransactions.filter(tx => !block.transactions.includes(tx));
+		
+		console.log(`Adding valid block: pruning pending transactions...\n--------\nPending Transactions: ${JSON.stringify(this.pendingTransactions)}\n--------\nBlock includes transactions: ${JSON.stringify(block.transactions)}\n--------\nRemaining Pending Transactions: ${JSON.stringify(remainingTransactions)}`);
+
+		this.pendingTransactions = [...remainingTransactions];
 		this.chain.push(block);
-		return block;
 	}
+
+
+
 
 	createGenesisBlock() {
 		const faucetFundingTransaction = this.createFaucetGenesisTransaction();
@@ -357,22 +353,26 @@ class Blockchain {
 		return false;
 	}
 
+
 	// static methods (exist on the class itself, not on an instantiation of the class)
 	hash(block) {
 		const sortedBlock = sortByObjectKeys(block);
 		return SHA256(JSON.stringify(sortedBlock));
 	}
 
+
 	getLastBlock() {
 		return this.chain[this.chain.length - 1];
 	}
 
+
+	// increase block nonce until block hash is valid
 	proofOfWork(block) {
-		// increase block nonce until block hash is valid
 		while (!this.validProof(block)) {
 			block["nonce"] += 1;
 		}
 	}
+
 
 	validProof(block) {
 		//check if hash starts with 4 zeros; 4 being the difficulty
@@ -382,9 +382,11 @@ class Blockchain {
 		return isValid;
 	}
 
+
 	validHash(hash, difficulty = this.config.startDifficulty || 0) {
 		return hash.slice(0, difficulty) === "0".repeat(difficulty);
 	}
+
 
 	mineBlock(block, startingNonce = 0) {
 		let timestamp = Date.now().toString();
@@ -407,6 +409,7 @@ class Blockchain {
 		};
 	}
 
+
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
 		const data = blockDataHash + "|" + timestamp + "|" + nonce;
 		const hash = SHA256(data);
@@ -420,6 +423,7 @@ class Blockchain {
 		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
+
 	getTransactionConfirmationCount(
 		transaction,
 		lastBlockIndex = getLastBlock().index
@@ -430,6 +434,7 @@ class Blockchain {
 
 		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
+
 
 	// Loosely based on Dark Gravity Wave
 	//      uses an EMA over the last 240 blocks (1 hour == 15s * 240), and restricts each difficulty change occurrence to 3x or 0.33x
@@ -442,7 +447,7 @@ class Blockchain {
 		// difficultyEMA = blockTime(today) * k + difficultyEMA(lastBlock) * (1 - k)
 		const maxDifficultyChange = 3;
 		const minDifficultyChange = 0.33;
-		const lastBlockTime = getLastBlock().blockTime; // TODO
+		const lastBlockTime = this.getBlockTimeByIndex(this.getLastBlock().index); // TODO
 		let newDifficulty = lastBlockTime * k + this.lastDifficulty * (1 - k);
 
 		// check if it's within our change range, compared to current difficulty
@@ -453,11 +458,19 @@ class Blockchain {
 		if (this.difficulty * minDifficultyChange > newDifficulty) {
 			newDifficulty = this.difficulty * minDifficultyChange;
 		}
+		
+		newDifficulty = Math.round(newDifficulty); //can't have decimals
+		
+		if (newDifficulty !== this.difficulty) {
+			const difference = newDifficulty - this.difficulty;
+			console.log(`Adjusting difficulty:\nDifference: ${difference}\nNew Difficulty: ${newDifficulty}`);
+		}
 
 		// we are now within range, so save the last value (for next time) and set our new value
 		this.lastDifficulty = this.difficulty;
 		this.difficulty = newDifficulty;
 	}
+
 
 	// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
 	// STEP 2: add pendingTransactions to our transactions list
@@ -514,35 +527,44 @@ class Blockchain {
 		return blockCandidateResponse;
 	}
 
-	saveMiningJob(blockCandidate) {
-		// check if new candidate index is higher than one of the saved ones; if so, wipe this.miningJobs
-		// finally, add our new mining job
 
+
+	// check if new candidate index is higher than one of the saved ones; if so, wipe this.miningJobs
+	// finally, add our new mining job
+	saveMiningJob(block) {
 		const indexOfFirstSavedJob = this.miningJobs.get(
 			this.miningJobs.keys().next().value
 		).index;
 		console.log("previous job index", indexOfFirstSavedJob);
 
-		if (blockCandidate.index > indexOfFirstSavedJob) {
+		if (block.index > indexOfFirstSavedJob) {
 			this.miningJobs.clear();
 		}
 
-		this.miningJobs.set(blockCandidate.blockDataHash, blockCandidate);
+		this.miningJobs.set(block.blockDataHash, block);
 
 		console.log(
 			`Mining job saved! Block candidate prepared for mining.\nCurrent mining jobs:${JSON.stringify(
 				this.miningJobs
 			)}`
 		);
-
-		// const indexArrayFromOldMiningJobs = Object.values(this.miningJobs).map(blockCandidate => blockCandidate.index).sort((a, b) => b - a);
-		// console.log({indexArrayFromOldMiningJobs});
-		// const biggestIndex = indexArrayFromOldMiningJobs[0];
-		// if (blockCandidate.index > biggestIndex) {
-		// 	this.miningJobs = {};
-		// }
-		// this.miningJobs[blockCandidate.blockDataHash] = blockCandidate;
 	}
+
+
+	getBlockTimeByIndex(index) {
+		if (index < 1) return 0;
+		const thisBlockDateMs = Date.parse(this.chain[index].dateCreated);
+		const prevBlockDateMs = Date.parse(this.chain[index - 1].dateCreated);
+		return (thisBlockDateMs - prevBlockDateMs) / 1000;
+	}
+
+
+	getBlockTime(block) {
+		const blockIndex = block.index;
+		return this.getBlockTimeByIndex(blockIndex);
+	}
+
+
 }
 
 module.exports = Blockchain;

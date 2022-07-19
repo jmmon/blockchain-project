@@ -57,7 +57,8 @@ router.post("/submit-mined-block", (req, res) => {
 	const response = {};
 	const latestIndex = blockchain.chain.length - 1;
 	if (foundBlock.index > latestIndex) {
-		blockchain.chain.push(foundBlock); // add the block!
+		blockchain.chain.addValidBlock(foundBlock);
+		
 		response = {
 			...response,
 			message: `Block accepted, reward paid: 500350 microcoins`,

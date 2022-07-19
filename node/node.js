@@ -118,36 +118,36 @@ app.get("/balances", (req, res) => {
 /* OLD ROUTES BELOW */
 
 
-app.get("/mine", (req, res) => {
-	//add our mining reward transaction
-	blockchain.createTransaction({
-		from: "0".repeat(40),
-		to: nodeAddress,
-		value: blockchain.blockReward,
-		fee: 0,
-		dateCreated: Date.now().toString(),
-		data: "coinbase tx",
-		senderPubKey: "0".repeat(40),
-		senderSignature: [
-			"0".repeat(20),
-			"0".repeat(20)
-		],
-	});
+// app.get("/mine", (req, res) => {
+// 	//add our mining reward transaction
+// 	blockchain.createTransaction({
+// 		from: "0".repeat(40),
+// 		to: nodeAddress,
+// 		value: blockchain.blockReward,
+// 		fee: 0,
+// 		dateCreated: Date.now().toString(),
+// 		data: "coinbase tx",
+// 		senderPubKey: "0".repeat(40),
+// 		senderSignature: [
+// 			"0".repeat(20),
+// 			"0".repeat(20)
+// 		],
+// 	});
 
-	//create the block and attempt to mine it
-	const block = blockchain.newBlock((nonce = 0));
-	blockchain.proofOfWork(block);
+// 	//create the block and attempt to mine it
+// 	const block = blockchain.newBlock((nonce = 0));
+// 	blockchain.proofOfWork(block);
 
-	const response = {
-		message: "New block mined!",
-		index: block["index"],
-		transactions: block["transactions"],
-		nonce: block["nonce"],
-		previousHash: block["previousHash"],
-	};
+// 	const response = {
+// 		message: "New block mined!",
+// 		index: block["index"],
+// 		transactions: block["transactions"],
+// 		nonce: block["nonce"],
+// 		previousHash: block["previousHash"],
+// 	};
 
-	res.status(200).send(JSON.stringify(response));
-});
+// 	res.status(200).send(JSON.stringify(response));
+// });
 
 
 app.get("/nodes/resolve", (req, res) => {
