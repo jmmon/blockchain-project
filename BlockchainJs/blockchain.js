@@ -191,6 +191,7 @@ class Blockchain {
 		senderPubKey,
 		senderSignature,
 	}) {
+
 		const sortedTransactionData = sortByObjectKeys({
 			from,
 			to,
@@ -241,7 +242,7 @@ class Blockchain {
 		to,
 		value = this.config.blockReward + 350,
 		fee = 0,
-		dateCreated = Date.now().toString(),
+		dateCreated = Date.now().toISOString(),
 		data = "coinbase tx",
 		senderPubKey = this.config.nullPublicKey,
 		// transactionDataHash: get this inside our function
@@ -389,13 +390,13 @@ class Blockchain {
 
 
 	mineBlock(block, startingNonce = 0) {
-		let timestamp = Date.now().toString();
+		let timestamp = Date.now().toISOString();
 		let nonce = startingNonce;
 		let data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 		let hash = SHA256(data);
 
 		while (!this.validHash(hash, block.difficulty)) {
-			timestamp = Date.now().toString();
+			timestamp = Date.now().toISOString();
 			nonce += 1;
 			data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 			hash = SHA256(data);
@@ -626,6 +627,15 @@ class Blockchain {
 		}
 		return response;
 	}
+
+
+
+	addressIsValid(address) {
+		if (address.length !== 40) return false;
+		// other validations ....
+		return true;
+	}
+
 }
 
 module.exports = Blockchain;

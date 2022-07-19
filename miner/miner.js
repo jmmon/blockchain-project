@@ -25,14 +25,14 @@ const validProof = (hash, difficulty) => {
 }
 
 const mineBlock = (block) => {
-	let timestamp = Date.now().toString();
+	let timestamp = Date.now().toISOString();
 	let nonce = 0;
 	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 	let hash = SHA256(data);
 	// console.log('data', data, '\n--->', hash);
 	
 	while (!validProof(hash, block.difficulty)) {
-		timestamp = Date.now().toString();
+		timestamp = Date.now().toISOString();
 		nonce += 1;
 		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 		// console.log('data', data, '\n--->', hash);

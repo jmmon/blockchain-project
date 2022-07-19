@@ -125,7 +125,7 @@ app.get("/balances", (req, res) => {
 // 		to: nodeAddress,
 // 		value: blockchain.blockReward,
 // 		fee: 0,
-// 		dateCreated: Date.now().toString(),
+// 		dateCreated: Date.now().toISOString(),
 // 		data: "coinbase tx",
 // 		senderPubKey: "0".repeat(40),
 // 		senderSignature: [

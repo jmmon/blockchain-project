@@ -83,14 +83,8 @@ router.get("/:address/balance", (req, res) => {
 		pendingBalance: 0,
 	};
 
-	const addressIsValid = (address) => {
-		if (address.length !== 40) return false;
-		// TODO:
-		//   other address validations...?
-		return true;
-	}
 
-	if (!addressIsValid(address)) {
+	if (!blockchain.addressIsValid(address)) {
 		res.status(404).send(JSON.stringify({errorMsg: "Invalid address"}));
 		return;
 	}
