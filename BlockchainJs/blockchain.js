@@ -113,7 +113,7 @@ class Blockchain {
 		this.lastDifficulty = this.config.startDifficulty;
 		this.targetBlockTime = this.config.targetBlockTime; // in seconds
 
-		this.cumulativeDifficulty = 0;
+		this.cumulativeDifficulty = 0; // initial value
 
 		this.createGenesisBlock(); // create genesis block
 	}
@@ -131,21 +131,36 @@ class Blockchain {
 		return Array.from(this.nodes);
 	}
 
+	//calculate cumulative difficulty:
+	//notes: difficulty for difficulty(p) === 16 * difficulty(p-1)
+		//cumulativeDifficulty == how much effort spent to calculate it
+		//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
+		//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
-		this.cumulativeDifficulty += this.chain[this.chain.length - 1].difficulty;
+		const lastBlockDifficulty = this.chain[this.chain.length - 1].difficulty;
+		this.cumulativeDifficulty += (16 ^ lastBlockDifficulty);
+	}
+
+
+
+	clearIncludedPendingTransactions(block) {
+		const remainingTransactions = this.pendingTransactions.filter(tx => !block.transactions.includes(tx));
+		
+		console.log(`Pruning pending transactions...\n--------\nPending Transactions: ${JSON.stringify(this.pendingTransactions)}\n--------\nTransactions in Block: ${JSON.stringify(block.transactions)}\n--------\nRemaining Pending Transactions: ${JSON.stringify(remainingTransactions)}`);
+
+		this.pendingTransactions = [...remainingTransactions];
 	}
 
 
 
 	//need to ONLY clear pending transactions which were included in the new block!
 	addValidBlock(block) {
-		const remainingTransactions = this.pendingTransactions.filter(tx => !block.transactions.includes(tx));
-		
-		console.log(`Adding valid block: pruning pending transactions...\n--------\nPending Transactions: ${JSON.stringify(this.pendingTransactions)}\n--------\nBlock includes transactions: ${JSON.stringify(block.transactions)}\n--------\nRemaining Pending Transactions: ${JSON.stringify(remainingTransactions)}`);
+		this.clearIncludedPendingTransactions();
 
-		this.pendingTransactions = [...remainingTransactions];
 		this.chain.push(block);
-		cumulateDifficultyFromLastBlock();
+
+		this.cumulateDifficultyFromLastBlock();
+		this.clearMiningJobs();
 	}
 
 
@@ -197,7 +212,7 @@ class Blockchain {
 
 		this.config.genesisBlock = genesisBlock;
 
-		cumulateDifficultyFromLastBlock();
+		this.cumulateDifficultyFromLastBlock();
 
 		//propagate block to peers?
 	}
@@ -320,20 +335,87 @@ class Blockchain {
 
 	
 
-	registerNode({ nodeIdentifier, peerUrl }) {
-		// const parsedUrl = new URL(peerUrl);
-		// console.log('url input:', peerUrl, "\nparsed url:", parsedUrl);
-		const peerObject = {
-			[nodeIdentifier]: peerUrl,
-		};
-		this.nodes.add(peerObject); //hostname and port
+	async registerPeer({ nodeIdentifier, peerUrl }) {
+		// if nodeId is already connected, don't try to connect again
+		if (this.nodes.get(nodeIdentifier)) {
+			return {status: 409, errorMsg: `Already connected to peer ${peerUrl}`};
+		}
 
-		const nodesList = [];
-		this.nodes.forEach((node) => nodesList.push(node));
-		console.log("node added\n" + JSON.stringify(nodesList));
+		console.log(`verifying peer's chainID...`);
+		const response = await fetch(`${peerUrl}/info`);
+		const peerInfo = await response.json();
+		if (response.statusCode === 200) {
+			const isSameChain = this.config.genesisBlock.chainId === peerInfo["chainId"];
+
+			if (!isSameChain) {
+				return {
+					status: 400, 
+					errorMsg: `Chain ID does not match!`, 
+					thisChainId: ourChainId, 
+					peerChainId
+				};
+			}
+			console.log(`--verified!`);
+		} else {
+			return {status: 404, message: `Network error! Could not get peer's chainId!`};
+		}
+		
+		console.log(`adding node to our list...`);
+		this.nodes.add({
+			[nodeIdentifier]: peerUrl,
+		});
+		console.log(`--added!`);
+
+		//synchronize chain and pending transactions?
+		syncPeerChain(peerInfo, peerUrl);
+
+
+		// send request to other node to connect to our node
+		console.log(`asking other node to friend us back...`)
+		const otherNodeResponse = await requestPeer({ nodeIdentifier, peerUrl });
+		if (otherNodeResponse.status === 200) {
+			console.log(`--Other peer has connected to us!`);
+		}
+		if (otherNodeResponse.status === 409) {
+			console.log(`--Other peer was ALREADY connected!`);
+		}
+		console.log(`--${{otherNodeResponse}}`);
+
+		return {status: 200, message: `Connected to peer ${peerUrl}`}
 	}
 
+
+
+	async requestPeer({ nodeIdentifier, peerUrl }) {
+		return await (await fetch(`${peerUrl}/peers/connect`, {
+			method: "POST",
+			body: JSON.stringify({nodeIdentifier, peerUrl}),
+			headers: {'Content-Type': 'application/json'},
+		})).json();
+	}
+
+
+
 	validateChain(chain) {
+		//validate genesis block, should be exactly the same
+		//validate each block from first to last:
+				//validate that all block fields are present && with valid values
+				//validate transactions in the block:
+						//validate transaction fields and values; recalc transactionDataHash; validate signature;
+						//re-execute all transactions?; re-calculate values of minedInBlockIndex and transferSuccessful fields;
+				//recalculate blockDataHash && blockHash
+				//ensure blockHash matches difficulty
+				//validate prevBlockHash === hash of previous block
+		//recalculate cumulative difficulty of incoming chain
+				//if > this.cumulativeDifficulty:
+						//replace current chain with incoming chain
+						//clear all current mining jobs (they are invalid)
+
+		//calculate cumulative difficulty: ????
+		//(note: difficulty for difficulty(p) === 16 * difficulty(p-1))
+		//cumulativeDifficulty == how much effort spent to calculate it
+		//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
+				//where d0, d1, ... dn == difficulties of the individual blocks
 		let lastBlock = chain[0];
 		let currentIndex = 1;
 
@@ -361,37 +443,81 @@ class Blockchain {
 		return true;
 	}
 
-	resolveConflict() {
-		//Consensus Algo: replaces our chain with the longest one in the network.
-		//Returns true if chain was replaced; false if not (if we have the longest)
-
-		const neighbors = this.nodes;
-		let newChain = null;
-
-		// must be longer than our chain
-		let maxLength = this.chain.length;
-
-		for (node in neighbors) {
-			const response = fetch(`http://${node}/chain`);
-			if (response.statusCode === 200) {
-				let length = response.json()["length"];
-				let chain = response.json()["chain"];
-
-				if (length > maxLength && this.validateChain(chain)) {
-					maxLength = length; // update our length to new longest
-					newChain = chain; // save the incoming chain
-				}
-			}
+	syncPeerChain(peerInfo, peerUrl) {
+		console.log(`Attempting sync with new peer...`);
+		if (peerInfo.cumulativeDifficulty > this.cumulativeDifficulty) {
+			//download chain from /blocks
+			//validate chain (blocks, transactions, etc??)
+			//if valid, replace our chain and notify peers about the new chain??
 		}
 
-		// update our chain if needed
-		if (newChain) {
-			this.chain = newChain;
-			return true;
+
+		const ourChainLength = this.chain.length;
+
+		const response = await fetch(`${peerUrl}/blocks`);
+		if (response.statusCode === 200) {
+			const chain = await response.json();
+			const length = chain.length;
+
+			if (length > ourChainLength) {
+				if (this.validateChain(chain)) {
+					this.chain = chain;
+					return true;
+
+				} else {
+					console.log(`Error: Peer chain is not valid`);
+				}
+
+			} else {
+				// our chain is longer
+				console.log(`--Our chain is longer`);
+			}
+		} else {
+			console.log(`Error: cannot get peer chain`);
 		}
 
 		return false;
 	}
+
+	
+	synchronizePendingTransactions(peerUrl) {
+		//fetch /transactions/pending and append missing transactions
+		// be sure to check for duplicated hashes!
+
+	}
+
+	// synchronizeChain() {
+	// 	//Consensus Algo: replaces our chain with the longest one in the network.
+	// 	//Returns true if chain was replaced; false if not (if we have the longest)
+
+	// 	const neighbors = Array.from(this.nodes);
+	// 	let newChain = null;
+
+	// 	// must be longer than our chain
+	// 	let maxLength = this.chain.length;
+
+	// 	for (node in neighbors) {
+	// 		const response = fetch(`http://${node}/chain`);
+	// 		if (response.statusCode === 200) {
+	// 			let length = response.json()["length"];
+	// 			let chain = response.json()["chain"];
+
+	// 			if (length > maxLength && this.validateChain(chain)) {
+	// 				maxLength = length; // update our length to new longest
+	// 				newChain = chain; // save the incoming chain
+	// 			}
+	// 		}
+	// 	}
+
+	// 	// update our chain if needed
+	// 	if (newChain) {
+	// 		this.chain = newChain;
+	// 		return true;
+	// 	}
+
+	// 	return false;
+	// }
+
 
 
 	// static methods (exist on the class itself, not on an instantiation of the class)
@@ -589,19 +715,13 @@ class Blockchain {
 	}
 
 
+	clearMiningJobs() {
+		this.miningJobs.clear();
+	}
 
 	// check if new candidate index is higher than one of the saved ones; if so, wipe this.miningJobs
 	// finally, add our new mining job
 	saveMiningJob(block) {
-		const indexOfFirstSavedJob = this.miningJobs.get(
-			this.miningJobs.keys().next().value
-		).index;
-		console.log("previous job index", indexOfFirstSavedJob);
-
-		if (block.index > indexOfFirstSavedJob) {
-			this.miningJobs.clear();
-		}
-
 		this.miningJobs.set(block.blockDataHash, block);
 
 		console.log(
@@ -643,25 +763,25 @@ class Blockchain {
 			blockHash
 		);
 
-		if (isValid) {
-			foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
-		} else {
+		if (!isValid) {
 			return {status: 400, message: "Block hash is not valid!"};
 		}
+		
+		foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
 
-		if (foundBlock.index > (this.chain.length - 1)) {
-			this.chain.addValidBlock(foundBlock);
-			return {
-				message: `Block accepted, reward paid: 500350 microcoins`,
-				status: 200,
-			};
-		} else {
+		if (foundBlock.index < (this.chain.length )) {
 			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
 				status: 404,
 			};
 		}
+
+		this.chain.addValidBlock(foundBlock);
+		return {
+			message: `Block accepted, reward paid: 500350 microcoins`,
+			status: 200,
+		};
 	}
 
 

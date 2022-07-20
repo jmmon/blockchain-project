@@ -9,21 +9,32 @@ router.get("/", (req, res) => {
 
 
 // works
-router.post("/connect", (req, res) => {
+router.post("/connect", async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {nodeIdentifier, peerUrl} = req.body;
 	// takes peerUrl and adds it to our list of nodes
 	if (!peerUrl || peerUrl === null) {
-		res.status(400).send("Error: Missing Peer Node URL");
+		return res.status(404).send("Error: Missing Peer Node URL");
+	}
+	const response = await blockchain.registerPeer({nodeIdentifier, peerUrl}); // add it to the list
+
+	if (response.status === 404 || response.status === 400) {
+		return res.status(response.status).send(JSON.stringify(response));
 	}
 
-	blockchain.registerNode({nodeIdentifier, peerUrl}); // add it to the list
+	console.log(`TODO: synchronize chain with peer`);
+// TODO: synchronize:
+// 	if (response.status === 200) {
+// 		console.log('*Peer successfully connected*');
+// 		console.log(`--Attempting synchronization...`);
+// 	}
+// 	if (response.status === 409) {
+// 		console.log(`*Peer ALREADY connected!!*`);
+// 		console.log(`--Attempting synchronization...`);
+// 	}
 
-	const response = {
-		message: `Connected to peer ${peerUrl}`
-	};
 
-	res.status(201).send(JSON.stringify(response));
+	return res.status(response.status).send(JSON.stringify(response));
 });
 
 
