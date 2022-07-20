@@ -16,8 +16,7 @@ const getMiningJobUrl = `mining/get-mining-job/${myAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
 const getNewJob = async () => {
-	const newJob = await fetch(`${nodeUrl}${getMiningJobUrl}`);
-	return await newJob.json();
+	return await (await fetch(`${nodeUrl}${getMiningJobUrl}`)).json();
 }
 
 const validProof = (hash, difficulty) => {
@@ -29,13 +28,11 @@ const mineBlock = (block) => {
 	let nonce = 0;
 	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 	let hash = SHA256(data);
-	// console.log('data', data, '\n--->', hash);
 	
 	while (!validProof(hash, block.difficulty)) {
 		timestamp = Date.now().toISOString();
 		nonce += 1;
 		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
-		// console.log('data', data, '\n--->', hash);
 		hash = SHA256(data);
 	}
 
@@ -48,31 +45,29 @@ const mineBlock = (block) => {
 }
 
 const postBlockCandidate = async (blockCandidate) => {
-	const postJob = await fetch(`${nodeUrl}${postMiningJobUrl}`, {
+	return await (await fetch(`${nodeUrl}${postMiningJobUrl}`, {
 		method: "POST",
 		body: JSON.stringify(blockCandidate),
 		headers: { "Content-Type": "application/json" },
-	});
+	})).json();
+};
 
-	const response = await postJob.json();
 
-	return response;
-}
+// 1. take a mining job:
+// 	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
+// 2. Mine the mining job!
+// 	Increment nonce until hash matches the block difficulty
+// 3. Submit the mined job
+//	post block to nodeUrl/mining/submit-mined-block
 
 const miner = async () => {
 	while(true) {
-		//1. take a mining job:
-		//	get nodeUrl/mining/get-mining-job/:address ??my miner's address?
 		const newBlockJob = await getNewJob();
 		console.log('New Job:', newBlockJob);
 
-		//2. Mine the mining job!
-		//	Increment nonce until hash matches the block difficulty
 		const minedBlockCandidate = await mineBlock(newBlockJob);
 		console.log('hash candidate:', minedBlockCandidate.blockHash);
 
-		// //3. Submit the mined job
-		// //	post block to nodeUrl/mining/submit-mined-block
 		const result = await postBlockCandidate(minedBlockCandidate);
 		console.log('accepted?', result);
 		console.log('\n---------\n');

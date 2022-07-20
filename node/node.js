@@ -54,12 +54,12 @@ app.get("/info", (req, res) => {
 	const data = {
 		about: "name of the node",
 		nodeId: nodeIdentifier,
-		chainId: "chain identifier based on genesis block",
+		chainId: blockchain.config.genesisBlock.blockHash,
 		nodeUrl: nodeInfo.selfUrl,
 		peers: blockchain.nodes.size,
 		currentDifficulty: blockchain.difficulty,
 		blocksCount: blockchain.chain.length,
-		cumulativeDifficulty: "running total of difficulty for mined blocks?",
+		cumulativeDifficulty: blockchain.cumulativeDifficulty,
 		confirmedTransactions: "number of transactions in blocks",
 		pendingTransactions: blockchain.pendingTransactions.length,
 	};
@@ -84,30 +84,30 @@ app.get("/balances", (req, res) => {
 
 /* OLD ROUTES BELOW */
 
-app.get("/nodes/resolve", (req, res) => {
-	const replaced = blockchain.resolveConflict();
+// app.get("/nodes/resolve", (req, res) => {
+// 	const replaced = blockchain.resolveConflict();
 
-	let response;
-	if (replaced) {
-		return res
-			.status(200)
-			.send(
-				JSON.stringify({
-					message: "Our chain was replaced",
-					newChain: blockchain.chain,
-				})
-			);
-	} else {
-		return res
-			.status(200)
-			.send(
-				JSON.stringify({
-					message: "Our chain is authoritative",
-					chain: blockchain.chain,
-				})
-			);
-	}
-});
+// 	let response;
+// 	if (replaced) {
+// 		return res
+// 			.status(200)
+// 			.send(
+// 				JSON.stringify({
+// 					message: "Our chain was replaced",
+// 					newChain: blockchain.chain,
+// 				})
+// 			);
+// 	} else {
+// 		return res
+// 			.status(200)
+// 			.send(
+// 				JSON.stringify({
+// 					message: "Our chain is authoritative",
+// 					chain: blockchain.chain,
+// 				})
+// 			);
+// 	}
+// });
 
 app.listen(port, () => {
 	console.log(`node listening on port ${port}`);
