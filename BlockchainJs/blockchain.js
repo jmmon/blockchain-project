@@ -179,26 +179,6 @@ class Blockchain {
 
 		// then we can build our final block with all the info, and push it to the chain
 
-		// const genesisBlock = new Block(
-		// 	0,
-		// 	[faucetFundingTransaction],
-		// 	0,
-		// 	"1",
-		// 	this.config.nullAddress,
-		// 	blockDataHash
-		// );
-
-		// genesisBlock.nonce = minedBlockCandidate.nonce;
-		// genesisBlock.dateCreated = minedBlockCandidate.dateCreated;
-		// genesisBlock.blockHash = minedBlockCandidate.blockHash;
-
-		// genesisBlock = {
-		// 	...genesisBlock, 
-		// 	nonce: minedBlockCandidate.nonce, 
-		// 	dateCreated: minedBlockCandidate.dateCreated, 
-		// 	blockHash: minedBlockCandidate.blockHash
-		// };
-		
 		const genesisBlock = {
 			...new Block(
 				0,
@@ -220,6 +200,60 @@ class Blockchain {
 		cumulateDifficultyFromLastBlock();
 
 		//propagate block to peers?
+	}
+
+
+	createFaucetGenesisTransaction() {
+		return this.createCoinbaseTransaction({
+			to: this.config.faucetAddress,
+			value: this.config.faucetGenerateValue,
+			data: "genesis tx",
+		});
+	}
+
+
+	createCoinbaseTransaction({
+		from = this.config.nullAddress,
+		to,
+		value = this.config.blockReward + 350,
+		fee = 0,
+		dateCreated = Date.now().toISOString(),
+		data = "coinbase tx",
+		senderPubKey = this.config.nullPublicKey,
+		// transactionDataHash: get this inside our function
+		senderSignature = this.config.nullSignature,
+		minedInBlockIndex = this.chain.length,
+		transferSuccessful = true,
+	}) {
+		const sortedTransactionData = sortObjectByKeys({
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
+		});
+
+		const transactionDataHash = SHA256(
+			JSON.stringify(sortedTransactionData)
+		);
+
+		const newTransaction = new Transaction(
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
+			transactionDataHash,
+			senderSignature
+		);
+		newTransaction.minedInBlockIndex = minedInBlockIndex;
+		newTransaction.transferSuccessful = transferSuccessful;
+
+		return newTransaction;
 	}
 
 
@@ -284,60 +318,7 @@ class Blockchain {
 		return false;
 	}
 
-	createFaucetGenesisTransaction() {
-		return this.createCoinbaseTransaction({
-			to: this.config.faucetAddress,
-			value: this.config.faucetGenerateValue,
-			data: "genesis tx",
-		});
-	}
-
-	// index 0 == genesis block
-	// next block index == chain.length
-
-	createCoinbaseTransaction({
-		from = this.config.nullAddress,
-		to,
-		value = this.config.blockReward + 350,
-		fee = 0,
-		dateCreated = Date.now().toISOString(),
-		data = "coinbase tx",
-		senderPubKey = this.config.nullPublicKey,
-		// transactionDataHash: get this inside our function
-		senderSignature = this.config.nullSignature,
-		minedInBlockIndex = this.chain.length,
-		transferSuccessful = true,
-	}) {
-		const sortedTransactionData = sortObjectByKeys({
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-		});
-
-		const transactionDataHash = SHA256(
-			JSON.stringify(sortedTransactionData)
-		);
-
-		const newTransaction = new Transaction(
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-			transactionDataHash,
-			senderSignature
-		);
-		newTransaction.minedInBlockIndex = minedInBlockIndex;
-		newTransaction.transferSuccessful = transferSuccessful;
-
-		return newTransaction;
-	}
+	
 
 	registerNode({ nodeIdentifier, peerUrl }) {
 		// const parsedUrl = new URL(peerUrl);
@@ -352,7 +333,7 @@ class Blockchain {
 		console.log("node added\n" + JSON.stringify(nodesList));
 	}
 
-	validChain(chain) {
+	validateChain(chain) {
 		let lastBlock = chain[0];
 		let currentIndex = 1;
 
@@ -396,7 +377,7 @@ class Blockchain {
 				let length = response.json()["length"];
 				let chain = response.json()["chain"];
 
-				if (length > maxLength && this.validChain(chain)) {
+				if (length > maxLength && this.validateChain(chain)) {
 					maxLength = length; // update our length to new longest
 					newChain = chain; // save the incoming chain
 				}
@@ -639,10 +620,10 @@ class Blockchain {
 	}
 
 
-	getBlockTime(block) {
-		const blockIndex = block.index;
-		return this.getBlockTimeByIndex(blockIndex);
-	}
+	// getBlockTime(block) {
+	// 	const blockIndex = block.index;
+	// 	return this.getBlockTimeByIndex(blockIndex);
+	// }
 
 
 
@@ -664,33 +645,30 @@ class Blockchain {
 
 		if (isValid) {
 			foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
+		} else {
+			return {status: 400, message: "Block hash is not valid!"};
 		}
 
-		const response = {};
 		if (foundBlock.index > (this.chain.length - 1)) {
 			this.chain.addValidBlock(foundBlock);
-			response = {
-				...response,
+			return {
 				message: `Block accepted, reward paid: 500350 microcoins`,
 				status: 200,
 			};
-
 		} else {
-			response = {
-				...response,
+			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
 				status: 404,
 			};
 		}
-		return response;
 	}
 
 
 
 	addressIsValid(address) {
 		if (address.length !== 40) return false;
-		// other validations ....
+		// other validations ....?
 		return true;
 	}
 
@@ -866,10 +844,8 @@ class Blockchain {
 	// sort transactions by "date and time" (ascending)
 	// pending transactions will not have "minedInBlockIndex"
 	getTransactionsByAddress(address) {
-		const transactions = this.getConfirmedTransactionsByAddress(address);
-
-		transactions = [
-			...transactions, // keep previous ones
+		const transactions = [
+			...this.getConfirmedTransactionsByAddress(address),
 			...this.getPendingTransactionsByAddress(address)
 		];
 
@@ -878,6 +854,7 @@ class Blockchain {
 
 		return transactions
 	}
+
 
 	getConfirmedTransactionsByAddress(address) {
 		const transactions = [];
@@ -898,18 +875,14 @@ class Blockchain {
 		return this.pendingTransactions;
 	}
 
-	getConfirmedTransactionsJson() {
-		let transactionsJson = "[";
+	getConfirmedTransactions() {
+		const transactions = [];
 		for (const block of this.chain) {
 			for (const transaction of block.transactions) {
-				thisTransaction = JSON.stringify(transaction);
-				transactionsJson += thisTransaction + ",";
+				transactions.push(transaction);
 			}
 		}
-		// slice off last comma
-		transactionsJson = transactionsJson.slice(0, transactionsJson.length - 1);
-		transactionsJson += "]";
-		return transactionsJson;
+		return transactions;
 	}
 
 

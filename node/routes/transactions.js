@@ -14,7 +14,7 @@ router.get("/transactions/pending", (req, res) => {
 //	crawl blocks and build list to return
 router.get("/transactions/confirmed", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	return res.status(200).send(blockchain.getConfirmedTransactionsJson());
+	return res.status(200).send(JSON.stringify(blockchain.getConfirmedTransactions()));
 });
 
 
