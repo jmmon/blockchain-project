@@ -6,12 +6,13 @@ const crypto = require("crypto");
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
 
-const sortByObjectKeys = (object) => {
+const sortObjectByKeys = (object) => {
 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
 	let newObject = {};
 	sortedKeys.forEach((key) => (newObject[key] = object[key]));
 	return newObject;
 };
+
 
 /** CONSTANTS */
 const CONFIG = {
@@ -37,6 +38,8 @@ const CONFIG = {
 	safeConfirmCount: 6,
 	genesisBlock: null, //added once we create it
 };
+
+
 
 class Block {
 	constructor(
@@ -64,6 +67,8 @@ class Block {
 		// this.blockHash = blockHash;
 	}
 }
+
+
 
 class Transaction {
 	constructor(
@@ -94,6 +99,8 @@ class Transaction {
 	}
 }
 
+
+
 class Blockchain {
 	constructor() {
 		this.config = CONFIG;
@@ -105,6 +112,8 @@ class Blockchain {
 		this.difficulty = this.config.startDifficulty;
 		this.lastDifficulty = this.config.startDifficulty;
 		this.targetBlockTime = this.config.targetBlockTime; // in seconds
+
+		this.cumulativeDifficulty = 0;
 
 		this.createGenesisBlock(); // create genesis block
 	}
@@ -122,6 +131,10 @@ class Blockchain {
 		return Array.from(this.nodes);
 	}
 
+	cumulateDifficultyFromLastBlock() {
+		this.cumulativeDifficulty += this.chain[this.chain.length - 1].difficulty;
+	}
+
 
 
 	//need to ONLY clear pending transactions which were included in the new block!
@@ -132,6 +145,7 @@ class Blockchain {
 
 		this.pendingTransactions = [...remainingTransactions];
 		this.chain.push(block);
+		cumulateDifficultyFromLastBlock();
 	}
 
 
@@ -165,25 +179,50 @@ class Blockchain {
 
 		// then we can build our final block with all the info, and push it to the chain
 
-		const genesisBlock = new Block(
-			0,
-			[faucetFundingTransaction],
-			0,
-			"1",
-			this.config.nullAddress,
-			blockDataHash
-		);
+		// const genesisBlock = new Block(
+		// 	0,
+		// 	[faucetFundingTransaction],
+		// 	0,
+		// 	"1",
+		// 	this.config.nullAddress,
+		// 	blockDataHash
+		// );
 
-		genesisBlock.nonce = minedBlockCandidate.nonce;
-		genesisBlock.dateCreated = minedBlockCandidate.dateCreated;
-		genesisBlock.blockHash = minedBlockCandidate.blockHash;
+		// genesisBlock.nonce = minedBlockCandidate.nonce;
+		// genesisBlock.dateCreated = minedBlockCandidate.dateCreated;
+		// genesisBlock.blockHash = minedBlockCandidate.blockHash;
+
+		// genesisBlock = {
+		// 	...genesisBlock, 
+		// 	nonce: minedBlockCandidate.nonce, 
+		// 	dateCreated: minedBlockCandidate.dateCreated, 
+		// 	blockHash: minedBlockCandidate.blockHash
+		// };
+		
+		const genesisBlock = {
+			...new Block(
+				0,
+				[faucetFundingTransaction],
+				0,
+				"1",
+				this.config.nullAddress,
+				blockDataHash
+			), 
+			nonce: minedBlockCandidate.nonce, 
+			dateCreated: minedBlockCandidate.dateCreated, 
+			blockHash: minedBlockCandidate.blockHash
+		};
 
 		this.chain.push(genesisBlock);
 
 		this.config.genesisBlock = genesisBlock;
 
+		cumulateDifficultyFromLastBlock();
+
 		//propagate block to peers?
 	}
+
+
 
 	createTransaction({
 		from,
@@ -196,7 +235,7 @@ class Blockchain {
 		senderSignature,
 	}) {
 
-		const sortedTransactionData = sortByObjectKeys({
+		const sortedTransactionData = sortObjectByKeys({
 			from,
 			to,
 			value,
@@ -269,7 +308,7 @@ class Blockchain {
 		minedInBlockIndex = this.chain.length,
 		transferSuccessful = true,
 	}) {
-		const sortedTransactionData = sortByObjectKeys({
+		const sortedTransactionData = sortObjectByKeys({
 			from,
 			to,
 			value,
@@ -376,7 +415,7 @@ class Blockchain {
 
 	// static methods (exist on the class itself, not on an instantiation of the class)
 	hash(block) {
-		const sortedBlock = sortByObjectKeys(block);
+		const sortedBlock = sortObjectByKeys(block);
 		return SHA256(JSON.stringify(sortedBlock));
 	}
 
@@ -873,6 +912,48 @@ class Blockchain {
 		return transactionsJson;
 	}
 
+
+
+
+
+	// list all accounts that have non-zero CONFIRMED balance (in blocks)
+	// (The all-0's address - genesis address - will have a NEGATIVE balance)
+	/**
+	{
+		00000...: -9999999,
+		address1: 12345,
+		address2: 1234,
+		address3: 123, 
+	}
+	*/
+	// for each block, go through each transaction
+	// 	save addresses and balances in an array of objects; no need to sort
+	// received coins: add value to {to: address} balance
+	// sent coins: subtract value+fee from {from: address} balance
+
+	getAllAccountBalances() {
+		const balances = {};
+		for (const block of this.chain) {
+			for (const transaction of block.transactions) {
+				const {from, to, value, fee} = transaction;
+				//handle {to: address}
+				if (to in balances) {
+					balances[to] += value;
+				} else {
+					balances[to] = value;
+				}
+
+				//handle {from: address}
+				if (from in balances) {
+					balances[from] -= (fee + value);
+				} else {
+					balances[from] = 0 - (fee + value);
+				}
+			}
+		}
+
+		return balances;
+	}
 }
 
 module.exports = Blockchain;

@@ -7,20 +7,17 @@ const port = 5000;
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const Blockchain = require("../BlockchainJs/blockchain.js");
 const blockchain = new Blockchain();
-app.set('blockchain', blockchain);
+app.set("blockchain", blockchain);
 const nodeInfo = {
 	nodeId: nodeIdentifier,
-	host: 'localhost',
+	host: "localhost",
 	port: port,
-	selfUrl: `http://${this.host}:${this.port}`
+	selfUrl: `http://${this.host}:${this.port}`,
 };
-app.set('nodeInfo', nodeInfo);
-
+app.set("nodeInfo", nodeInfo);
 
 console.log({ nodeIdentifier });
 console.log(blockchain);
-
-
 
 /* 
 NODE:
@@ -37,7 +34,6 @@ GET {
 	"/", 				?? homepage for api?
 	"/info", 		started
 	"/debug",		started
-	"/balances", started
 }
 
 POST {
@@ -45,13 +41,14 @@ POST {
 }
 */
 
-
 app.use("/debug", require("./routes/debug"));
 app.use("/peers", require("./routes/peers"));
 app.use("/blocks", require("./routes/blocks"));
 app.use("/transactions", require("./routes/transactions"));
 app.use("/address", require("./routes/address"));
 app.use("/mining", require("./routes/mining"));
+
+
 
 app.get("/info", (req, res) => {
 	const data = {
@@ -71,22 +68,11 @@ app.get("/info", (req, res) => {
 });
 
 
+// done
 app.get("/balances", (req, res) => {
-	// list all accounts that have non-zero CONFIRMED balance
-	// (The all-0's address - genesis address - will have a NEGATIVE balance)
-
-	/**
-	{
-		00000...: -9999999,
-		address1: 12345,
-		address2: 1234,
-		address3: 123, 
-	}
-	*/
-	res.status(200).send("supposed to get balances ??of all addresses on the network??");
+	const balances = blockchain.getAllAccountBalances();
+	return res.status(200).send(JSON.stringify(balances));
 });
-
-
 
 
 
@@ -103,25 +89,25 @@ app.get("/nodes/resolve", (req, res) => {
 
 	let response;
 	if (replaced) {
-		response = {
-			message: "Our chain was replaced",
-			newChain: blockchain.chain,
-		};
+		return res
+			.status(200)
+			.send(
+				JSON.stringify({
+					message: "Our chain was replaced",
+					newChain: blockchain.chain,
+				})
+			);
 	} else {
-		response = {
-			message: "Our chain is authoritative",
-			chain: blockchain.chain,
-		};
+		return res
+			.status(200)
+			.send(
+				JSON.stringify({
+					message: "Our chain is authoritative",
+					chain: blockchain.chain,
+				})
+			);
 	}
-
-	res.status(200).send(JSON.stringify(response));
 });
-
-
-
-
-
-
 
 app.listen(port, () => {
 	console.log(`node listening on port ${port}`);
