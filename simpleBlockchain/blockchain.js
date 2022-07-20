@@ -29,7 +29,7 @@ class Block {
 
 class Blockchain {
 	constructor() {
-		this.chain = [new Block(Date.now().toISOString())];
+		this.chain = [new Block(new Date().toISOString())];
 		this.difficulty = 1;
 	}
 

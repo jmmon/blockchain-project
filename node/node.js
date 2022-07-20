@@ -2,18 +2,21 @@ const express = require("express");
 const crypto = require("node:crypto");
 const app = express();
 app.use(express.json());
-const port = 5000;
-
+const CONFIG = require("../BlockchainJs/config");
+const Blockchain = require("../BlockchainJs/Blockchain.js");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
-const Blockchain = require("../BlockchainJs/blockchain.js");
-const blockchain = new Blockchain();
-app.set("blockchain", blockchain);
+const blockchain = new Blockchain(CONFIG);
+
+const port = undefined;
+
 const nodeInfo = {
 	nodeId: nodeIdentifier,
 	host: "localhost",
-	port: port,
+	port: port || CONFIG.defaultServerPort,
 	selfUrl: `http://${this.host}:${this.port}`,
 };
+
+app.set("blockchain", blockchain);
 app.set("nodeInfo", nodeInfo);
 
 console.log({ nodeIdentifier });
@@ -109,6 +112,6 @@ app.get("/balances", (req, res) => {
 // 	}
 // });
 
-app.listen(port, () => {
-	console.log(`node listening on port ${port}`);
+app.listen(nodeInfo.port, () => {
+	console.log(`node listening on port ${nodeInfo.port}`);
 });

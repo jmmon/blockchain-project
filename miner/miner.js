@@ -10,9 +10,11 @@ const crypto = require("crypto");
 const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
 
 const myAddress = "testAddress"; // address of my miner
+const paddedAddress = myAddress + "0".repeat(40-myAddress.length);
 
 const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
-const getMiningJobUrl = `mining/get-mining-job/${myAddress}`;
+// const nodeUrl = "http://localhost:5555/";
+const getMiningJobUrl = `mining/get-mining-job/${paddedAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
 const getNewJob = async () => {
@@ -24,13 +26,13 @@ const validProof = (hash, difficulty) => {
 }
 
 const mineBlock = (block) => {
-	let timestamp = Date.now().toISOString();
+	let timestamp = new Date().toISOString();
 	let nonce = 0;
 	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 	let hash = SHA256(data);
 	
 	while (!validProof(hash, block.difficulty)) {
-		timestamp = Date.now().toISOString();
+		timestamp = new Date().toISOString();
 		nonce += 1;
 		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 		hash = SHA256(data);

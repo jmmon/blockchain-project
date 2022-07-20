@@ -2,6 +2,8 @@
 // import crypto from "node:crypto"
 const fetch = import("node-fetch");
 const crypto = require("crypto");
+const Transaction = require("./Transaction");
+const Block = require('./Block');
 
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
@@ -14,96 +16,13 @@ const sortObjectByKeys = (object) => {
 };
 
 
-/** CONSTANTS */
-const CONFIG = {
-	defaultServerHost: "localhost",
-	defaultServerPort: "5555",
-	faucetPrivateKey: "theFaucetPrivateKey",
-	faucetPublicKey: "theFaucetPublicKey",
-	faucetAddress: "theFaucetAddress -- send funds to this in genesis block!",
-	faucetGenerateValue: 1000000000000,
-	nullAddress: "0000000000000000000000000000000000000000",
-	nullPublicKey:
-		"00000000000000000000000000000000000000000000000000000000000000000",
-	nullSignature: [
-		"0000000000000000000000000000000000000000000000000000000000000000",
-		"0000000000000000000000000000000000000000000000000000000000000000",
-	],
-	startDifficulty: 5,
-	targetBlockTime: 15,
-	minTransactionFee: 10,
-	maxTransactionFee: 1000000,
-	blockReward: 5000000,
-	maxTransferValue: 10000000000000,
-	safeConfirmCount: 6,
-	genesisBlock: null, //added once we create it
-};
 
-
-
-class Block {
-	constructor(
-		index,
-		transactions,
-		difficulty,
-		prevBlockHash,
-		minedBy,
-		blockDataHash
-
-		// nonce,
-		// dateCreated,
-		// blockHash
-	) {
-		this.index = index;
-		this.transactions = transactions;
-		this.difficulty = difficulty;
-		this.prevBlockHash = prevBlockHash;
-		this.minedBy = minedBy;
-		this.blockDataHash = blockDataHash;
-		// three below are added separately once we have the data
-
-		// this.nonce = nonce;
-		// this.dateCreated = dateCreated;
-		// this.blockHash = blockHash;
-	}
-}
-
-
-
-class Transaction {
-	constructor(
-		from,
-		to,
-		value,
-		fee,
-		dateCreated,
-		data,
-		senderPubKey,
-		transactionDataHash,
-		senderSignature
-		// last two "appear" only after transaction is mined
-		// minedInBlockIndex,
-		// transferSuccessful
-	) {
-		this.from = from;
-		this.to = to;
-		this.value = value;
-		this.fee = fee;
-		this.dateCreated = dateCreated;
-		this.data = data;
-		this.senderPubKey = senderPubKey;
-		this.transactionDataHash = transactionDataHash;
-		this.senderSignature = senderSignature;
-		// this.minedInBlockIndex = minedInBlockIndex;
-		// this.transferSuccessful = transferSuccessful;
-	}
-}
 
 
 
 class Blockchain {
-	constructor() {
-		this.config = CONFIG;
+	constructor(config) {
+		this.config = config;
 		this.chain = [];
 		this.pendingTransactions = [];
 		this.nodes = new Set();
@@ -138,7 +57,13 @@ class Blockchain {
 		//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
 		const lastBlockDifficulty = this.chain[this.chain.length - 1].difficulty;
-		this.cumulativeDifficulty += (16 ^ lastBlockDifficulty);
+		const addedDifficulty = this.cumulateDifficulty(lastBlockDifficulty);
+		console.log({lastBlockDifficulty, addedDifficulty})
+		this.cumulativeDifficulty += addedDifficulty;
+	}
+
+	cumulateDifficulty(difficulty) {
+		return 16 ** difficulty;
 	}
 
 
@@ -190,7 +115,7 @@ class Blockchain {
 		// next should "mine" the genesis block (hash it)
 
 		const minedBlockCandidate = this.mineBlock(genesisBlockCandidate);
-		console.log('"mined" genesis block candidate:', minedBlockCandidate);
+		// console.log('"mined" genesis block candidate:', minedBlockCandidate);
 
 		// then we can build our final block with all the info, and push it to the chain
 
@@ -232,7 +157,7 @@ class Blockchain {
 		to,
 		value = this.config.blockReward + 350,
 		fee = 0,
-		dateCreated = Date.now().toISOString(),
+		dateCreated = new Date().toISOString(),
 		data = "coinbase tx",
 		senderPubKey = this.config.nullPublicKey,
 		// transactionDataHash: get this inside our function
@@ -443,7 +368,7 @@ class Blockchain {
 		return true;
 	}
 
-	syncPeerChain(peerInfo, peerUrl) {
+	async syncPeerChain(peerInfo, peerUrl) {
 		console.log(`Attempting sync with new peer...`);
 		if (peerInfo.cumulativeDifficulty > this.cumulativeDifficulty) {
 			//download chain from /blocks
@@ -555,13 +480,13 @@ class Blockchain {
 
 
 	mineBlock(block, startingNonce = 0) {
-		let timestamp = Date.now().toISOString();
+		let timestamp = new Date().toISOString();
 		let nonce = startingNonce;
 		let data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 		let hash = SHA256(data);
 
 		while (!this.validHash(hash, block.difficulty)) {
-			timestamp = Date.now().toISOString();
+			timestamp = new Date().toISOString();
 			nonce += 1;
 			data = block.blockDataHash + "|" + timestamp + "|" + nonce;
 			hash = SHA256(data);
