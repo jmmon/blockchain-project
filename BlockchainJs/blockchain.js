@@ -521,56 +521,83 @@ class Blockchain {
 
 // Need to try again and reexamine exactly how DGW does it
 
-// targetSpacing = 2.5 * 60 //2.5 minutes between blocks
 
 /* 
-darkGravityWave(blockIndex-pindexLast, blockHeader pblock) returns int
+
+targetSpacing = 2.5 * 60 //2.5 minutes between blocks
+
+darkGravityWave(blockIndex-pindexLast, blockHeader pblock) returns int difficulty
 {
 	//variables setup
-	blockLastSolved = pindexLast
+	blockLastSolved = pindexLast //getLastBlock().index
 	blockReading = pindexLast
 	blockCreating = pblock	
 	actualTimespan = 0;
 	lastBlockTime = 0;
-	pastBlocksMin = 24;
-	pastBlocksMax = 24;
-	countBlock = 0;
+	pastBlocksMin = 24;	//min and max blocks to count
+	pastBlocksMax = 24; 
+	countBlocks = 0; // counter for our loop
 	pastDifficultyAverage
 	pastDifficultyAveragePrevious
 
-	// check for odd cases at start of chain
+	// STEP 0.5: special cases
+
+	// check for odd cases at start of chain; return our minimum difficulty
 	if (blockLastSolved == null 
 		|| blockLastSolved.nHeight == 0 //genesis block 
 		|| blockLastSolved.nHeight < pastBlocksMin) {
 		return bnProofOfWorkLimit.getCompact(); // ???
 	}
 
-	// loop over past (pastBlocksaMax) blocks
+	// STEP 1: loop over our blocks
+
+	// loop over past (pastBlocksMax) blocks
 	for (var i = 1; blockReading && blockReading.nheight > 0; i++) {
+
+		// break when looped enough
 		if (pastBlocksMax > 0 && i > pastBlocksMax) {break; }
 
-		countBlocks++;
+		countBlocks++; // current block count
+
+		// STEP 1.5: Calculate our average block difficulties
+
 		//calculate avg difficulty based on blocks we are iterating over
 		if (countBlocks <= pastBlocksMin) {
 			if (countBlocks == 1) {
+				// if we're on the first block, we just need the difficulty
 				pastDifficultyAverage.setCompact(blockReading.nBits);
+
 			} else {
+				// else we calculate our rolling average for this block
 				pastDifficultyAverage = ((pastDifficultyAveragePrev * countBlocks) + (cBigNum().setCompact(blockReading.nBits))) / (countBlocks + 1);
 			}
+
+			// save our value for next iteration
 			pastDifficultyAveragePrev = pastDifficultyAverage
 		}
-	
 
-		//if this is second iteration (lastBlockTime was set)
+
+		// STEP 2: calculate running total of differences in block times
+
+		//if this is not the first iteration (lastBlockTime was set)
 		if (lastBlockTime > 0) {
-			//calc time difference between prev block and current block
-			difference = lastBlockTime - blockReading.getBlockTime();
+			//calc time difference between prev blocktime and current blocktime
+			blockTimeDifference = lastBlockTime - blockReading.getBlockTime();
+
 			//increment actual timespan ??
-			actualTimespan += difference;
+			// holds running total of differences in block times between blocks
+			// should be 0 in a perfect world ???? if all block times are equal
+			// maybe not....
+			actualTimespan += blockTimeDifference;
 		}
 
-		//set lastBlockTime to block time for block in current iteration
+		//set lastBlockTime to current-iteration-block's block time
+		// (save value for next iteration)
 		lastBlockTime = blockReading.getBlockTime();
+
+
+
+		// STEP 3: ?? 
 
 		if (blockReading.prev == null) {
 			assert(blockReading); 
@@ -579,34 +606,57 @@ darkGravityWave(blockIndex-pindexLast, blockHeader pblock) returns int
 
 		blockReading = blockReading.prev;
 	
-	}
+	}// end loop
 
-	//bnNew is the new difficulty
+
+	// STEP 4: set up the new difficulty
+
+	//bnNew is the new difficulty; set to past average difficulty to start
 	bnNew(pastDifficultyAverage);
 
 	//targetTimespan is time the countBlocks should have taken to be generated
+	//i.e. 24 * 2.5 minutes == 60 minutes
 	targetTimespan = countBlock * targetSpacing;
 
+
+	// STEP 4.5: check actual time vs target time
+
 	//limit readjustment to 3x or 0.33x, don't increase diff too much
+	// if actualTimespan < (60 / 3)
 	if (actualTimespan < targetTimespan / 3) {
+		//set to (60 / 3)
 		actualTimespan = targetTimespan / 3;
 	}
+	//if actualTimespan > (60 * 3)
 	if (actualTimespan > targetTimespan * 3) {
+		//set to (60 * 3)
 		actualTimespan = targetTimespan * 3;
 	}
+
+
+	// STEP 5: set our difficulty
+	// starting at pastDifficultyAverage...
+	// * actualTimespan (say 30 minutes)
+	// / targetTimespan (say 60 minutes)
+
+	// == * 30 / 60 == pastDifficultyAverage * 1/2
 
 	//calculate new difficulty based on actual and target timespan
 	bnNew *= actualTimespan;
 	bnNew /= targetTimespan;
+
+
+
+	// STEP 5.5: make sure we're above our minimum difficulty
 
 	//if calc difficulty is lower than minimalDiff, set to minimalDiff
 	if (bnNew > bnProofOfWorkLimit) {
 		bnNew = bnProofOfWorkLimit;
 	}
 
-	//logging
+	//logging data
 
-	//return new diff
+	//return new difficulty!
 	return bnNew.getCompact();
 }
 */
