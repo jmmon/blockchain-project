@@ -30,7 +30,8 @@ class Blockchain {
 
 		this.difficulty = this.config.startDifficulty;
 		this.lastDifficulty = this.config.startDifficulty;
-		this.targetBlockTime = this.config.targetBlockTime; // in seconds
+
+		this.lastBlockTimeEMA = this.config.targetBlockTimeSeconds;
 
 		this.cumulativeDifficulty = 0; // initial value
 
@@ -58,8 +59,9 @@ class Blockchain {
 	cumulateDifficultyFromLastBlock() {
 		const lastBlockDifficulty = this.chain[this.chain.length - 1].difficulty;
 		const addedDifficulty = this.cumulateDifficulty(lastBlockDifficulty);
-		console.log({lastBlockDifficulty, addedDifficulty})
 		this.cumulativeDifficulty += addedDifficulty;
+		console.log(`--Cumulative Difficulty: ${{lastBlockDifficulty, addedDifficulty, cumulativeDifficulty: this.cumulativeDifficulty}}`)
+
 	}
 
 	cumulateDifficulty(difficulty) {
@@ -80,12 +82,13 @@ class Blockchain {
 
 	//need to ONLY clear pending transactions which were included in the new block!
 	addValidBlock(block) {
-		this.clearIncludedPendingTransactions();
+		this.clearIncludedPendingTransactions(block);
 
 		this.chain.push(block);
 
 		this.cumulateDifficultyFromLastBlock();
 		this.clearMiningJobs();
+		this.adjustDifficulty();
 	}
 
 
@@ -165,35 +168,20 @@ class Blockchain {
 		minedInBlockIndex = this.chain.length,
 		transferSuccessful = true,
 	}) {
-		const sortedTransactionData = sortObjectByKeys({
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-		});
-
-		const transactionDataHash = SHA256(
-			JSON.stringify(sortedTransactionData)
-		);
-
-		const newTransaction = new Transaction(
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-			transactionDataHash,
-			senderSignature
-		);
-		newTransaction.minedInBlockIndex = minedInBlockIndex;
-		newTransaction.transferSuccessful = transferSuccessful;
-
-		return newTransaction;
+		return {
+			...this.createTransaction(
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+				senderSignature
+			),
+			minedInBlockIndex: minedInBlockIndex,
+			transferSuccessful: transferSuccessful
+		};
 	}
 
 
@@ -219,11 +207,7 @@ class Blockchain {
 			senderPubKey,
 		});
 
-		const transactionDataHash = SHA256(
-			JSON.stringify(sortedTransactionData)
-		);
-
-		const newTransaction = new Transaction(
+		return new Transaction(
 			from,
 			to,
 			value,
@@ -231,16 +215,14 @@ class Blockchain {
 			dateCreated,
 			data,
 			senderPubKey,
-			transactionDataHash,
+			SHA256(JSON.stringify(sortedTransactionData)),
 			senderSignature
+
 			// last two "appear" only after transaction is mined
 			// null, // minedInBlockIndex
 			// null // transferSuccessful
 		);
 
-		// this.pendingTransactions.push (newTransaction);
-
-		return newTransaction;
 	}
 
 	addPendingTransaction(transaction) {
@@ -535,35 +517,138 @@ class Blockchain {
 	//      uses an EMA over the last 240 blocks (1 hour == 15s * 240), and restricts each difficulty change occurrence to 3x or 0.33x
 	// difficulty should be adjusted when?
 	// AFTER a new block is added to the chain (most likely)
-	adjustDifficulty() {
+
+
+// Need to try again and reexamine exactly how DGW does it
+
+// targetSpacing = 2.5 * 60 //2.5 minutes between blocks
+
+/* 
+darkGravityWave(blockIndex-pindexLast, blockHeader pblock) returns int
+{
+	//variables setup
+	blockLastSolved = pindexLast
+	blockReading = pindexLast
+	blockCreating = pblock	
+	actualTimespan = 0;
+	lastBlockTime = 0;
+	pastBlocksMin = 24;
+	pastBlocksMax = 24;
+	countBlock = 0;
+	pastDifficultyAverage
+	pastDifficultyAveragePrevious
+
+	// check for odd cases at start of chain
+	if (blockLastSolved == null 
+		|| blockLastSolved.nHeight == 0 //genesis block 
+		|| blockLastSolved.nHeight < pastBlocksMin) {
+		return bnProofOfWorkLimit.getCompact(); // ???
+	}
+
+	// loop over past (pastBlocksaMax) blocks
+	for (var i = 1; blockReading && blockReading.nheight > 0; i++) {
+		if (pastBlocksMax > 0 && i > pastBlocksMax) {break; }
+
+		countBlocks++;
+		//calculate avg difficulty based on blocks we are iterating over
+		if (countBlocks <= pastBlocksMin) {
+			if (countBlocks == 1) {
+				pastDifficultyAverage.setCompact(blockReading.nBits);
+			} else {
+				pastDifficultyAverage = ((pastDifficultyAveragePrev * countBlocks) + (cBigNum().setCompact(blockReading.nBits))) / (countBlocks + 1);
+			}
+			pastDifficultyAveragePrev = pastDifficultyAverage
+		}
+	
+
+		//if this is second iteration (lastBlockTime was set)
+		if (lastBlockTime > 0) {
+			//calc time difference between prev block and current block
+			difference = lastBlockTime - blockReading.getBlockTime();
+			//increment actual timespan ??
+			actualTimespan += difference;
+		}
+
+		//set lastBlockTime to block time for block in current iteration
+		lastBlockTime = blockReading.getBlockTime();
+
+		if (blockReading.prev == null) {
+			assert(blockReading); 
+			break;
+		}
+
+		blockReading = blockReading.prev;
+	
+	}
+
+	//bnNew is the new difficulty
+	bnNew(pastDifficultyAverage);
+
+	//targetTimespan is time the countBlocks should have taken to be generated
+	targetTimespan = countBlock * targetSpacing;
+
+	//limit readjustment to 3x or 0.33x, don't increase diff too much
+	if (actualTimespan < targetTimespan / 3) {
+		actualTimespan = targetTimespan / 3;
+	}
+	if (actualTimespan > targetTimespan * 3) {
+		actualTimespan = targetTimespan * 3;
+	}
+
+	//calculate new difficulty based on actual and target timespan
+	bnNew *= actualTimespan;
+	bnNew /= targetTimespan;
+
+	//if calc difficulty is lower than minimalDiff, set to minimalDiff
+	if (bnNew > bnProofOfWorkLimit) {
+		bnNew = bnProofOfWorkLimit;
+	}
+
+	//logging
+
+	//return new diff
+	return bnNew.getCompact();
+}
+*/
+
+
+
+	adjustDifficulty() { // simpler version
+
+		console.log('DIFFICULTY ADJUST FUNCTION TESTING******');
 		//adjust our ema weighted by this many blocks
-		const maxBlocksToCheck = 4 * 60; // supposed to be == 1 hour
+		//  hours * 60 * 60 == seconds
+		//  seconds / blockTimeInSeconds == maxBlocksToCheck
+		const maxBlocksToCheck = this.config.hoursToAverageBlockTimeOver * 60 * 60 / this.config.targetBlockTimeSeconds;
 		const k = 2 / (maxBlocksToCheck + 1);
 		// difficultyEMA = blockTime(today) * k + difficultyEMA(lastBlock) * (1 - k)
-		const maxDifficultyChange = 3;
-		const minDifficultyChange = 0.33;
-		const lastBlockTime = this.getBlockTimeByIndex(this.getLastBlock().index); // TODO
-		let newDifficulty = lastBlockTime * k + this.lastDifficulty * (1 - k);
 
-		// check if it's within our change range, compared to current difficulty
-		if (this.difficulty * maxDifficultyChange < newDifficulty) {
-			newDifficulty = this.difficulty * maxDifficultyChange;
-		}
-
-		if (this.difficulty * minDifficultyChange > newDifficulty) {
-			newDifficulty = this.difficulty * minDifficultyChange;
-		}
-
-		newDifficulty = Math.round(newDifficulty); //can't have decimals
-		
-		if (newDifficulty !== this.difficulty) {
-			const difference = newDifficulty - this.difficulty;
-			console.log(`Adjusting difficulty:\nDifference: ${difference}\nNew Difficulty: ${newDifficulty}`);
-		}
-
-		// we are now within range, so save the last value (for next time) and set our new value
+		const thisBlockTime = this.getBlockTimeByIndex(this.getLastBlock().index);
+		const lastBlockTime = this.getBlockTimeByIndex(this.getLastBlock().index - 1);
+		let currentBlockTimeEMA = thisBlockTime * k + this.lastBlockTimeEMA * (1 - k);
 		this.lastDifficulty = this.difficulty;
-		this.difficulty = newDifficulty;
+		console.log({currentBlockTimeEMA});
+		if (currentBlockTimeEMA < this.config.targetBlockTimeSeconds) {
+			// increase difficulty (by how much?)
+			this.difficulty += 1;
+			// console.log(`increment difficulty; new difficulty:${this.difficulty}`)
+		}
+		if (currentBlockTimeEMA > this.config.targetBlockTimeSeconds) {
+			// decrease difficulty (by how much?)
+			this.difficulty -= (this.difficulty > 1) ? 1 : 0;
+			// console.log(`decrement difficulty; new difficulty:${this.difficulty}`)
+		}
+		const difference = (this.difficulty - this.lastDifficulty);
+		console.log({maxBlocksToCheck, lastBlockTime, thisBlockTime, currentBlockTimeEMA, lastDifficulty: this.lastDifficulty, currentDifficulty: this.difficulty, difference, change: (difference > 0) ? `increment` : (difference == 0) ? `none` : `decrement`});
+		this.lastBlockTimeEMA = currentBlockTimeEMA;
+	}
+
+
+	getBlockTimeByIndex(index) {
+		if (index < 1) return this.config.targetBlockTimeSeconds;
+		const thisBlockDateMs = Date.parse(this.chain[index].dateCreated);
+		const prevBlockDateMs = Date.parse(this.chain[index - 1].dateCreated);
+		return (thisBlockDateMs - prevBlockDateMs) / 1000;
 	}
 
 
@@ -619,7 +704,7 @@ class Blockchain {
 		this.saveMiningJob(
 			new Block(
 				index,
-				transactionList,
+				transactions,
 				difficulty,
 				prevBlockHash,
 				minerAddress,
@@ -651,17 +736,9 @@ class Blockchain {
 
 		console.log(
 			`Mining job saved! Block candidate prepared for mining.\nCurrent mining jobs:${JSON.stringify(
-				this.miningJobs
+				Array.from(this.miningJobs)
 			)}`
 		);
-	}
-
-
-	getBlockTimeByIndex(index) {
-		if (index < 1) return 0;
-		const thisBlockDateMs = Date.parse(this.chain[index].dateCreated);
-		const prevBlockDateMs = Date.parse(this.chain[index - 1].dateCreated);
-		return (thisBlockDateMs - prevBlockDateMs) / 1000;
 	}
 
 
@@ -692,9 +769,9 @@ class Blockchain {
 			return {status: 400, message: "Block hash is not valid!"};
 		}
 		
-		foundBlock = { ...foundBlock, nonce, dateCreated, blockHash };
+		const completeBlock = { ...foundBlock, nonce, dateCreated, blockHash };
 
-		if (foundBlock.index < (this.chain.length )) {
+		if (completeBlock.index < (this.chain.length )) {
 			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
@@ -702,7 +779,7 @@ class Blockchain {
 			};
 		}
 
-		this.chain.addValidBlock(foundBlock);
+		this.addValidBlock(completeBlock);
 		return {
 			message: `Block accepted, reward paid: 500350 microcoins`,
 			status: 200,
@@ -902,7 +979,7 @@ class Blockchain {
 
 
 	getConfirmedTransactionsByAddress(address) {
-		const transactions = [];
+		let transactions = [];
 		for (const block of this.chain) {
 			transactions = [
 				...transactions, // keep previous ones
@@ -921,7 +998,7 @@ class Blockchain {
 	}
 
 	getConfirmedTransactions() {
-		const transactions = [];
+		let transactions = [];
 		for (const block of this.chain) {
 			for (const transaction of block.transactions) {
 				transactions.push(transaction);
@@ -950,7 +1027,7 @@ class Blockchain {
 	// sent coins: subtract value+fee from {from: address} balance
 
 	getAllAccountBalances() {
-		const balances = {};
+		let balances = {};
 		for (const block of this.chain) {
 			for (const transaction of block.transactions) {
 				const {from, to, value, fee} = transaction;
