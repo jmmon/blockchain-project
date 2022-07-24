@@ -1,6 +1,6 @@
 const CONFIG = {
 	defaultServerHost: "localhost",
-	defaultServerPort: "5555",
+	defaultServerPort: 5555,
 	faucetPrivateKey: "theFaucetPrivateKey",
 	faucetPublicKey: "theFaucetPublicKey",
 	faucetAddress: "theFaucetAddress -- send funds to this in genesis block!",
@@ -13,14 +13,16 @@ const CONFIG = {
 		"0000000000000000000000000000000000000000000000000000000000000000",
 	],
 	startDifficulty: 1,
-	targetBlockTimeSeconds: 1,
-	hoursToAverageBlockTimeOver: 0.01,
+	targetBlockTimeSeconds: 0.3,
+	difficultyOverPastBlocks: 96,
+	difficultyAdjustmentRatio: 3,
+	difficultyLimit: 5, // mainly for testing
 	minTransactionFee: 10,
 	maxTransactionFee: 1000000,
 	blockReward: 5000000,
 	maxTransferValue: 10000000000000,
 	safeConfirmCount: 6,
-	genesisBlock: null, //added once we create it
+	//genesis block added once created;
 };
 
 module.exports = CONFIG;

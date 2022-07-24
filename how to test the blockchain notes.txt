@@ -1,0 +1,33 @@
+Consider the following:
+
+Node + wallet + miners:
+	Run & test the node
+		all REST endpoints
+	run & test the wallet
+		create new wallet, 
+		open existing wallet,
+		Send transactions (valid and invalid)
+		check balances
+	Run & test miner
+		Ensure it works correctly & produces valid chain blocks
+		Run several miners & ensure they behave correctly
+
+Node peers:
+	Example scenario:
+		Run 4 node
+		Connect them in two separate networks (2x2)
+		Mine in the first node, 
+		mine in the last node,
+		connect two separate networks, 
+			check how the higher difficulty chain wins the consensus and the other nodes lose their chain
+
+Faucet + Explorer:
+	Run & test faucet
+		test faucet, send coins to certain address
+		try being greedy, the faucet should reject you
+	Block explorer
+		explore blocks, mined transactions, pending transactions,
+		explore accounts and  balances
+		Explore peers (view peers, connect to different peers)
+	Implement automated testing for node + other components
+		unit tests + integration tests + system tests

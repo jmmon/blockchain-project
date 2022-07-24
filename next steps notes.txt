@@ -1,0 +1,14 @@
+TODO: 
+	- TEST more routes! Test whole functionality. 
+		- Two nodes, two miners!
+	- Still need to build chain sync functions, validate functions 
+		- depends on the keys aspect so maybe need to start a wallet. 
+			- My own? based on the homework code
+	- Can still test all that I have already done though!
+	
+	- After I do wallet, I'll do the faucet
+	- And the block explorer can be done but is easier to test after wallets (keys and signatures) is implemented
+	- extra: could have them auto-connect with some sort of lookup?
+		- (or just auto connect to "a known node" or list of nodes to get started)
+		
+	- (EXTRA) Do a better EMA for dgw??

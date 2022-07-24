@@ -1,0 +1,15 @@
+Faucet app:
+Takes parameters: 
+	Your blockchain address
+	Node URL
+	Captcha
+
+Sends transaction:
+	We sent {coins} coins to address {link to address:{address}}.
+	{link to tx: {tx}}
+	Back button, donate button to send coins back
+
+faucet works like a wallet with a hard-coded private key
+	sends 1 coin (or less, input box for request amount?) to anyone who requests coins
+		limits: one request per address per hour, with captcha
+	For each request, faucet creates transaction (signs and sends it to specified node url thru POST request)

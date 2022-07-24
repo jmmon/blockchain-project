@@ -18,7 +18,7 @@ const getMiningJobUrl = `mining/get-mining-job/${paddedAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
 const getNewJob = async () => {
-	return await (await fetch(`${nodeUrl}${getMiningJobUrl}`)).json();
+	return await (await fetch(`${nodeUrl}${getMiningJobUrl}`)).json() || {errorMsg: "Fetch error"};
 }
 
 const validProof = (hash, difficulty) => {
@@ -31,22 +31,28 @@ const mineBlock = (block) => {
 	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 	let hash = SHA256(data);
 	// process.stdout.write('Mining');
+	let maxZeroesFound = Array.from(hash.slice(0, block.difficulty)).filter(char => char === "0").length;
 	
 	while (!validProof(hash, block.difficulty)) {
 		timestamp = new Date().toISOString();
 		nonce += 1;
 		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
 		hash = SHA256(data);
-		const maxDots = 50;
-		let dotsNumber = Math.round(nonce / (16 ** (block.difficulty - 1)));
-		if (dotsNumber > maxDots) {
-			dotsNumber -= maxDots
+
+
+  	// for logging:
+		const zeroesAtStartArray = Array.from(hash.slice(0, block.difficulty)).filter(char => char === "0");
+		if (zeroesAtStartArray.length > maxZeroesFound) {
+			maxZeroesFound = zeroesAtStartArray.length;
 		}
-		process.stdout.write('Mining ' +  nonce + " .".repeat(dotsNumber) + " .\033[0G");
-		// process.stdout.write("Mining Hash: "+ hash + " \033[0G");
-		// if (nonce % (16**(block.difficulty-1)) === 0) {
-		// 	process.stdout.write('.');
-		// }
+		const zeroesAtStartString = zeroesAtStartArray.join('') + "-".repeat(block.difficulty - zeroesAtStartArray.length);
+
+		const maxDots = 20;
+		let dotsNumber = Math.round(nonce / (16 ** (block.difficulty - 1)));
+		while (dotsNumber > maxDots) {
+			dotsNumber -= maxDots;
+		}
+		process.stdout.write('Mining ' +  nonce + " : " + maxZeroesFound + " | " + zeroesAtStartString + " .".repeat(dotsNumber) + " .\033[0G");
 	}
 	process.stdout.write('\n');
 
@@ -77,14 +83,17 @@ const postBlockCandidate = async (blockCandidate) => {
 const miner = async () => {
 	while(true) {
 		const newBlockJob = await getNewJob();
-		console.log('New Job:', newBlockJob);
+		console.log('New Job Received:', newBlockJob);
 
+		const timerStart = Date.now();
 		const minedBlockCandidate = await mineBlock(newBlockJob);
-		console.log(`Block mined: Nonce: ${minedBlockCandidate.nonce}\n--blockHash: ${minedBlockCandidate.blockHash}`);
+		const timerTotalSeconds = (Date.now() - timerStart) / 1000;
+		const hashesPerSecond = minedBlockCandidate.nonce / timerTotalSeconds;
+		console.log(`Block mined! Nonce: ${minedBlockCandidate.nonce}, HashesPerSecond: ${Math.round(hashesPerSecond)}\n--blockHash: ${minedBlockCandidate.blockHash}`);
 
 		const result = await postBlockCandidate(minedBlockCandidate);
-		console.log('accepted?', result);
-		console.log('\n---------\n');
+		console.log({result});
+		console.log('\n-----------------\n');
 	}
 }
 

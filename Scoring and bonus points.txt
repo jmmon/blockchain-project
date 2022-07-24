@@ -1,0 +1,43 @@
+Node: 
+	REST
+	Tx validations
+	Multiple nodes sync
+	Block validations
+	Mining jobs
+	Balances (confirmed/pending/available)
+Node BONUS:
+	dynamic difficulty adjustment
+	merkle tree storage for transactions
+
+Wallet: 
+	Key/address derivation
+	transaction sign/send
+	secure initial seed derivation
+Wallet BONUS:
+	Wallet front-end
+	HD wallet (Hierarchical key-derivation)
+
+Faucet: 
+	Faucet back-end
+Faucet BONUS:
+	faucet coin request limit
+	faucet front-end
+
+Miner:
+	Simple miner
+Miner BONUS:
+	Parallel/multi-threaded miner
+	GPU mining
+
+Block explorer:
+	Display homepage with latest blocks/transactions
+	display block info
+	display transaction info
+		pending, confirmed
+	display balance info
+	display transaction history of address
+Block explorer BONUS:
+	Display node connectivity around the workd
+	allow comments on transactions/blocks/addresses ??
+	Implement address naming service ?? 
+		(Would be nice to do some sort of hd address derivation instead of a simple name==address service)

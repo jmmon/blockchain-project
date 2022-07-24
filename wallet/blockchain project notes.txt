@@ -1,0 +1,50 @@
+Keys & Addresses:
+	ECC using secp256k1 curve:
+		private key (64 hex digits) => 
+		public key (privateKey * G; {x, y}: 256 bit numbers compressed: {x, 0|1} 65 hex digits) =>
+		address (ripemd(pubkey)) ripemd-160 of the compressed public key, 40 hex digits
+
+
+To create a transaction you need:
+	Sender pub key (65 hex digits)
+	recipient address (40 hex digits)
+	value (positive integer)
+	fee (positive integer)
+	Date and Time (iso string)
+	data (payload / comments) optional string
+	
+The sender's address is derived from the public key!
+
+Signing:
+	Private and public key are required
+	first, put transaction data in JSON object (without signature)
+	Fields order: [from, to, value, fee, dateCreated, data, senderPubKey]
+	(if data field is empty, remove it from the JSON)
+	(From address should always derive from the sender public key)
+	Remove any whitespace, calculate sha256 hash and sign it
+
+	ECDSA signature of the transaction data hash gives [r, s]
+		ECDSA signature consists of 2* 64 hex digits (2* 256 bits)
+
+	add hash and signature to JSON
+	use deterministic ECDSA signature (based on curve secp256k1 + rfc-6979 with HMAC-SHA256)
+
+
+
+
+
+Wallet type:
+	HD wallet (bip39 && bip44)
+		holds multiple keys + addresses
+	Simple keystore
+		Private key encrypted in JSON/UTC document
+
+	Password Protect ALL wallet operations!
+
+Wallet app:
+	manages private keys + signs/sends transactions
+	Functionality:
+		Create new wallet
+		Open existing wallet
+		Check account balance for certain blockchain address
+		Create, sign, send transactions

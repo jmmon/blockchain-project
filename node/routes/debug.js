@@ -18,13 +18,17 @@ router.get("/", (req, res) => {
 		chainId: blockchain.config.genesisBlock.blockHash,
 	};
 
-	const confirmedBalances = {
-		'00000...0000': -10000000000,
-		'...addr 1...': 123456,
-		'...addr 2...': 23456,
-		'...addr 3...': 3456,
-		'...addr 4...': 0,
-	};
+
+	// const confirmedBalances = {
+	// 	'example': 9001,
+	// 	'00000...0000': -10000000000,
+	// 	'...addr 1...': 123456,
+	// 	'...addr 2...': 23456,
+	// 	'...addr 3...': 3456,
+	// 	'...addr 4...': 0,
+	// };
+
+	const confirmedBalances = blockchain.getAllConfirmedAccountBalances();
 
 	const debugInfo = {
 		node,
@@ -41,7 +45,7 @@ router.get("/reset-chain", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const success = blockchain.reset();
 	if (success) {
-		console.log("Chain reset\n" + JSON.stringify(blockchain.chain));
+		console.log("Chain reset\nChain: " + JSON.stringify(blockchain.chain));
 		res.status(200).send("yes chain was reset to genesis block");
 	} else {
 		res.status(400).send("no chain was not reset");

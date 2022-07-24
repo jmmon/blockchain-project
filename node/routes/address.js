@@ -13,6 +13,8 @@ router.get("/:address/transactions", (req, res) => {
 
 
 
+// return 0 balances for non-active addresses (no transactions)
+//return 404 message for invalid addresses
 router.get("/:address/balance", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {address} = req.params;

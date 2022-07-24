@@ -1,0 +1,6 @@
+password:
+test
+mnemonic:
+witness orient vivid mail name insane already affair priority pink army gravity
+
+{"address":"a9cd2c35910794e830aea9fa3d7beb2db667454d","id":"64254bc4-d38f-468b-aadc-e8b1d6524a87","version":3,"Crypto":{"cipher":"aes-128-ctr","cipherparams":{"iv":"748da161d8bf68380c080640aaf3b947"},"ciphertext":"8c1f49ac2b02411547f117c162ab1dd64d3a8b178682ab1befb93a311ebab78d","kdf":"scrypt","kdfparams":{"salt":"9e1b6bf50e46823d832d79df3bd137615940ee63b51005ad76c4c50c1f118390","n":131072,"dklen":32,"p":1,"r":8},"mac":"783ca0ad3130a6d21c74f106e11e41a8c0ea784469f87c34ac7432cd189786b4"},"x-ethers":{"client":"ethers.js","gethFilename":"UTC--2022-07-24T14-48-43.0Z--a9cd2c35910794e830aea9fa3d7beb2db667454d","mnemonicCounter":"9bd612f04ccb227e96a8fe9f017d9022","mnemonicCiphertext":"f867f7f156478141dc672efd8814b342","path":"m/44'/60'/0'/0/0","locale":"en","version":"0.1"}}

@@ -1,0 +1,11 @@
+Implement block explorer as web app
+	port 9999
+	Optionally, it may hold faucet app functionality inside it
+
+Block explorer functionality:
+	view blocks,
+	view confirmed transactions,
+	view pending transactions,
+	view accounts & balances,
+	view peers,
+	view network difficulty,

@@ -3,7 +3,7 @@ const router = express.Router();
 
 // works:
 //return pending transactions, (in mempool)
-router.get("/transactions/pending", (req, res) => {
+router.get("/pending", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	return res.status(200).send(JSON.stringify(blockchain.getPendingTransactions()));
 });
@@ -12,7 +12,7 @@ router.get("/transactions/pending", (req, res) => {
 // works:
 //display all transactions in blocks
 //	crawl blocks and build list to return
-router.get("/transactions/confirmed", (req, res) => {
+router.get("/confirmed", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	return res.status(200).send(JSON.stringify(blockchain.getConfirmedTransactions()));
 });
@@ -20,7 +20,7 @@ router.get("/transactions/confirmed", (req, res) => {
 
 
  // works ??
-router.get("/transactions/:tranHash", (req, res) => {
+router.get("/:tranHash", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {tranHash: transactionDataHash} = req.params;
 
@@ -37,7 +37,7 @@ router.get("/transactions/:tranHash", (req, res) => {
 
 
 // done
-router.post("/transactions/send", (req, res) => {
+router.post("/send", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const transactionData = req.body;
 	const requiredData = ["from", "to", "value", "fee", "dateCreated", "data", "senderPubKey", "senderSignature"];
@@ -52,19 +52,18 @@ router.post("/transactions/send", (req, res) => {
 	//check for missing data object
 	if (!transactionData) {
 		return res.status(400).send(JSON.stringify({errorMsg: "Missing all transaction data"}));
-		return;
 	}
 
 	//check for missing fields
 	let missing = [];
+	const incomingDataKeys = Object.keys(transactionData);
 	for (const each of requiredData) {
-		if (!Object.keys(transactionData).includes(each)) {
+		if (!incomingDataKeys.includes(each)) {
 			missing.push(each);
 		}
 	}
 	if (missing.length > 0) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: missing fields '${missing.join(", ")}'`}));
-		return;
 	}
 
 
@@ -91,7 +90,8 @@ router.post("/transactions/send", (req, res) => {
 
 	// checks sender account balance >= value + fee
 	const balancesOfSender = blockchain.getBalancesOfAddress(transactionData.from);
-	if (balancesOfSender.confirmed < transactionData.value + transactionData.fee) {
+	// console.log('--attempting send transaction\n balances of from account:', {balancesOfSender});
+	if (balancesOfSender.confirmedBalance < (transactionData.value + transactionData.fee)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'from' address does not have enough funds!`}));
 	}
 

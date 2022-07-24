@@ -1,4 +1,6 @@
 const express = require("express");
+// import express from "express";
+
 const crypto = require("node:crypto");
 const app = express();
 app.use(express.json());
@@ -72,8 +74,12 @@ app.get("/info", (req, res) => {
 
 
 // done
+// return ALL balances in the network
+//non-zero + confirmed (in blocks)
 app.get("/balances", (req, res) => {
-	const balances = blockchain.getAllAccountBalances();
+	const allBalances = blockchain.getAllConfirmedAccountBalances();
+	const balances = blockchain.filterOutNonZeroBalances(allBalances);
+	console.log({allBalances, balances});
 	return res.status(200).send(JSON.stringify(balances));
 });
 
