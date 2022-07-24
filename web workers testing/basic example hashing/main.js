@@ -4,65 +4,54 @@ const FARM_OPTIONS     = {
 , maxCallsPerWorker           : Infinity
 , maxConcurrentCallsPerWorker : Infinity
 };
-const	workers = workerFarm(FARM_OPTIONS, require.resolve('./child'));
-// const	workers = workerFarm(require.resolve('./child'));
+// const	workers = workerFarm(FARM_OPTIONS, require.resolve('./child'));
+const	workers = workerFarm(require.resolve('./child'));
 
 
 const blockDataHash = "blockDataHash";
 const difficulty = 2;
 let success = false;
-let nonce = 0;
 
 let blockCandidate = {
 	blockDataHash,
 	dateCreated: '',
-	nonce,
+	nonce: 0,
 	blockHash: '',
 };
 
 console.log('starting while loop');
 
-const loop = () => {
+for (let nonce = 0; !success; nonce++) {
+	// console.log(success);
+	if (success) break;
 	const input = {
 		nonce,
 		blockDataHash,
 		difficulty
-	}
+	};
 
-	const callback = (err, result) => {
-		//always called in/from the main thread
-		if (result) {
-			const {dataToHash, blockHash} = result;
-			const [data, timestamp, nonce] = dataToHash.split("|");
+	//callback always called in/from the main thread
+	workers(input, (err, response) => {
+		console.log(response);
+		if (!response) return;
 
-			blockCandidate = {
-				...blockCandidate,
-				dateCreated: timestamp,
-				nonce,
-				blockHash
-			}
+		const {dataToHash, blockHash} = JSON.parse(response);
+		const [data, timestamp, nonce] = dataToHash.split("|");
 
-			success = blockCandidate;
-
-			// onSuccess(success);
+		blockCandidate = {
+			...blockCandidate,
+			dateCreated: timestamp,
+			nonce,
+			blockHash
 		}
-	}
-	if (success) return success;
-
-	workers(input, callback);
-	nonce++; // increment for next loop
+		success = blockCandidate;
+		console.log(' *********** success recorded *********** ');
+		console.log(success);
+		console.log('while loop has ended');
+		workerFarm.end(workers);
+		process.exit();
+		
+	});
 }
 
-// setInterval(loop, 1);
 
-while (!success) {
-	success = loop();
-}
-onSuccess(success);
-
-const onSuccess = (blockCandidate) => {
-	console.log(blockCandidate);
-	console.log('while loop has ended');
-	workerFarm.end(workers);
-	process.exit();
-}

@@ -14,20 +14,36 @@ const validProof = (hash, difficulty) => {
 }
 
 
-module.exports = function ({nonce, blockDataHash, difficulty}, callback) {
-	console.log({nonce, blockDataHash, difficulty});
-	const timestamp = new Date().toISOString();
-	const dataToHash = `${blockDataHash}|${timestamp}|${nonce}`;
-	const blockHash = SHA256(dataToHash);
+// module.exports = function ({nonce, blockDataHash, difficulty}, callback) {
+// 	// console.log({nonce, blockDataHash, difficulty});
+// 	const timestamp = new Date().toISOString();
+// 	const dataToHash = `${blockDataHash}|${timestamp}|${nonce}`;
+// 	const blockHash = SHA256(dataToHash);
 	
-	const result = validProof(blockHash, difficulty);
-	console.log(`${process.pid} - ${dataToHash} - ${result? `***********SUCCESS*********** - hash: ${blockHash}` : ''}`);
+// 	const result = validProof(blockHash, difficulty);
 
-	if (!result) {
-		callback(null, result);
-	} else {
-		callback(null, {dataToHash, blockHash});
+// 	if (!result) {
+// 		// console.log(`${process.pid} - ${dataToHash}`);
+// 		callback(null, null);
+// 	} else {
+// 		console.log(`${process.pid} - ${dataToHash} - ***********SUCCESS*********** - hash: ${blockHash}`);
+// 		const response = {dataToHash, blockHash};
+// 		callback(null, response);
+// 	}
 
-	}
-
+// }
+module.exports = function (input, callback) {
+	callback(null, true);
+	// const {nonce, blockDataHash, difficulty} = input;
+	// const timestamp = new Date().toISOString();
+	// const dataToHash = `${blockDataHash}|${timestamp}|${nonce}`;
+	// const blockHash = SHA256(dataToHash);
+	// const result = validProof(blockHash, difficulty);
+	// let response = null;
+	// if (result) {
+	// 	response = {dataToHash, blockHash}
+	// 	// console.log(`${process.pid} - ${dataToHash} - ***********SUCCESS*********** - hash: ${blockHash}`);
+	// }
+	// // callback(null, JSON.stringify(response));
+	// callback(null, true);
 }

@@ -22,7 +22,8 @@ for (let i = 0; i < end; i++) {
 			workerFarm.end(workers);
 		}
 	}
-	workers(`#${i} FOO`, callback);
+	const input = `#${i} FOO`;
+	workers(input, callback);
 }
 
 // PIDs: (end == 100)
