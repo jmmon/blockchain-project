@@ -4,8 +4,8 @@ const FARM_OPTIONS     = {
 , maxCallsPerWorker           : Infinity
 , maxConcurrentCallsPerWorker : Infinity
 };
-// const	workers = workerFarm(FARM_OPTIONS, require.resolve('./child'));
-const	workers = workerFarm(require.resolve('./child'));
+const	workers = workerFarm(FARM_OPTIONS, require.resolve('./child'));
+// const	workers = workerFarm(require.resolve('./child'));
 
 
 const blockDataHash = "blockDataHash";

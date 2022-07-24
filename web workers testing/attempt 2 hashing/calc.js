@@ -1,10 +1,26 @@
-/* 
-This should run the mining function, validate the hash, and return false or the hash ( i think ).
-So should take the current nonce, the data, and then should be able to perform the hash and return the value
+'use strict'
 
+/* A simple π estimation function using a Monte Carlo method
+ * For 0 to `points`, take 2 random numbers < 1, square and add them to
+ * find the area under that point in a 1x1 square. If that area is <= 1
+ * then it's *within* a quarter-circle, otherwise it's outside.
+ * Take the number of points <= 1 and multiply it by 4 and you have an
+ * estimate!
+ * Do this across multiple processes and average the results to
+ * increase accuracy.
+ */
 
-I guess the main function should just loop indefinitely, starting service workers. Once a service worker finds the correct validated hash, it should end the main thread loop  and end all service workers.
-*/
+// module.exports = function (points, callback) {
+//   let inside = 0
+//     , i = points
+
+//   while (i--)
+//     if (Math.pow(Math.random(), 2) + Math.pow(Math.random(), 2) <= 1)
+//       inside++
+
+//   callback(null, (inside / points) * 4)
+// }
+
 
 const crypto = require("crypto");
 const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
@@ -39,11 +55,22 @@ module.exports = function (input, callback) {
 	const dataToHash = `${blockDataHash}|${timestamp}|${nonce}`;
 	const blockHash = SHA256(dataToHash);
 	const result = validProof(blockHash, difficulty);
-	let response = null;
+
 	if (result) {
-		response = {dataToHash, blockHash}
+    console.log('Success with hash', blockHash);
+    
+	  callback(null, {
+      blockDataHash,
+      timestamp,
+      nonce, 
+      difficulty,
+      blockHash
+    });
 		// console.log(`${process.pid} - ${dataToHash} - ***********SUCCESS*********** - hash: ${blockHash}`);
-	}
+	} else {
+    console.log('hash failed');
+    callback(null, false);
+
+  }
 	// callback(null, JSON.stringify(response));
-	callback(null, true);
 }
