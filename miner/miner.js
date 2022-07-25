@@ -12,8 +12,8 @@ const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('
 const myAddress = "testAddress"; // address of my miner
 const paddedAddress = myAddress + "0".repeat(40-myAddress.length);
 
-// const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
-const nodeUrl = "http://localhost:5555/";
+const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
+// const nodeUrl = "http://localhost:5555/";
 const getMiningJobUrl = `mining/get-mining-job/${paddedAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
@@ -26,22 +26,16 @@ const validProof = (hash, difficulty) => {
 }
 
 const mineBlock = (block) => {
-	let timestamp = new Date().toISOString();
 	let nonce = 0;
-	let data = block.blockDataHash+"|"+timestamp+"|"+nonce;
-	let hash = SHA256(data);
-	// process.stdout.write('Mining');
-	let maxZeroesFound = Array.from(hash.slice(0, block.difficulty)).filter(char => char === "0").length;
-	
-	while (!validProof(hash, block.difficulty)) {
-		timestamp = new Date().toISOString();
-		nonce += 1;
-		data = block.blockDataHash+"|"+timestamp+"|"+nonce;
-		hash = SHA256(data);
+	let maxZeroesFound = 0; // for logging
 
+	while (true) {
+		const dateCreated = new Date().toISOString();
+		const data = block.blockDataHash+"|"+dateCreated+"|"+nonce;
+		const blockHash = SHA256(data);
 
-  	// for logging:
-		const zeroesAtStartArray = Array.from(hash.slice(0, block.difficulty)).filter(char => char === "0");
+		//for logging:
+		const zeroesAtStartArray = Array.from(blockHash.slice(0, block.difficulty)).filter(char => char === "0");
 		if (zeroesAtStartArray.length > maxZeroesFound) {
 			maxZeroesFound = zeroesAtStartArray.length;
 		}
@@ -53,15 +47,19 @@ const mineBlock = (block) => {
 			dotsNumber -= maxDots;
 		}
 		process.stdout.write('Mining ' +  nonce + " : " + maxZeroesFound + " | " + zeroesAtStartString + " .".repeat(dotsNumber) + " .\033[0G");
-	}
-	process.stdout.write('\n');
+		//end logging
 
-	return {
-		blockDataHash: block.blockDataHash,
-		dateCreated: timestamp,
-		nonce: nonce,
-		blockHash: hash,
-	};
+		if (validProof(blockHash, block.difficulty)) {
+			process.stdout.write('\n');
+			return {
+				blockDataHash: block.blockDataHash,
+				dateCreated: dateCreated,
+				nonce: nonce,
+				blockHash: blockHash,
+			};
+		}
+		nonce++;
+	}
 }
 
 const postBlockCandidate = async (blockCandidate) => {

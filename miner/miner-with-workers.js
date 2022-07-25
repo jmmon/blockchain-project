@@ -64,17 +64,36 @@ const postBlockCandidate = async (blockCandidate) => {
 //	post block to nodeUrl/mining/submit-mined-block
 
 const miner = async () => {
-	while(true) {
+	let lastCandidate = null;
+	let postResult = null;
+	while(!postResult) {
+		postResult = true;
 		const newBlockJob = await getNewJob();
 		console.log('New Job Received:', newBlockJob);
 
 		const timerStart = Date.now();
-		// const minedBlockCandidate = await mineBlock(newBlockJob);
-		let minedBlockCandidate;
-		await mineBlock(newBlockJob, async (result) => {
-			minedBlockCandidate = await result;
-		})
-		console.log("Block mined!", {minedBlockCandidate});
+
+		// not working:
+
+
+		const afterMining = async (result) => {
+			let minedBlockCandidate = await result;
+			if (lastCandidate?.blockDataHash === minedBlockCandidate.blockDataHash) {
+				console.log('~~~already mined~~~');
+				postResult = null;
+				return;
+			}
+			console.log("Block mined!", {minedBlockCandidate});
+
+			postResult = await postBlockCandidate(minedBlockCandidate);
+			console.log({postResult});
+			console.log('\n-----------------\n');
+			lastCandidate = minedBlockCandidate;
+			postResult = null;
+		}
+
+		mineBlock(newBlockJob, afterMining);
+		// console.log("Block mined!", {minedBlockCandidate});
 
 
 		
@@ -83,9 +102,12 @@ const miner = async () => {
 		// const hashesPerSecond = minedBlockCandidate.nonce / timerTotalSeconds;
 		// console.log(`Block mined! Nonce: ${minedBlockCandidate.nonce}, HashesPerSecond: ${Math.round(hashesPerSecond)}\n--blockHash: ${minedBlockCandidate.blockHash}`);
 
-		const result = await postBlockCandidate(minedBlockCandidate);
-		console.log({result});
-		console.log('\n-----------------\n');
+		// mineBlock(newBlockJob).then(async (blockCandidate) => {
+		// 	console.log({blockCandidate});
+		// 	postResult = await postBlockCandidate(blockCandidate);
+		// 	console.log({postResult});
+		// 	console.log('\n-----------------\n');
+		// })
 	}
 }
 
