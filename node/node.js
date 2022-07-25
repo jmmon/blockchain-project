@@ -91,32 +91,17 @@ app.get("/balances", (req, res) => {
 
 
 
-/* OLD ROUTES BELOW */
 
-// app.get("/nodes/resolve", (req, res) => {
-// 	const replaced = blockchain.resolveConflict();
 
-// 	let response;
-// 	if (replaced) {
-// 		return res
-// 			.status(200)
-// 			.send(
-// 				JSON.stringify({
-// 					message: "Our chain was replaced",
-// 					newChain: blockchain.chain,
-// 				})
-// 			);
-// 	} else {
-// 		return res
-// 			.status(200)
-// 			.send(
-// 				JSON.stringify({
-// 					message: "Our chain is authoritative",
-// 					chain: blockchain.chain,
-// 				})
-// 			);
-// 	}
-// });
+
+
+
+
+
+
+
+
+
 
 app.listen(nodeInfo.port, () => {
 	console.log(`node listening on port ${nodeInfo.port}`);
