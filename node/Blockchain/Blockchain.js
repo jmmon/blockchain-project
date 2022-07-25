@@ -516,8 +516,8 @@ class Blockchain {
 
 		let actualTimespan = 0; // counts our actual total block times
 
-		let pastDifficultyAverage = 0
-		let pastDifficultyAveragePrevious = 0;
+		let difficultyAverage = 0
+		let pastDifficultyAverage = 0;
 
 		// check for odd cases at start of chain; return our minimum difficulty
 		if (newestBlockIndex == 0) { //genesis block 
@@ -527,7 +527,9 @@ class Blockchain {
 		
 		// STEP 1: loop backward over our blocks starting at newest block
 		let count; // blocks counted
-		for (count = 1; count <= pastBlocks; count++) {
+		
+		for (count = 0; count < pastBlocks; ) {
+			count++; // increment at the start so we don't need to try to subtract 1 sometimes, after the loop
 			const thisBlockIndex = newestBlockIndex - (count - 1); 
 			const thisIterationBlock = this.chain[thisBlockIndex];
 			//example: count == 1 => block == newest block
@@ -536,19 +538,22 @@ class Blockchain {
 			// STEP A: Calculate our average block difficulties
 			if (count === 1) {
 				// For the first block, just grab the difficulty
-				pastDifficultyAverage = thisIterationBlock.difficulty
+				difficultyAverage = thisIterationBlock.difficulty
 
 			} else {
 				// else we calculate our rolling average for this block
-				// pastDifficultyAverage = (
-				// 	(pastDifficultyAveragePrevious * count) + thisIterationBlock.difficulty
-				// ) / (count + 1);
-				const k = 2. / (1 + pastBlocks);
-				//EMA == difficulty * k + lastEMA * (1 - k);
-				pastDifficultyAverage = thisIterationBlock.difficulty * k + pastDifficultyAveragePrevious * (1 - k);
+				// basically, previous weighted for (previous blocks + 1 == count blocks), + this.difficulty, all over (count + 1)
+				//so slightly more weight given to past trend vs current difficulty
+				difficultyAverage = (
+					(pastDifficultyAverage * count) + thisIterationBlock.difficulty
+				) / (count + 1);
+			
+				// const k = 2. / (1 + pastBlocks);
+				// //EMA == difficulty * k + lastEMA * (1 - k);
+				// difficultyAverage = thisIterationBlock.difficulty * k + pastDifficultyAverage * (1 - k);
 			}
 			// save our value for next iteration
-			pastDifficultyAveragePrevious = pastDifficultyAverage;
+			pastDifficultyAverage = difficultyAverage;
 
 			// STEP B: calculate running total of block time
 			//actualTimespan is the total accumulated time for counted blocks
@@ -562,20 +567,23 @@ class Blockchain {
 
 
 		// STEP 2: set up the new difficulty
-		let newDifficulty = pastDifficultyAverage;
+		let newDifficulty = difficultyAverage;
 		
 		// targetTimespan is time the countBlocks should have taken to be generated
 		let targetTimespan = count * targetSpacing;
 
+		// so we can keep our actual timespan for logging
 		let adjustedTimespan = actualTimespan;
 
 		// STEP 3: check actual time vs target time
 		// limit readjustment, don't change more than our ratio
-		if (actualTimespan < targetTimespan / this.config.difficultyAdjustmentRatio) {
-			adjustedTimespan = targetTimespan / this.config.difficultyAdjustmentRatio;
+		const adjustmentRatioLimit = this.config.difficultyAdjustmentRatio;
+
+		if (actualTimespan < targetTimespan / adjustmentRatioLimit) {
+			adjustedTimespan = targetTimespan / adjustmentRatioLimit;
 		}
-		if (actualTimespan > targetTimespan * this.config.difficultyAdjustmentRatio) {
-			adjustedTimespan = targetTimespan * this.config.difficultyAdjustmentRatio;
+		if (actualTimespan > targetTimespan * adjustmentRatioLimit) {
+			adjustedTimespan = targetTimespan * adjustmentRatioLimit;
 		}
 
 		//calculate new difficulty based on actual and target timespan
@@ -583,29 +591,30 @@ class Blockchain {
 		newDifficulty *= (targetTimespan / adjustedTimespan);
 
 
-		// STEP 4: make sure we're above our minimum difficulty
-		if (newDifficulty <  minimumDifficulty) {
-			newDifficulty = minimumDifficulty; //our minimum
-		}
+		// // STEP 4: make sure we're above our minimum difficulty
+		// // not really needed
+		// if (newDifficulty <  minimumDifficulty) {
+		// 	newDifficulty = minimumDifficulty; //our minimum
+		// }
 
 		const previousBlockTime = this.getBlockTimeByIndex(newestBlockIndex);
-		// const blockTimeDifferenceRatio = 1.5;
+		const blockTimeDifferenceRatio = 1.5;
 
 
-		//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty! 
-		// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
-	// up to 3/2 target time, don't increase difficulty.
-		if (previousBlockTime > (3/2 * targetSpacing)) {
-			if (newDifficulty > this.difficulty) {
-				newDifficulty = this.difficulty;
-			}
-		}
-	// down to 2/3 target time, don't increase difficulty.
-		if (previousBlockTime > (2/3 * targetSpacing)) {
-			if (newDifficulty < this.difficulty) {
-				newDifficulty = this.difficulty;
-			}
-		}
+	// 	//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty! 
+	// 	// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
+	// // up to 3/2 target time, don't increase difficulty.
+	// 	if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
+	// 		if (newDifficulty > this.difficulty) {
+	// 			newDifficulty = this.difficulty;
+	// 		}
+	// 	}
+	// // down to 2/3 target time, don't increase difficulty.
+	// 	if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
+	// 		if (newDifficulty < this.difficulty) {
+	// 			newDifficulty = this.difficulty;
+	// 		}
+	// 	}
 
 
 		// limit difficulty based on estimated time for next block
@@ -615,13 +624,14 @@ class Blockchain {
 		//based on being scared of a worst case scenario where the difficulty bumps up way too high for my testing,
 		if (newDifficulty >= this.difficulty + 1) {
 			const timeIncreaseFromOneBumpInDifficulty = previousBlockTime * 16;
-			if (timeIncreaseFromOneBumpInDifficulty > (blockTimeDifferenceRatio * this.config.targetBlockTimeSeconds)) {
+
+			if (timeIncreaseFromOneBumpInDifficulty > targetSpacing * (blockTimeDifferenceRatio || this.config.difficultyAdjustmentRatio)) {
 				newDifficulty = (this.difficulty + 1);
 			}
 		}
 
 		//logging data
-		console.log({targetTimespan, actualTimespan, adjustedTimespan, previousDifficulty: this.chain[newestBlockIndex].difficulty, previousBlockTime, pastDifficultyAverage, newDifficulty});
+		console.log({targetTimespan, actualTimespan, adjustedTimespan, previousDifficulty: this.chain[newestBlockIndex].difficulty, previousBlockTime, pastDifficultyAverage: difficultyAverage, newDifficulty});
 
 		return Math.round(newDifficulty);
 	}

@@ -4,8 +4,8 @@ const express = require("express");
 const crypto = require("node:crypto");
 const app = express();
 app.use(express.json());
-const CONFIG = require("./BlockchainJs/config");
-const Blockchain = require("./BlockchainJs/Blockchain.js");
+const CONFIG = require("./Blockchain/config");
+const Blockchain = require("./Blockchain/Blockchain.js");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const blockchain = new Blockchain(CONFIG);
 

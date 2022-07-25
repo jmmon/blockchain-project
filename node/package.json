@@ -4,7 +4,7 @@
   "description": "blockchain-project",
   "main": "node.js",
   "scripts": {
-    "start": "nodemon node/node.js",
+    "start": "nodemon node.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

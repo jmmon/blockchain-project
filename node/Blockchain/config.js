@@ -12,11 +12,13 @@ const CONFIG = {
 		"0000000000000000000000000000000000000000000000000000000000000000",
 		"0000000000000000000000000000000000000000000000000000000000000000",
 	],
-	startDifficulty: 1,
-	targetBlockTimeSeconds: 0.3,
+	
+	startDifficulty: 4,
+	targetBlockTimeSeconds: 4,
 	difficultyOverPastBlocks: 96,
 	difficultyAdjustmentRatio: 3,
-	difficultyLimit: 5, // mainly for testing
+	difficultyLimit: 7, // mainly for testing
+
 	minTransactionFee: 10,
 	maxTransactionFee: 1000000,
 	blockReward: 5000000,

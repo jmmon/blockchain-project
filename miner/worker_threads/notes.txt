@@ -1,0 +1,2 @@
+looking into gpu mining:
+looks like I would be submitting batches of nonces for computation and would receive back batches of hashes. Run hashes say 10k at a time, so checking 10k nonces at once before going to the next 10k.

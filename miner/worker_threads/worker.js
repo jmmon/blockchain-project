@@ -15,28 +15,39 @@ const index = workerData;
 
 let nonce = 0;
 
+
 while (true) {
-	if (thisJob != getEnvironmentData("newJob")) {
-		throw new Error('Job changed');
+	if (getEnvironmentData("newJob") == undefined) {
+		console.log('new job is undefined; breaking');
+		break;
 	}
 
 	const dateCreated = new Date().toISOString();
 	const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
 	const blockHash = SHA256(dataToHash);
-
+	
 	if (validProof(blockHash, difficulty)) {
-		const returnData = {
-			blockDataHash,
-			dateCreated,
-			nonce,
-			blockHash
-		};
-		console.log(`***Success: Worker ${index} process ${process.pid}\nNonce: ${nonce}`);
-		//on success:
-		parentPort.postMessage(returnData);
-		break;
-	}
-	nonce++;
-}
+		const workerInfo = {
+			index,
+			pid: process.pid,
+			hashedBlockCandidate: {
+				blockDataHash,
+				dateCreated,
+				nonce,
+				blockHash
+			},
+		}
 
-// console.log(thisJob == getEnvironmentData("newJob") ? "Jobs are still the same" : "jobs are different");
+		parentPort.postMessage(workerInfo);
+		break;
+
+	} else {
+		// log loading indicator
+		const occurrence = Math.round((16 ** (difficulty)) / 100);
+		if (nonce % occurrence == 0) {
+			process.stdout.write(". ");
+		}
+
+		nonce++;
+	}
+}
