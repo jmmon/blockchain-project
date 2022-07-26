@@ -4,6 +4,7 @@ const fetch = (...args) =>
 
 // const CPU_CORES = require('os').cpus().length;
 const CPU_CORES = 5;
+let workers = [];
 
 
 // const NODE_URL = "https://stormy-everglades-34766.herokuapp.com/";
@@ -15,10 +16,16 @@ const GET_MINING_JOB_ROUTE = `mining/get-mining-job/${PADDED_ADDRESS}`;
 const POST_MINING_JOB_ROUTE = `mining/submit-mined-block`;
 
 
-const runWorker = (workerData) => {
+const createWorkerPromise = (index) => {
 	return new Promise((resolve, reject) => {
-		const worker = new Worker("./worker.js", { workerData: workerData });
-		// console.log("worker created");
+		const worker = new Worker("./worker.js", { workerData: index });
+		
+		// if (index == 0) {
+		// 	process.stdout.write("" + index);
+		// } else {
+		// 	process.stdout.write(", " + index);
+		// }
+
 		worker.on("message", resolve);
 		worker.on("error", reject);
 		worker.on("exit", (code) => {
@@ -30,26 +37,35 @@ const runWorker = (workerData) => {
 };
 
 
-
-
 const mineMany = async (newJob) => {
+	workers.splice(0, workers.length); // clear all workers
 	setEnvironmentData("newJob", newJob);
+	
 
+	process.stdout.write("Starting workers ");
 	const workerPromiseArray = [];
-	for (let i = 0; i < CPU_CORES; i++) {
-		workerPromiseArray.push(runWorker(i));
+	let i;
+	for (i = 0; i < CPU_CORES; i++) {
+		workerPromiseArray.push(createWorkerPromise(i));
 	}
+	console.log(`. . . Started ${i} threads:`
+	// , JSON.stringify(workers)
+	);
 
+	process.stdout.write("Mining . . . \033[0G");
 
-	process.stdout.write("Mining ");
-	return await Promise.race(workerPromiseArray).then(({index, pid, hashedBlockCandidate}) => {
-		setEnvironmentData("newJob", undefined);
-		process.stdout.write("\n");
+	return (
+		await Promise.race(workerPromiseArray)
+			.then(({index, pid, hashedBlockCandidate}) => {
+				setEnvironmentData("newJob", undefined); 
+				// clear our newJob to cancel mining jobs (better way to do it?)
+				
+				process.stdout.write("\n");
+				console.log(`*** Winning worker: ${index} process ${pid}\nNonce: ${hashedBlockCandidate.nonce}`);
 
-		console.log(`*** Winning worker: ${index} process ${pid}\nNonce: ${hashedBlockCandidate.nonce}`);
-
-		return hashedBlockCandidate;
-	});
+				return hashedBlockCandidate;
+			})
+	);
 };
 
 

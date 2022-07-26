@@ -9,22 +9,32 @@ const validProof = (hash, difficulty) => {
 }
 
 const thisJob = getEnvironmentData("newJob");
-const {blockDataHash, difficulty} = thisJob;
+const {blockDataHash, difficulty, index: blockIndex } = thisJob;
+// console.log({blockDataHash, difficulty});
 const index = workerData;
-// console.log(`Worker ${index} started, process ${process.pid}`);
 
+// if (index == 0) {
+// 	process.stdout.write("" + index);
+// } else {
+// 	process.stdout.write(", " + index);
+// }
+
+process.stdout.write("(" + index + ") ");
 let nonce = 0;
+let continueLoop = true;
 
 
-while (true) {
+while (continueLoop) {
 	if (getEnvironmentData("newJob") == undefined) {
 		console.log('new job is undefined; breaking');
 		break;
+		// process.exit();
 	}
 
 	const dateCreated = new Date().toISOString();
 	const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
 	const blockHash = SHA256(dataToHash);
+	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
 	
 	if (validProof(blockHash, difficulty)) {
 		const workerInfo = {
@@ -47,7 +57,7 @@ while (true) {
 		if (nonce % occurrence == 0) {
 			process.stdout.write(". ");
 		}
-
+		
 		nonce++;
 	}
 }

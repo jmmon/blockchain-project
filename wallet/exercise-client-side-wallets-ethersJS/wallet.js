@@ -14,6 +14,7 @@ $(document).ready(function () {
 	const SAMPLE_ABI = [];
 
 	showView("viewHome");
+	
 
 	$("#linkHome").click(function () {
 		showView("viewHome");
@@ -25,7 +26,7 @@ $(document).ready(function () {
 		showView("viewCreateNewWallet");
 	});
 
-	$("#linkImportWalletFromMnemonic").click(function () {
+	$("#linkOpenWallet").click(function () {
 		$("#textareaOpenWallet").val("");
 		$("#passwordOpenWallet").val("");
 		$("#textareaOpenWalletResult").val("");
@@ -35,22 +36,10 @@ $(document).ready(function () {
 		showView("viewOpenWalletFromMnemonic");
 	});
 
-	$("#linkImportWalletFromFile").click(function () {
-		$("#walletForUpload").val("");
-		$("#passwordUploadWallet").val("");
-		showView("viewOpenWalletFromFile");
+	$("#linkAccountBalance").click(function () {
+		showView("viewAccountBalance");
 	});
 
-	$("#linkShowMnemonic").click(function () {
-		$("#passwordShowMnemonic").val("");
-		showView("viewShowMnemonic");
-	});
-
-	$("#linkShowAddressesAndBalances").click(function () {
-		$("#passwordShowAddresses").val("");
-		$("#divAddressesAndBalances").empty();
-		showView("viewShowAddressesAndBalances");
-	});
 
 	$("#linkSendTransaction").click(function () {
 		$("#divSignAndSendTransaction").hide();
@@ -65,58 +54,47 @@ $(document).ready(function () {
 		showView("viewSendTransaction");
 	});
 
-	$("#linkExport").click(function () {
-		showView("viewExportWallet");
-		$("#currentWalletToExport").val(window.localStorage.JSON);
+	$("#linkShowMnemonic").click(function () {
+		$("#passwordShowMnemonic").val("");
+		showView("viewShowMnemonic");
 	});
 
-	$("#linkContract").click(function () {
-		showView("viewContract");
-		$("#contractAddress").val(SAMPLE_CONTRACT_ADDRESS);
-		$("#textareaContractABI").val(JSON.stringify(SAMPLE_ABI, null, " "));
-	});
+	$("#linkLogout").click(logout);
 
+
+	// Set up our button functions:
 	$("#buttonGenerateNewWallet").click(generateNewWallet);
 	$("#buttonOpenExistingWallet").click(openWalletFromMnemonic);
-	$("#buttonUploadWallet").click(openWalletFromFile);
 	$("#buttonShowMnemonic").click(showMnemonic);
 	$("#buttonShowAddresses").click(showAddressesAndBalances);
 	$("#buttonSendAddresses").click(unlockWalletAndDeriveAddresses);
 	$("#buttonSignTransaction").click(signTransaction);
 	$("#buttonSendSignedTransaction").click(sendTransaction);
 	$("#exportWalletForReal").click(exportWalletToJSONFile);
-	$("#contractAddressInitialize").click(initializeContract);
-	$("#contractExecute").click(executeContract);
 
-	$("#linkDelete").click(deleteWallet);
+
+
+
+	//Testing buttons:
+	$("#showLoggedInButtons").click(showLoggedInButtons);
+	$("#showLoggedOutButtons").click(showLoggedOutButtons);
+
+
+
+
+	// Show/Hide sections functions:
 
 	function showView(viewName) {
 		// Hide all views and show the selected view only
 		$("main > section").hide();
 		$("#" + viewName).show();
 
+		// if we have a wallet in local storage, we have access to the wallet:
 		if (localStorage.JSON) {
-			$("#linkCreateNewWallet").hide();
-			$("#linkImportWalletFromMnemonic").hide();
-			$("#linkImportWalletFromFile").hide();
+			showLoggedInButtons();
 
-			$("#linkShowMnemonic").show();
-			$("#linkShowAddressesAndBalances").show();
-			$("#linkSendTransaction").show();
-			$("#linkDelete").show();
-			$("#linkContract").show();
-			$("#linkExport").show();
 		} else {
-			$("#linkShowMnemonic").hide();
-			$("#linkShowAddressesAndBalances").hide();
-			$("#linkSendTransaction").hide();
-			$("#linkDelete").hide();
-			$("#linkContract").hide();
-			$("#linkExport").hide();
-
-			$("#linkCreateNewWallet").show();
-			$("#linkImportWalletFromMnemonic").show();
-			$("#linkImportWalletFromFile").show();
+			showLoggedOutButtons();
 		}
 	}
 
@@ -151,20 +129,32 @@ $(document).ready(function () {
 	}
 
 	function showLoggedInButtons() {
-		$("#linkCreateNewWallet").hide();
-		$("#linkImportWalletFromMnemonic").hide();
-		$("#linkImportWalletFromFile").hide();
-
-		$("#linkShowMnemonic").show();
-		$("#linkShowAddressesAndBalances").show();
-		$("#linkSendTransaction").show();
-		$("#linkDelete").show();
-		$("#linkContract").show();
-		$("#linkExport").show();
+		$(".before-login").each(function () {
+			$(this).hide();
+			// console.log('attempting hiding ', $(this));
+		});
+		$(".after-login").each(function () {
+			$(this).show();
+			// console.log('attempting showing ', $(this));
+		});
 	}
 
+	function showLoggedOutButtons() {
+		$(".before-login").each(function () {
+			$(this).show();
+			// console.log('attempting showing ', $(this));
+		});
+		$(".after-login").each(function () {
+			$(this).hide();
+			// console.log('attempting hiding ', $(this));
+		});
+	}
+
+
+
+	// Wallet functionality:
+
 	async function encryptAndSaveJSON(wallet, password) {
-		// TODO:
 		// encrypt() method returns json; save it in local storage
 		// 		and call showLoggedInButtons() if saved wallet exists in storage.
 		// catch errors and show them with showError()
@@ -231,42 +221,6 @@ $(document).ready(function () {
 		}
 	}
 
-	async function openWalletFromFile() {
-		// TODO:
-		if ($("#walletForUpload")[0].files.length <= 0) {
-			showError("Please select a file to upload");
-			return;
-		}
-
-		let password = $("#passwordUploadWallet").val();
-		let fileReader = new FileReader();
-
-		fileReader.onload = async function () {
-			let json = fileReader.result;
-
-			let wallet;
-
-			try {
-				wallet = await decryptWallet(json, password);
-			} catch (e) {
-				showError(e);
-				return;
-			} finally {
-				hideLoadingBar();
-			}
-
-			if (!wallet.mnemonic.phrase) {
-				showError("Invalid JSON file");
-				return;
-			}
-
-			window.localStorage["JSON"] = json;
-			showInfo("Wallet successfully loaded!");
-			showLoggedInButtons();
-		};
-
-		fileReader.readAsText($("#walletForUpload")[0].files[0]);
-	}
 
 	async function showMnemonic() {
 		// TODO:
@@ -482,91 +436,9 @@ $(document).ready(function () {
 		}
 	}
 
-	function deleteWallet() {
-		// TODO:
+	function logout() {
 		localStorage.clear();
 		showView("viewHome");
-	}
-
-	function initializeContract() {
-		// OPTIONAL TODO:
-		const contractAddress = $("#contractAddress").val();
-		const abi = $("#textareaContractABI").val();
-
-		console.log("contract address:", contractAddress);
-		console.log("abi:", abi);
-
-		let contract;
-		try {
-			contract = new ethers.Contract(contractAddress, abi, provider);
-			console.log("after new contract");
-			const methods = Object.keys(contract.functions).filter(
-				(item) => item.includes("(") && item.includes(")")
-			);
-			console.log(methods);
-
-			methods.forEach((m) => {
-				let option = $(`<option id="${m}"></option>`).text(m);
-				$("#contractMethods").append(option);
-			});
-		} catch (e) {
-			showError(e);
-			return;
-		} finally {
-			$("#contractInput").show();
-		}
-	}
-
-	async function executeContract() {
-		// not working
-		// OPTIONAL TODO:
-
-		// take password
-		// decrypt localstorage wallet
-		// take a value
-		// send transaction
-		const password = $("#contractPassword").val();
-		const json = window.localStorage.JSON;
-
-		const method = $("#contractMethods").children("option:selected").val();
-		console.log("selected method", method);
-
-		const contractAddress = $("#contractAddress").val();
-		const abi = $("#textareaContractABI").val();
-		let contract;
-
-		let wallet;
-
-		// need to deploy contract here - so it's deployed on ropsten (instead of private remix blockchain)
-
-		try {
-			wallet = await decryptWallet(json, password);
-			hideLoadingBar();
-			const value = $("#contractInput").val();
-			contract = new ethers.Contract(contractAddress, abi, provider);
-			let contractWithSigner = contract.connect(wallet);
-			let tx;
-
-			if (method.includes("()")) {
-				// no value needed
-
-				let get = await contract[method]();
-				console.log("retrieved value from method:", get);
-			} else {
-				// example: "(uint256)"
-				if (!value) {
-					showError("A value is needed!");
-					return;
-				}
-				tx = await contractWithSigner[method](value);
-				console.log("tx hash:", tx.hash);
-				await tx.wait();
-				console.log("tx.wait finished, should be updated?");
-			}
-		} catch (e) {
-			showError(e);
-			return;
-		}
 	}
 
 	function exportWalletToJSONFile() {

@@ -48,3 +48,16 @@ Wallet app:
 		Open existing wallet
 		Check account balance for certain blockchain address
 		Create, sign, send transactions
+
+
+
+
+
+
+
+
+
+
+
+So, keep it simple and just have the wallet client-side,
+or use an express server and save wallet in the session

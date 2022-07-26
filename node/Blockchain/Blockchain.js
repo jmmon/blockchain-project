@@ -512,7 +512,7 @@ class Blockchain {
 	darkGravityWave(newestBlockIndex = this.getLastBlock().index) {
 		const targetSpacing = this.config.targetBlockTimeSeconds;
 		const pastBlocks = this.config.difficultyOverPastBlocks;	//max blocks to count
-		const minimumDifficulty = this.config.startDifficulty;
+		const minimumDifficulty = 1;
 
 		let actualTimespan = 0; // counts our actual total block times
 
@@ -593,9 +593,9 @@ class Blockchain {
 
 		// // STEP 4: make sure we're above our minimum difficulty
 		// // not really needed
-		// if (newDifficulty <  minimumDifficulty) {
-		// 	newDifficulty = minimumDifficulty; //our minimum
-		// }
+		if (newDifficulty <  minimumDifficulty) {
+			newDifficulty = minimumDifficulty; //our minimum
+		}
 
 		const previousBlockTime = this.getBlockTimeByIndex(newestBlockIndex);
 		const blockTimeDifferenceRatio = 1.5;
