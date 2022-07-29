@@ -1,12 +1,12 @@
 {
-  "name": "key-generation",
+  "name": "playing-with-btc-lib",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "create-wallet.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "start": "node create-wallet.js"
   },
   "keywords": [],
   "author": "",
@@ -14,8 +14,7 @@
   "dependencies": {
     "bip32": "^3.0.1",
     "bip39": "^3.0.4",
-    "elliptic": "^6.5.4",
-    "js-chain-libs": "^0.3.0",
-    "js-sha3": "^0.8.0"
+    "bitcoinjs-lib": "^6.0.2",
+    "tiny-secp256k1": "^2.2.1"
   }
 }

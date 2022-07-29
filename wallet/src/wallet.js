@@ -3,6 +3,15 @@
  * Check documentation here: https://docs.ethers.io/v5/
  */
 
+// import BIP32Factory from 'bip32';
+const BIP32Factory = require('bip32');
+// import * as bip39 from 'bip39';
+const bip39 = require('bip39');
+// import * as ecc from 'tiny-secp256k1';
+const ecc = require('tiny-secp256k1');
+
+const bip32 = BIP32Factory(ecc);
+
 $(document).ready(function () {
 	const derivationPath = "m/44'/60'/0'/0/";
 	const provider = ethers.getDefaultProvider("ropsten");
@@ -189,24 +198,33 @@ $(document).ready(function () {
 	}
 
 	async function generateNewWallet() {
-		// Generate Now button
-		// TODO;
-		// Take input box and save it in a variable.
-		// Use ethers.js to create a new random wallet
-		// ethers.Wallet.createRandom([options])
-		// encryptAndSaveJSON method to encrypt wallet and save in local storage
+		//TODO: use util entropy generator to create randomness for wallet
 
-		const password = $("#passwordCreateWallet").val();
-		// console.log(password);
-		const randomNumber = Math.random();
-		const wallet = new ethers.Wallet.createRandom([password, randomNumber]);
-		await encryptAndSaveJSON(wallet, password);
-		showInfo("Please save your mnemonic: " + wallet.mnemonic.phrase);
-		$("#textareaCreateWalletResult").val(window.localStorage.JSON);
+		// const password = $("#passwordCreateWallet").val();
+		// const repeatPassword = $("#passwordRepeatCreateWallet").val();
+
+		// if (password !== repeatPassword) {
+		// 	showError("Passwords do not match!");
+		// 	return;
+		// }
+
+		const mnemonic = bip39.generateMnemonic()
+		const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
+		const node = bip32.fromSeed(masterSeed);
+		const stringNode = node.neutered().toBase58();
+		$("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${mnemonic}\nSeed from mnemonic:\n${masterSeed}\nnode from seed:\n${node}\nStringNode from node:\n${stringNode}`);
+		
+		// const randomNumber = Math.random();
+		// const wallet = new ethers.Wallet.createRandom([password, randomNumber]);
+		// console.log(wallet);
+		
+		// // await encryptAndSaveJSON(wallet, password);
+		// showInfo("Please save your mnemonic: " + wallet.mnemonic.phrase);
+		// $("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${wallet.mnemonic.phrase}\nExtracted Public Key:\n${wallet.publicKey}\nAddress:\n${wallet.address}`);
+		
 	}
 
 	async function openWalletFromMnemonic() {
-		// TODO:
 		const mnemonic = $("#textareaOpenWallet").val();
 
 		if (!ethers.utils.isValidMnemonic(mnemonic)) {
@@ -223,7 +241,6 @@ $(document).ready(function () {
 
 
 	async function showMnemonic() {
-		// TODO:
 		const password = $("#passwordShowMnemonic").val();
 		const json = window.localStorage.JSON;
 
@@ -241,7 +258,6 @@ $(document).ready(function () {
 	}
 
 	async function showAddressesAndBalances() {
-		// TODO:
 		const password = $("#passwordShowAddresses").val();
 		const json = window.localStorage.JSON;
 
@@ -260,7 +276,6 @@ $(document).ready(function () {
 	}
 
 	async function renderAddressAndBalances(wallet) {
-		// TODO:
 		$("#divAddressesAndBalances").empty();
 		const masterNode = ethers.utils.HDNode.fromMnemonic(
 			wallet.mnemonic.phrase
@@ -305,7 +320,6 @@ $(document).ready(function () {
 	}
 
 	async function unlockWalletAndDeriveAddresses() {
-		// TODO:
 		let password = $("#passwordSendTransaction").val();
 		let json = localStorage.JSON;
 		let wallet;
@@ -326,7 +340,6 @@ $(document).ready(function () {
 	}
 
 	async function renderAddresses(wallet) {
-		// TODO:
 		$("#senderAddress").empty();
 
 		let masterNode = ethers.utils.HDNode.fromMnemonic(
@@ -349,12 +362,11 @@ $(document).ready(function () {
 	}
 
 	async function signTransaction() {
-		// TODO:
 		let senderAddress = $("#senderAddress option:selected").attr("id");
 		let wallet = wallets[senderAddress];
 
+		
 		// Validations
-
 		if (!wallet) {
 			showError("Invalid address!");
 			return;
@@ -390,7 +402,6 @@ $(document).ready(function () {
 	}
 
 	async function sendTransaction() {
-		// TODO:
 		const recipient = $("#recipientAddress").val();
 		if (!recipient) {
 			showError("Invalid recipient!");
@@ -442,7 +453,6 @@ $(document).ready(function () {
 	}
 
 	function exportWalletToJSONFile() {
-		// OPTIONAL TODO:
 		const data = new Blob([window.localStorage.JSON], {
 			type: "text/plain",
 		});
