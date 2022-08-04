@@ -1,0 +1,51 @@
+BIP 44:
+
+Understanding derivation path levels:
+5 levels in BIP32 path:
+	m / purpose' / coin_type' / account' / change / address_index
+Apostrophe indicates that BIP32-hardened-derivation is used
+
+"Purpose":
+A constant, set to 44' (or 0x8000002C) (following BIP43 recommendation). It indicates the subtree of this node is used according to the specification!
+Hardened derivation is used at this level.
+
+"Coin type":
+One master node (seed) can be used for unlimited number of independent cryptocurrencies! However, sharing the same space has disadvantages.
+This path level creates a separate subtree for each cryptocurrency, avoiding reusing addresses across coins (and improving privacy issues).
+This is a constant, set for each cryptocurrency. (Developers may ask to register an unused number for their project - see registered coin types)
+Hardened derivation is used at this level.
+
+"Account":
+This derivation path level splits the "key space" into independent "user identities", so wallet never mixes coins across different accounts.
+Users can use these accounts to organize funds like bank accounts; for donation purposes; saving purposes; common expenses; etc
+Accounts are numbered from 0 and increasing sequentially. This number (index) is used as "child index" in BIP32 derivation
+Hardened derivation is used at this level.
+Software should prevent creation of account if previous account does not have a transaction history (none of the addresses have been used before).
+Software needs to discover all used accounts after importing a seed. (See below)
+
+"Change":
+Constant: 0 is used for external chain (public receiving addresses) while 1 is used for internal chain (change addresses; only receiving coins from the "external chain" addresses).
+"Public derivation" is used at this level.
+
+"Index":
+Addresses are numbered from 0, sequentially increasing. This is used as "child index" in BIP32 derivation.
+"Public derivation" is used at this level.
+
+
+Account Discovery Algorithm:
+When master seed is imported, wallet should start to discover accounts in following manner:
+
+1. Derive first account's node (index 0)
+2. derive external chain node of this account (addresses intended to be publicly viewable?)
+3. scan addresses of external chain; respect gap limit (described below?)
+4. If no transactions found on external chain, stop discovery
+5. If some transactions, increment account index and go back to step 1
+
+This works because wallets should disallow creation of new accounts if previous one has no transaction history
+
+Note that it works with transaction history, not account balances, so will continue discovery if account has 0 total coins
+
+Gap limit: 20
+If software hits 20 unused addresses in a row, it stops searching that "address chain" because it assumes no used addresses will be found.
+We only scan "external" chains, because internal chains receive coins only from the external chain anyway.
+Wallet should warn user when they try to generate a new address which would exceed the gap limit!
