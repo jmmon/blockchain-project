@@ -120,7 +120,190 @@ const createWallet = () => {
 	console.log('child2 privateKey:\n', child2.privateKey.toString('hex'));
 
 	// ideas from: https://github.com/bitcoinjs/bip32/blob/master/test/index.js
+
+
+
+
+	// -------------------------------------------------------------
+
+	console.log(`\n---- NEW PATH DERIVATION TESTING FOR BIP44 ----`);
+
+	const purpose = "44'"
+	const coinType = "7789'"
+
+	const accountPathsArray = [
+		//account 0
+		[			
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "0'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "0", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "0'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "1", // address number (inside this account)
+			},	
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "0'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "2", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "0'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "3", // address number (inside this account)
+			},
+		],
+		
+		//account 1
+		[			
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "1'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "0", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "1'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "1", // address number (inside this account)
+			},	
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "1'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "2", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "1'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "3", // address number (inside this account)
+			},
+		],
+
+		//account 2
+		[
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "2'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "0", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "2'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "1", // address number (inside this account)
+			},	
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "2'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "2", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "2'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "3", // address number (inside this account)
+			},
+		],
+
+		//account 3
+		[
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "3'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "0", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "3'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "1", // address number (inside this account)
+			},	
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "3'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "2", // address number (inside this account)
+			},
+			{
+				purpose, //bip44 indication
+				coinType,	//"coin type" constant
+				account: "3'", // different sets of addresses
+				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
+				index: "3", // address number (inside this account)
+			},
+		],
+	];
+
+	accountPathsArray.forEach((account, index) => {
+		console.log(`\n\n---- ACCOUNT ${index} ----`);
+
+		account.forEach((keyPair, i) => {
+			console.log(`  ---- INDEX ${i} ----`);
+			// Path deriving based on bip44 tips
+			// console.log(`  derive child #${i} from custom path object:\n  `, masterNode.derivePath(pathFromPathObject(account[`index${i}`])));
+
+			
+			let path = pathFromPathObject(keyPair);
+
+			console.log(`  privateKey #${i}:\n  `, masterNode.derivePath(path).privateKey.toString('hex'));
+
+			console.log(`  publicKey #${i}:\n  `, masterNode.derivePath(path).publicKey.toString('hex'));
+			console.log();
+
+
+			console.log(`  ---- CHANGE ${i} ----`);
+			// Path deriving based on bip44 tips
+			// console.log(`  derive child #${i} from custom path object:\n  `, masterNode.derivePath(pathFromPathObject(account[`index${i}`])));
+
+			let changePath = {
+				...keyPair,
+				change: "1",
+			}
+
+			path = pathFromPathObject(changePath);
+
+			console.log(`  CHANGE privateKey #${i}:\n  `, masterNode.derivePath(path).privateKey.toString('hex'));
+
+			console.log(`  CHANGE publicKey #${i}:\n  `, masterNode.derivePath(path).publicKey.toString('hex'));
+			console.log("\n");
+		});
+		
+	});
+	
+	console.log(`---- END PATH DERIVATION ----\n`);
+
+	
 }
+
+const pathFromPathObject = ({purpose, coinType, account, change, index}) => `m/${purpose}/${coinType}/${account}/${change}/${index}`;
+
 
 createWallet();
 
