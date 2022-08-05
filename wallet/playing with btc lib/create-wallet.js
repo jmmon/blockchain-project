@@ -128,37 +128,32 @@ const createWallet = () => {
 
 	console.log(`\n---- NEW PATH DERIVATION TESTING FOR BIP44 ----`);
 
-	const purpose = "44'"
-	const coinType = "7789'"
+	
+	const purpose = "44"
+	const coinType = "7789"
+
+	const pathFromPathObject = ({ account, change, index }) => `m/${purpose}'/${coinType}'/${account}'/${change}/${index}`;
 
 	const accountPathsArray = [
 		//account 0
 		[			
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "0'", // different sets of addresses
+				account: "0", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "0", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "0'", // different sets of addresses
+				account: "0", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "1", // address number (inside this account)
 			},	
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "0'", // different sets of addresses
+				account: "0", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "2", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "0'", // different sets of addresses
+				account: "0", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "3", // address number (inside this account)
 			},
@@ -167,30 +162,22 @@ const createWallet = () => {
 		//account 1
 		[			
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "1'", // different sets of addresses
+				account: "1", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "0", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "1'", // different sets of addresses
+				account: "1", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "1", // address number (inside this account)
 			},	
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "1'", // different sets of addresses
+				account: "1", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "2", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "1'", // different sets of addresses
+				account: "1", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "3", // address number (inside this account)
 			},
@@ -199,30 +186,22 @@ const createWallet = () => {
 		//account 2
 		[
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "2'", // different sets of addresses
+				account: "2", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "0", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "2'", // different sets of addresses
+				account: "2", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "1", // address number (inside this account)
 			},	
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "2'", // different sets of addresses
+				account: "2", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "2", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "2'", // different sets of addresses
+				account: "2", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "3", // address number (inside this account)
 			},
@@ -231,30 +210,22 @@ const createWallet = () => {
 		//account 3
 		[
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "3'", // different sets of addresses
+				account: "3", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "0", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "3'", // different sets of addresses
+				account: "3", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "1", // address number (inside this account)
 			},	
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "3'", // different sets of addresses
+				account: "3", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "2", // address number (inside this account)
 			},
 			{
-				purpose, //bip44 indication
-				coinType,	//"coin type" constant
-				account: "3'", // different sets of addresses
+				account: "3", // different sets of addresses
 				change: "0", // 0 indicates "public" addresses, 1 indicates "change" addresses
 				index: "3", // address number (inside this account)
 			},
@@ -299,10 +270,11 @@ const createWallet = () => {
 	
 	console.log(`---- END PATH DERIVATION ----\n`);
 
+	// public keys start with [02 or 03], meaning (it's compressed and) the y coordinate is [even or odd]
+
 	
 }
 
-const pathFromPathObject = ({purpose, coinType, account, change, index}) => `m/${purpose}/${coinType}/${account}/${change}/${index}`;
 
 
 createWallet();

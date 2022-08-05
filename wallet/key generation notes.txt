@@ -19,9 +19,9 @@ Hardened derivation is used at this level.
 This derivation path level splits the "key space" into independent "user identities", so wallet never mixes coins across different accounts.
 Users can use these accounts to organize funds like bank accounts; for donation purposes; saving purposes; common expenses; etc
 Accounts are numbered from 0 and increasing sequentially. This number (index) is used as "child index" in BIP32 derivation
-Hardened derivation is used at this level.
 Software should prevent creation of account if previous account does not have a transaction history (none of the addresses have been used before).
 Software needs to discover all used accounts after importing a seed. (See below)
+Hardened derivation is used at this level.
 
 "Change":
 Constant: 0 is used for external chain (public receiving addresses) while 1 is used for internal chain (change addresses; only receiving coins from the "external chain" addresses).

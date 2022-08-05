@@ -197,8 +197,11 @@ $(document).ready(function () {
 		);
 	}
 
+	//Generate mnemonic and display generated stuff:
+	// Generated random private key:
+	// Extracted public key:
+	// Extracted blockchain address:
 	async function generateNewWallet() {
-		//TODO: use util entropy generator to create randomness for wallet
 
 		// const password = $("#passwordCreateWallet").val();
 		// const repeatPassword = $("#passwordRepeatCreateWallet").val();
@@ -208,11 +211,15 @@ $(document).ready(function () {
 		// 	return;
 		// }
 
+		const password = "a user's entered password?";
+
 		const mnemonic = bip39.generateMnemonic()
-		const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
-		const node = bip32.fromSeed(masterSeed);
-		const stringNode = node.neutered().toBase58();
-		$("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${mnemonic}\nSeed from mnemonic:\n${masterSeed}\nnode from seed:\n${node}\nStringNode from node:\n${stringNode}`);
+		const masterSeed = bip39.mnemonicToSeedSync(mnemonic, password);
+		const masterNode = bip32.fromSeed(masterSeed);
+
+		const stringNode = masterNode.neutered().toBase58();
+		$("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${mnemonic}\nSeed from mnemonic:\n${masterSeed}\nnode from seed:\n${masterNode}\nStringNode from node:\n${stringNode}`);
+
 		
 		// const randomNumber = Math.random();
 		// const wallet = new ethers.Wallet.createRandom([password, randomNumber]);
@@ -224,7 +231,14 @@ $(document).ready(function () {
 		
 	}
 
+	//Load wallet from  mnemonic and display loaded stuff:
+	// Decoded private key:
+	// Extracted public key:
+	// Extracted blockchain address:
 	async function openWalletFromMnemonic() {
+
+
+
 		const mnemonic = $("#textareaOpenWallet").val();
 
 		if (!ethers.utils.isValidMnemonic(mnemonic)) {
@@ -240,6 +254,7 @@ $(document).ready(function () {
 	}
 
 
+	// When wallet is loaded (into local storage), display the mnemonic
 	async function showMnemonic() {
 		const password = $("#passwordShowMnemonic").val();
 		const json = window.localStorage.JSON;
@@ -257,6 +272,9 @@ $(document).ready(function () {
 		showInfo("Your mnemonic is: " + wallet.mnemonic.phrase);
 	}
 
+	// for View Account Balance ?
+	// Address is constant for our wallet (only allow one address ?)
+	// takes a node, and fetches data from our blockchain to display balances
 	async function showAddressesAndBalances() {
 		const password = $("#passwordShowAddresses").val();
 		const json = window.localStorage.JSON;
