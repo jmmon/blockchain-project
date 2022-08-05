@@ -1,0 +1,5 @@
+Transaction from previous Eth CSharp wallet project (instead of faucet):
+https://ropsten.etherscan.io/tx/0x757031a337d500fc622378e4dbd9e2e7fd9c54d9bb923c4a67b0aad00fcd04ec
+
+Transfer transaction:
+https://ropsten.etherscan.io/tx/0xa1707b3f975348c02b2664c19a27c3ab7b5352d1f3e1dd6c50c5fd758386ff02
