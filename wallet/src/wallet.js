@@ -3,24 +3,47 @@
  * Check documentation here: https://docs.ethers.io/v5/
  */
 
-// import BIP32Factory from 'bip32';
-const BIP32Factory = require('bip32');
-// import * as bip39 from 'bip39';
-const bip39 = require('bip39');
-// import * as ecc from 'tiny-secp256k1';
-const ecc = require('tiny-secp256k1');
+// // import BIP32Factory from 'bip32';
+// const BIP32Factory = require('bip32');
+// // import * as bip39 from 'bip39';
+// const bip39 = require('bip39');
+// // import * as ecc from 'tiny-secp256k1';
+// const ecc = require('tiny-secp256k1');
 
-const bip32 = BIP32Factory(ecc);
+// const bip32 = BIP32Factory(ecc);
+
+import BIP32Factory from 'bip32';
+import * as bip39 from 'bip39';
+import * as ecc from 'tiny-secp256k1';
+
+const bip32 = BIP32Factory.default(ecc)
+
+// const {	
+// 	COIN_PATH_INFO, 
+// 	generatePathFromAccountChangeIndex, 
+// 	getAddressFromPublicKey
+// } = require('./CONSTANTS.JS');
+import {
+	COIN_PATH_INFO, 
+	generatePathFromAccountChangeIndex, 
+	getAddressFromPublicKey,
+	encrypt,
+	decrypt,
+} from "./CONSTANTS.mjs";
+
+
+
+
 
 $(document).ready(function () {
-	const derivationPath = "m/44'/60'/0'/0/";
-	const provider = ethers.getDefaultProvider("ropsten");
+	// const derivationPath = "m/44'/60'/0'/0/";
+	// const provider = ethers.getDefaultProvider("ropsten");
 
-	let wallets = {};
-	let contract;
+	// let wallets = {};
+	// let contract;
 
-	const SAMPLE_CONTRACT_ADDRESS = "";
-	const SAMPLE_ABI = [];
+	// const SAMPLE_CONTRACT_ADDRESS = "";
+	// const SAMPLE_ABI = [];
 
 	showView("viewHome");
 	
@@ -161,46 +184,56 @@ $(document).ready(function () {
 
 
 
-	// Wallet functionality:
+// Encrypt wallet to JSON, not needed?
+async function encryptAndSaveMnemonic(wallet, password) {
+	// encrypt() method returns json; save it in local storage
+	// 		and call showLoggedInButtons() if saved wallet exists in storage.
+	// catch errors and show them with showError()
+	// hide loading bar with hideLoadingBar()
 
-	async function encryptAndSaveJSON(wallet, password) {
-		// encrypt() method returns json; save it in local storage
-		// 		and call showLoggedInButtons() if saved wallet exists in storage.
-		// catch errors and show them with showError()
-		// hide loading bar with hideLoadingBar()
+	let encryptedWallet;
 
-		let encryptedWallet;
-
-		try {
-			encryptedWallet = await wallet.encrypt(
-				password,
-				{},
-				showLoadingProgress
-			);
-		} catch (e) {
-			showError(e);
-			return;
-		} finally {
-			hideLoadingBar();
-		}
-
-		window.localStorage["JSON"] = encryptedWallet;
-		showLoggedInButtons();
-	}
-
-	function decryptWallet(json, password) {
-		// TODO:
-		return ethers.Wallet.fromEncryptedJson(
-			json,
+	try {
+		encryptedWallet = await wallet.encrypt(
 			password,
+			{},
 			showLoadingProgress
 		);
+	} catch (e) {
+		showError(e);
+		return;
+	} finally {
+		hideLoadingBar();
 	}
+
+	window.localStorage["JSON"] = encryptedWallet;
+	showLoggedInButtons();
+}
+
+
+// Decrypt wallet from JSON, probably not needed?
+function decryptWallet(json, password) {
+	// TODO:
+	return ethers.Wallet.fromEncryptedJson(
+		json,
+		password,
+		showLoadingProgress
+	);
+}
+
+
+	// Wallet functionality:
+
 
 	//Generate mnemonic and display generated stuff:
 	// Generated random private key:
 	// Extracted public key:
 	// Extracted blockchain address:
+	//
+	//We want to 
+	//	display mnemonic, 
+	//	account 0 privateKey, 
+	//	account0 address index0
 	async function generateNewWallet() {
 
 		// const password = $("#passwordCreateWallet").val();
@@ -211,23 +244,41 @@ $(document).ready(function () {
 		// 	return;
 		// }
 
-		const password = "a user's entered password?";
+		// const password = "a user's entered password?";
+		const password = null;
 
-		const mnemonic = bip39.generateMnemonic()
-		const masterSeed = bip39.mnemonicToSeedSync(mnemonic, password);
+		const mnemonic = bip39.generateMnemonic();
+
+		let masterSeed
+		if (password) {
+			masterSeed = bip39.mnemonicToSeedSync(mnemonic, password);
+		} else {
+			masterSeed = bip39.mnemonicToSeedSync(mnemonic);
+		}
+
 		const masterNode = bip32.fromSeed(masterSeed);
 
-		const stringNode = masterNode.neutered().toBase58();
-		$("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${mnemonic}\nSeed from mnemonic:\n${masterSeed}\nnode from seed:\n${masterNode}\nStringNode from node:\n${stringNode}`);
+		const pathObject = {
+			account: "0",
+			change: "0", // public
+			index: "0",
+		};
 
-		
-		// const randomNumber = Math.random();
-		// const wallet = new ethers.Wallet.createRandom([password, randomNumber]);
-		// console.log(wallet);
-		
-		// // await encryptAndSaveJSON(wallet, password);
-		// showInfo("Please save your mnemonic: " + wallet.mnemonic.phrase);
-		// $("#textareaCreateWalletResult").val(`Generated Mnemonic:\n${wallet.mnemonic.phrase}\nExtracted Public Key:\n${wallet.publicKey}\nAddress:\n${wallet.address}`);
+		const path = generatePathFromAccountChangeIndex(pathObject);
+
+		const accountPrivKey = masterNode.derivePath(path).privateKey.toString('hex');
+		const accountPubKey = masterNode.derivePath(path).publicKey.toString('hex');
+		const accountAddress0 = getAddressFromPublicKey(accountPubKey);
+
+		const displayData = `Generated Mnemonic:\n${mnemonic}
+		\nAccount Private Key:\n${accountPrivKey}
+		\nAccount Public Key:\n${accountPubKey}
+		\nPublic address from account:\n${accountAddress0}`
+
+
+
+		$("#textareaCreateWalletResult").val(displayData);
+
 		
 	}
 
@@ -293,92 +344,12 @@ $(document).ready(function () {
 		}
 	}
 
-	async function renderAddressAndBalances(wallet) {
-		$("#divAddressesAndBalances").empty();
-		const masterNode = ethers.utils.HDNode.fromMnemonic(
-			wallet.mnemonic.phrase
-		);
-		const balancePromises = [];
+	// Sign transaction
+	// Sender address (our constant address for our wallet)
+	// Recipient address
+	// Value
 
-		for (let i = 0; i < 5; i++) {
-			const derivedPrivateKey = masterNode.derivePath(
-				derivationPath + i
-			).privateKey;
-			let wallet = new ethers.Wallet(derivedPrivateKey, provider);
-			const promise = wallet.getBalance();
-			balancePromises.push(promise);
-		}
-
-		let balances;
-
-		try {
-			balances = await Promise.all(balancePromises);
-		} catch (e) {
-			showError(e);
-			return;
-		}
-
-		for (let i = 0; i < 5; i++) {
-			let div = $('<div id="qrcode"></div>');
-			const derivedPrivateKey = masterNode.derivePath(
-				derivationPath + i
-			).privateKey;
-			let wallet = new ethers.Wallet(derivedPrivateKey, provider);
-
-			div.qrcode(wallet.address);
-			div.append(
-				$(
-					`<p>${wallet.address}: ${ethers.utils.formatEther(
-						balances[i]
-					)} ETH </p>`
-				)
-			);
-			$("#divAddressesAndBalances").append(div);
-		}
-	}
-
-	async function unlockWalletAndDeriveAddresses() {
-		let password = $("#passwordSendTransaction").val();
-		let json = localStorage.JSON;
-		let wallet;
-
-		try {
-			wallet = await decryptWallet(json, password);
-		} catch (e) {
-			showError(e);
-			return;
-		} finally {
-			$("#passwordSendTransaction").val();
-			hideLoadingBar();
-		}
-
-		showInfo("Wallet successfully unlocked!");
-		renderAddresses(wallet);
-		$("#divSignAndSendTransaction").show();
-	}
-
-	async function renderAddresses(wallet) {
-		$("#senderAddress").empty();
-
-		let masterNode = ethers.utils.HDNode.fromMnemonic(
-			wallet.mnemonic.phrase
-		);
-
-		for (let i = 0; i < 5; i++) {
-			let wallet = new ethers.Wallet(
-				masterNode.derivePath(derivationPath + i).privateKey,
-				provider
-			);
-			let address = wallet.address;
-
-			wallets[address] = wallet;
-			let option = $(`<option id="${wallet.address}"></option>`).text(
-				address
-			);
-			$("#senderAddress").append(option);
-		}
-	}
-
+	//Returns signed transaction object
 	async function signTransaction() {
 		let senderAddress = $("#senderAddress option:selected").attr("id");
 		let wallet = wallets[senderAddress];
@@ -419,6 +390,10 @@ $(document).ready(function () {
 		}
 	}
 
+	//Send transaction:
+	// takes our signed transaction object
+	// takes blockchain node (url)
+	//and sends request to our node to send the transaction
 	async function sendTransaction() {
 		const recipient = $("#recipientAddress").val();
 		if (!recipient) {
@@ -465,11 +440,13 @@ $(document).ready(function () {
 		}
 	}
 
+	// clears our localStorage, "logging us out"
 	function logout() {
 		localStorage.clear();
 		showView("viewHome");
 	}
 
+	// probably not needed?
 	function exportWalletToJSONFile() {
 		const data = new Blob([window.localStorage.JSON], {
 			type: "text/plain",
@@ -485,3 +462,143 @@ $(document).ready(function () {
 		$a.remove();
 	}
 });
+
+
+
+
+
+
+
+/* 
+// Encrypt wallet to JSON, not needed?
+	async function encryptAndSaveJSON(wallet, password) {
+		// encrypt() method returns json; save it in local storage
+		// 		and call showLoggedInButtons() if saved wallet exists in storage.
+		// catch errors and show them with showError()
+		// hide loading bar with hideLoadingBar()
+
+		let encryptedWallet;
+
+		try {
+			encryptedWallet = await wallet.encrypt(
+				password,
+				{},
+				showLoadingProgress
+			);
+		} catch (e) {
+			showError(e);
+			return;
+		} finally {
+			hideLoadingBar();
+		}
+
+		window.localStorage["JSON"] = encryptedWallet;
+		showLoggedInButtons();
+	}
+
+
+// Decrypt wallet from JSON, probably not needed?
+	function decryptWallet(json, password) {
+		// TODO:
+		return ethers.Wallet.fromEncryptedJson(
+			json,
+			password,
+			showLoadingProgress
+		);
+	}
+
+
+
+// for showing balances, probably not needed?
+	async function renderAddressAndBalances(wallet) {
+		$("#divAddressesAndBalances").empty();
+		const masterNode = ethers.utils.HDNode.fromMnemonic(
+			wallet.mnemonic.phrase
+		);
+		const balancePromises = [];
+
+		for (let i = 0; i < 5; i++) {
+			const derivedPrivateKey = masterNode.derivePath(
+				derivationPath + i
+			).privateKey;
+			let wallet = new ethers.Wallet(derivedPrivateKey, provider);
+			const promise = wallet.getBalance();
+			balancePromises.push(promise);
+		}
+
+		let balances;
+
+		try {
+			balances = await Promise.all(balancePromises);
+		} catch (e) {
+			showError(e);
+			return;
+		}
+
+		for (let i = 0; i < 5; i++) {
+			let div = $('<div id="qrcode"></div>');
+			const derivedPrivateKey = masterNode.derivePath(
+				derivationPath + i
+			).privateKey;
+			let wallet = new ethers.Wallet(derivedPrivateKey, provider);
+
+			div.qrcode(wallet.address);
+			div.append(
+				$(
+					`<p>${wallet.address}: ${ethers.utils.formatEther(
+						balances[i]
+					)} ETH </p>`
+				)
+			);
+			$("#divAddressesAndBalances").append(div);
+		}
+	}
+
+
+
+	// helper function, probably not needed
+	async function unlockWalletAndDeriveAddresses() {
+		let password = $("#passwordSendTransaction").val();
+		let json = localStorage.JSON;
+		let wallet;
+
+		try {
+			wallet = await decryptWallet(json, password);
+		} catch (e) {
+			showError(e);
+			return;
+		} finally {
+			$("#passwordSendTransaction").val();
+			hideLoadingBar();
+		}
+
+		showInfo("Wallet successfully unlocked!");
+		renderAddresses(wallet);
+		$("#divSignAndSendTransaction").show();
+	}
+
+
+
+	// helper function, probably not needed? But maybe helpful for derivePath logic
+	async function renderAddresses(wallet) {
+		$("#senderAddress").empty();
+
+		let masterNode = ethers.utils.HDNode.fromMnemonic(
+			wallet.mnemonic.phrase
+		);
+
+		for (let i = 0; i < 5; i++) {
+			let wallet = new ethers.Wallet(
+				masterNode.derivePath(derivationPath + i).privateKey,
+				provider
+			);
+			let address = wallet.address;
+
+			wallets[address] = wallet;
+			let option = $(`<option id="${wallet.address}"></option>`).text(
+				address
+			);
+			$("#senderAddress").append(option);
+		}
+	}
+*/
