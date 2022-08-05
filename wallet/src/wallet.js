@@ -185,40 +185,31 @@ $(document).ready(function () {
 
 
 // Encrypt wallet to JSON, not needed?
-async function encryptAndSaveMnemonic(wallet, password) {
+async function encryptAndSaveMnemonic(mnemonic, password) {
 	// encrypt() method returns json; save it in local storage
 	// 		and call showLoggedInButtons() if saved wallet exists in storage.
 	// catch errors and show them with showError()
 	// hide loading bar with hideLoadingBar()
 
-	let encryptedWallet;
+	let encryptedMnemonic;
 
 	try {
-		encryptedWallet = await wallet.encrypt(
-			password,
-			{},
-			showLoadingProgress
+		encryptedMnemonic = await encrypt( mnemonic, password,
 		);
 	} catch (e) {
 		showError(e);
 		return;
-	} finally {
-		hideLoadingBar();
 	}
 
-	window.localStorage["JSON"] = encryptedWallet;
+	window.localStorage["walletMnemonic"] = encryptedMnemonic;
 	showLoggedInButtons();
 }
 
 
 // Decrypt wallet from JSON, probably not needed?
-function decryptWallet(json, password) {
+function decryptMnemonic(encryptedMnemonic, password) {
 	// TODO:
-	return ethers.Wallet.fromEncryptedJson(
-		json,
-		password,
-		showLoadingProgress
-	);
+	return decrypt(encryptedMnemonic, password)
 }
 
 
@@ -235,17 +226,13 @@ function decryptWallet(json, password) {
 	//	account 0 privateKey, 
 	//	account0 address index0
 	async function generateNewWallet() {
+		const password = $("#passwordCreateWallet").val();
+		const repeatPassword = $("#passwordRepeatCreateWallet").val();
 
-		// const password = $("#passwordCreateWallet").val();
-		// const repeatPassword = $("#passwordRepeatCreateWallet").val();
-
-		// if (password !== repeatPassword) {
-		// 	showError("Passwords do not match!");
-		// 	return;
-		// }
-
-		// const password = "a user's entered password?";
-		const password = null;
+		if (password !== repeatPassword) {
+			showError("Passwords do not match!");
+			return;
+		}
 
 		const mnemonic = bip39.generateMnemonic();
 
@@ -273,10 +260,11 @@ function decryptWallet(json, password) {
 		const displayData = `Generated Mnemonic:\n${mnemonic}
 		\nAccount Private Key:\n${accountPrivKey}
 		\nAccount Public Key:\n${accountPubKey}
-		\nPublic address from account:\n${accountAddress0}`
+		\nPublic address from account:\n${accountAddress0}`;
 
 
-
+		await encryptAndSaveMnemonic(mnemonic, password);
+		showInfo("Please save your mnemonic!");
 		$("#textareaCreateWalletResult").val(displayData);
 
 		
