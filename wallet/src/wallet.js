@@ -12,444 +12,448 @@
 
 // const bip32 = BIP32Factory(ecc);
 
-import BIP32Factory from 'bip32';
-import * as bip39 from 'bip39';
-import * as ecc from 'tiny-secp256k1';
-
-const bip32 = BIP32Factory.default(ecc)
-
 // const {	
 // 	COIN_PATH_INFO, 
 // 	generatePathFromAccountChangeIndex, 
 // 	getAddressFromPublicKey
 // } = require('./CONSTANTS.JS');
-import {
-	COIN_PATH_INFO, 
-	generatePathFromAccountChangeIndex, 
-	getAddressFromPublicKey,
-	encrypt,
-	decrypt,
-} from "./CONSTANTS.mjs";
 
 
 
+(async () => {
+	const {
+		bip32,
+		bip39,
+		bjs
+	} = await import('./lib/walletUtils.mjs');
 
+	const {
+		COIN_PATH_INFO, 
+		generatePathFromAccountChangeIndex, 
+		getAddressFromPublicKey,
+		encrypt,
+		decrypt,
+	} = await import("./CONSTANTS.mjs");
 
-$(document).ready(function () {
-	// const derivationPath = "m/44'/60'/0'/0/";
-	// const provider = ethers.getDefaultProvider("ropsten");
-
-	// let wallets = {};
-	// let contract;
-
-	// const SAMPLE_CONTRACT_ADDRESS = "";
-	// const SAMPLE_ABI = [];
-
-	showView("viewHome");
+	$(document).ready(function () {
+		// const derivationPath = "m/44'/60'/0'/0/";
+		// const provider = ethers.getDefaultProvider("ropsten");
 	
-
-	$("#linkHome").click(function () {
+		// let wallets = {};
+		// let contract;
+	
+		// const SAMPLE_CONTRACT_ADDRESS = "";
+		// const SAMPLE_ABI = [];
+	
 		showView("viewHome");
-	});
-
-	$("#linkCreateNewWallet").click(function () {
-		$("#passwordCreateWallet").val("");
-		$("#textareaCreateWalletResult").val("");
-		showView("viewCreateNewWallet");
-	});
-
-	$("#linkOpenWallet").click(function () {
-		$("#textareaOpenWallet").val("");
-		$("#passwordOpenWallet").val("");
-		$("#textareaOpenWalletResult").val("");
-		$("#textareaOpenWallet").val(
-			"toddler online monitor oblige solid enrich cycle animal mad prevent hockey motor"
-		);
-		showView("viewOpenWalletFromMnemonic");
-	});
-
-	$("#linkAccountBalance").click(function () {
-		showView("viewAccountBalance");
-	});
-
-
-	$("#linkSendTransaction").click(function () {
-		$("#divSignAndSendTransaction").hide();
-
-		$("#passwordSendTransaction").val("");
-		$("#transferValue").val("");
-		$("#senderAddress").empty();
-
-		$("#textareaSignedTransaction").val("");
-		$("#textareaSendTransactionResult").val("");
-
-		showView("viewSendTransaction");
-	});
-
-	$("#linkShowMnemonic").click(function () {
-		$("#passwordShowMnemonic").val("");
-		showView("viewShowMnemonic");
-	});
-
-	$("#linkLogout").click(logout);
-
-
-	// Set up our button functions:
-	$("#buttonGenerateNewWallet").click(generateNewWallet);
-	$("#buttonOpenExistingWallet").click(openWalletFromMnemonic);
-	$("#buttonShowMnemonic").click(showMnemonic);
-	$("#buttonShowAddresses").click(showAddressesAndBalances);
-	$("#buttonSendAddresses").click(unlockWalletAndDeriveAddresses);
-	$("#buttonSignTransaction").click(signTransaction);
-	$("#buttonSendSignedTransaction").click(sendTransaction);
-	$("#exportWalletForReal").click(exportWalletToJSONFile);
-
-
-
-
-	//Testing buttons:
-	$("#showLoggedInButtons").click(showLoggedInButtons);
-	$("#showLoggedOutButtons").click(showLoggedOutButtons);
-
-
-
-
-	// Show/Hide sections functions:
-
-	function showView(viewName) {
-		// Hide all views and show the selected view only
-		$("main > section").hide();
-		$("#" + viewName).show();
-
-		// if we have a wallet in local storage, we have access to the wallet:
-		if (localStorage.JSON) {
-			showLoggedInButtons();
-
-		} else {
-			showLoggedOutButtons();
-		}
-	}
-
-	function showInfo(message) {
-		$("#infoBox>p").html(message);
-		$("#infoBox").show();
-		$("#infoBox>header").click(function () {
-			$("#infoBox").hide();
-		});
-	}
-
-	function showError(errorMsg) {
-		$("#errorBox>p").html("Error: " + errorMsg);
-		$("#errorBox").show();
-		$("#errorBox>header").click(function () {
-			$("#errorBox").hide();
-		});
-	}
-
-	function showLoadingProgress(percent) {
-		$("#loadingBox").html(
-			"Loading... " + parseInt(percent * 100) + "% complete"
-		);
-		$("#loadingBox").show();
-		$("#loadingBox>header").click(function () {
-			$("#errorBox").hide();
-		});
-	}
-
-	function hideLoadingBar() {
-		$("#loadingBox").hide();
-	}
-
-	function showLoggedInButtons() {
-		$(".before-login").each(function () {
-			$(this).hide();
-			// console.log('attempting hiding ', $(this));
-		});
-		$(".after-login").each(function () {
-			$(this).show();
-			// console.log('attempting showing ', $(this));
-		});
-	}
-
-	function showLoggedOutButtons() {
-		$(".before-login").each(function () {
-			$(this).show();
-			// console.log('attempting showing ', $(this));
-		});
-		$(".after-login").each(function () {
-			$(this).hide();
-			// console.log('attempting hiding ', $(this));
-		});
-	}
-
-
-
-// Encrypt wallet to JSON, not needed?
-async function encryptAndSaveMnemonic(mnemonic, password) {
-	// encrypt() method returns json; save it in local storage
-	// 		and call showLoggedInButtons() if saved wallet exists in storage.
-	// catch errors and show them with showError()
-	// hide loading bar with hideLoadingBar()
-
-	let encryptedMnemonic;
-
-	try {
-		encryptedMnemonic = await encrypt( mnemonic, password,
-		);
-	} catch (e) {
-		showError(e);
-		return;
-	}
-
-	window.localStorage["walletMnemonic"] = encryptedMnemonic;
-	showLoggedInButtons();
-}
-
-
-// Decrypt wallet from JSON, probably not needed?
-function decryptMnemonic(encryptedMnemonic, password) {
-	// TODO:
-	return decrypt(encryptedMnemonic, password)
-}
-
-
-	// Wallet functionality:
-
-
-	//Generate mnemonic and display generated stuff:
-	// Generated random private key:
-	// Extracted public key:
-	// Extracted blockchain address:
-	//
-	//We want to 
-	//	display mnemonic, 
-	//	account 0 privateKey, 
-	//	account0 address index0
-	async function generateNewWallet() {
-		const password = $("#passwordCreateWallet").val();
-		const repeatPassword = $("#passwordRepeatCreateWallet").val();
-
-		if (password !== repeatPassword) {
-			showError("Passwords do not match!");
-			return;
-		}
-
-		const mnemonic = bip39.generateMnemonic();
-
-		let masterSeed
-		if (password) {
-			masterSeed = bip39.mnemonicToSeedSync(mnemonic, password);
-		} else {
-			masterSeed = bip39.mnemonicToSeedSync(mnemonic);
-		}
-
-		const masterNode = bip32.fromSeed(masterSeed);
-
-		const pathObject = {
-			account: "0",
-			change: "0", // public
-			index: "0",
-		};
-
-		const path = generatePathFromAccountChangeIndex(pathObject);
-
-		const accountPrivKey = masterNode.derivePath(path).privateKey.toString('hex');
-		const accountPubKey = masterNode.derivePath(path).publicKey.toString('hex');
-		const accountAddress0 = getAddressFromPublicKey(accountPubKey);
-
-		const displayData = `Generated Mnemonic:\n${mnemonic}
-		\nAccount Private Key:\n${accountPrivKey}
-		\nAccount Public Key:\n${accountPubKey}
-		\nPublic address from account:\n${accountAddress0}`;
-
-
-		await encryptAndSaveMnemonic(mnemonic, password);
-		showInfo("Please save your mnemonic!");
-		$("#textareaCreateWalletResult").val(displayData);
-
 		
-	}
-
-	//Load wallet from  mnemonic and display loaded stuff:
-	// Decoded private key:
-	// Extracted public key:
-	// Extracted blockchain address:
-	async function openWalletFromMnemonic() {
-
-
-
-		const mnemonic = $("#textareaOpenWallet").val();
-
-		if (!ethers.utils.isValidMnemonic(mnemonic)) {
-			showError("Invalid Mnemonic");
-		} else {
-			const wallet = ethers.Wallet.fromMnemonic(mnemonic);
-			const password = $("#passwordOpenWallet").val();
-
-			await encryptAndSaveJSON(wallet, password);
-			showInfo("Wallet successfully loaded!");
-			$("#textareaOpenWalletResult").val(window.localStorage.JSON);
-		}
-	}
-
-
-	// When wallet is loaded (into local storage), display the mnemonic
-	async function showMnemonic() {
-		const password = $("#passwordShowMnemonic").val();
-		const json = window.localStorage.JSON;
-
-		let wallet;
-
-		try {
-			wallet = await decryptWallet(json, password);
-		} catch (e) {
-			showError(e);
-			return;
-		} finally {
-			hideLoadingBar();
-		}
-		showInfo("Your mnemonic is: " + wallet.mnemonic.phrase);
-	}
-
-	// for View Account Balance ?
-	// Address is constant for our wallet (only allow one address ?)
-	// takes a node, and fetches data from our blockchain to display balances
-	async function showAddressesAndBalances() {
-		const password = $("#passwordShowAddresses").val();
-		const json = window.localStorage.JSON;
-
-		let wallet;
-
-		try {
-			wallet = await decryptWallet(json, password);
-			await renderAddressAndBalances(wallet);
-		} catch (e) {
-			$("#divAddressesAndBalances").empty();
-			showError(e);
-			return;
-		} finally {
-			hideLoadingBar();
-		}
-	}
-
-	// Sign transaction
-	// Sender address (our constant address for our wallet)
-	// Recipient address
-	// Value
-
-	//Returns signed transaction object
-	async function signTransaction() {
-		let senderAddress = $("#senderAddress option:selected").attr("id");
-		let wallet = wallets[senderAddress];
-
-		
-		// Validations
-		if (!wallet) {
-			showError("Invalid address!");
-			return;
-		}
-
-		const recipient = $("#recipientAddress").val();
-		if (!recipient) {
-			showError("Invalid recipient!");
-			return;
-		}
-
-		const value = $("#transferValue").val();
-		if (!value || value < 0) {
-			showError("Invalid transfer value!");
-			return;
-		}
-
-		// Create Tx Object
-		const tx = {
-			to: recipient,
-			value: ethers.utils.parseEther(value.toString()),
-		};
-
-		try {
-			const createReceipt = await wallet.signTransaction(tx);
-			console.log(`Sign Transaction Successful: ${createReceipt}`);
-			$("#textareaSignedTransaction").val(createReceipt);
-		} catch (e) {
-			$("#textareaSignedTransaction").val("Error: " + e);
-			showError(e);
-			return;
-		}
-	}
-
-	//Send transaction:
-	// takes our signed transaction object
-	// takes blockchain node (url)
-	//and sends request to our node to send the transaction
-	async function sendTransaction() {
-		const recipient = $("#recipientAddress").val();
-		if (!recipient) {
-			showError("Invalid recipient!");
-			return;
-		}
-
-		const value = $("#transferValue").val();
-		if (!value || value < 0) {
-			showError("Invalid transfer value!");
-			return;
-		}
-
-		let senderAddress = $("#senderAddress option:selected").attr("id");
-		let wallet = wallets[senderAddress];
-
-		if (!wallet) {
-			showError("Invalid address!");
-			return;
-		}
-
-		console.log(
-			`Attempting to send ${value} ETH transaction from ${senderAddress} to ${recipient}`
-		);
-
-		// Create Tx Object
-		const tx = {
-			to: recipient,
-			value: ethers.utils.parseEther(value.toString()),
-		};
-
-		try {
-			const createReceipt = await wallet.sendTransaction(tx);
-			await createReceipt.wait();
-			const hash = createReceipt.hash;
-			console.log(`Transaction successful with hash: ${hash}`);
-			showInfo(`Transaction successful with hash: ${hash}`);
-			let etherscanUrl = "https://ropsten.etherscan.io/tx/" + hash;
-			$("#textareaSendTransactionResult").val(etherscanUrl);
-		} catch (e) {
-			$("#textareaSendTransactionResult").val("Error: " + e);
-			showError(e);
-			return;
-		}
-	}
-
-	// clears our localStorage, "logging us out"
-	function logout() {
-		localStorage.clear();
-		showView("viewHome");
-	}
-
-	// probably not needed?
-	function exportWalletToJSONFile() {
-		const data = new Blob([window.localStorage.JSON], {
-			type: "text/plain",
+	
+		$("#linkHome").click(function () {
+			showView("viewHome");
 		});
-
-		let $a = $("<a>", {
-			href: window.URL.createObjectURL(data),
-			download: "exported-wallet.json",
+	
+		$("#linkCreateNewWallet").click(function () {
+			$("#passwordCreateWallet").val("");
+			$("#textareaCreateWalletResult").val("");
+			showView("viewCreateNewWallet");
 		});
-
-		$("body").append($a);
-		$a[0].click();
-		$a.remove();
+	
+		$("#linkOpenWallet").click(function () {
+			$("#textareaOpenWallet").val("");
+			$("#passwordOpenWallet").val("");
+			$("#textareaOpenWalletResult").val("");
+			$("#textareaOpenWallet").val(
+				"toddler online monitor oblige solid enrich cycle animal mad prevent hockey motor"
+			);
+			showView("viewOpenWalletFromMnemonic");
+		});
+	
+		$("#linkAccountBalance").click(function () {
+			showView("viewAccountBalance");
+		});
+	
+	
+		$("#linkSendTransaction").click(function () {
+			$("#divSignAndSendTransaction").hide();
+	
+			$("#passwordSendTransaction").val("");
+			$("#transferValue").val("");
+			$("#senderAddress").empty();
+	
+			$("#textareaSignedTransaction").val("");
+			$("#textareaSendTransactionResult").val("");
+	
+			showView("viewSendTransaction");
+		});
+	
+		$("#linkShowMnemonic").click(function () {
+			$("#passwordShowMnemonic").val("");
+			showView("viewShowMnemonic");
+		});
+	
+		$("#linkLogout").click(logout);
+	
+	
+		// Set up our button functions:
+		$("#buttonGenerateNewWallet").click(generateNewWallet);
+		$("#buttonOpenExistingWallet").click(openWalletFromMnemonic);
+		$("#buttonShowMnemonic").click(showMnemonic);
+		$("#buttonShowAddresses").click(showAddressesAndBalances);
+		$("#buttonSendAddresses").click(unlockWalletAndDeriveAddresses);
+		$("#buttonSignTransaction").click(signTransaction);
+		$("#buttonSendSignedTransaction").click(sendTransaction);
+		$("#exportWalletForReal").click(exportWalletToJSONFile);
+	
+	
+	
+	
+		//Testing buttons:
+		$("#showLoggedInButtons").click(showLoggedInButtons);
+		$("#showLoggedOutButtons").click(showLoggedOutButtons);
+	
+	
+	
+	
+		// Show/Hide sections functions:
+	
+		function showView(viewName) {
+			// Hide all views and show the selected view only
+			$("main > section").hide();
+			$("#" + viewName).show();
+	
+			// if we have a wallet in local storage, we have access to the wallet:
+			if (localStorage.JSON) {
+				showLoggedInButtons();
+	
+			} else {
+				showLoggedOutButtons();
+			}
+		}
+	
+		function showInfo(message) {
+			$("#infoBox>p").html(message);
+			$("#infoBox").show();
+			$("#infoBox>header").click(function () {
+				$("#infoBox").hide();
+			});
+		}
+	
+		function showError(errorMsg) {
+			$("#errorBox>p").html("Error: " + errorMsg);
+			$("#errorBox").show();
+			$("#errorBox>header").click(function () {
+				$("#errorBox").hide();
+			});
+		}
+	
+		function showLoadingProgress(percent) {
+			$("#loadingBox").html(
+				"Loading... " + parseInt(percent * 100) + "% complete"
+			);
+			$("#loadingBox").show();
+			$("#loadingBox>header").click(function () {
+				$("#errorBox").hide();
+			});
+		}
+	
+		function hideLoadingBar() {
+			$("#loadingBox").hide();
+		}
+	
+		function showLoggedInButtons() {
+			$(".before-login").each(function () {
+				$(this).hide();
+				// console.log('attempting hiding ', $(this));
+			});
+			$(".after-login").each(function () {
+				$(this).show();
+				// console.log('attempting showing ', $(this));
+			});
+		}
+	
+		function showLoggedOutButtons() {
+			$(".before-login").each(function () {
+				$(this).show();
+				// console.log('attempting showing ', $(this));
+			});
+			$(".after-login").each(function () {
+				$(this).hide();
+				// console.log('attempting hiding ', $(this));
+			});
+		}
+	
+	
+	
+	// Encrypt wallet to JSON, not needed?
+	async function encryptAndSaveMnemonic(mnemonic, password) {
+		// encrypt() method returns json; save it in local storage
+		// 		and call showLoggedInButtons() if saved wallet exists in storage.
+		// catch errors and show them with showError()
+		// hide loading bar with hideLoadingBar()
+	
+		let encryptedMnemonic;
+	
+		try {
+			encryptedMnemonic = await encrypt( mnemonic, password,
+			);
+		} catch (e) {
+			showError(e);
+			return;
+		}
+	
+		window.localStorage["walletMnemonic"] = encryptedMnemonic;
+		showLoggedInButtons();
 	}
-});
+	
+	
+	// Decrypt wallet from JSON, probably not needed?
+	function decryptMnemonic(encryptedMnemonic, password) {
+		// TODO:
+		return decrypt(encryptedMnemonic, password)
+	}
+	
+	
+		// Wallet functionality:
+	
+	
+		//Generate mnemonic and display generated stuff:
+		// Generated random private key:
+		// Extracted public key:
+		// Extracted blockchain address:
+		//
+		//We want to 
+		//	display mnemonic, 
+		//	account 0 privateKey, 
+		//	account0 address index0
+		async function generateNewWallet() {
+			const password = $("#passwordCreateWallet").val();
+			const repeatPassword = $("#passwordRepeatCreateWallet").val();
+	
+			if (password !== repeatPassword) {
+				showError("Passwords do not match!");
+				return;
+			}
+	
+			const mnemonic = bip39.generateMnemonic();
+	
+			let masterSeed
+			if (password) {
+				masterSeed = bip39.mnemonicToSeedSync(mnemonic, password);
+			} else {
+				masterSeed = bip39.mnemonicToSeedSync(mnemonic);
+			}
+	
+			const masterNode = bip32.fromSeed(masterSeed);
+	
+			const pathObject = {
+				account: "0",
+				change: "0", // public
+				index: "0",
+			};
+	
+			const path = generatePathFromAccountChangeIndex(pathObject);
+	
+			const accountPrivKey = masterNode.derivePath(path).privateKey.toString('hex');
+			const accountPubKey = masterNode.derivePath(path).publicKey.toString('hex');
+			const accountAddress0 = getAddressFromPublicKey(accountPubKey);
+	
+			const displayData = `Generated Mnemonic:\n${mnemonic}
+			\nAccount Private Key:\n${accountPrivKey}
+			\nAccount Public Key:\n${accountPubKey}
+			\nPublic address from account:\n${accountAddress0}`;
+	
+	
+			await encryptAndSaveMnemonic(mnemonic, password);
+			showInfo("Please save your mnemonic!");
+			$("#textareaCreateWalletResult").val(displayData);
+	
+			
+		}
+	
+		//Load wallet from  mnemonic and display loaded stuff:
+		// Decoded private key:
+		// Extracted public key:
+		// Extracted blockchain address:
+		async function openWalletFromMnemonic() {
+	
+	
+	
+			const mnemonic = $("#textareaOpenWallet").val();
+	
+			if (!ethers.utils.isValidMnemonic(mnemonic)) {
+				showError("Invalid Mnemonic");
+			} else {
+				const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+				const password = $("#passwordOpenWallet").val();
+	
+				await encryptAndSaveJSON(wallet, password);
+				showInfo("Wallet successfully loaded!");
+				$("#textareaOpenWalletResult").val(window.localStorage.JSON);
+			}
+		}
+	
+	
+		// When wallet is loaded (into local storage), display the mnemonic
+		async function showMnemonic() {
+			const password = $("#passwordShowMnemonic").val();
+			const json = window.localStorage.JSON;
+	
+			let wallet;
+	
+			try {
+				wallet = await decryptWallet(json, password);
+			} catch (e) {
+				showError(e);
+				return;
+			} finally {
+				hideLoadingBar();
+			}
+			showInfo("Your mnemonic is: " + wallet.mnemonic.phrase);
+		}
+	
+		// for View Account Balance ?
+		// Address is constant for our wallet (only allow one address ?)
+		// takes a node, and fetches data from our blockchain to display balances
+		async function showAddressesAndBalances() {
+			const password = $("#passwordShowAddresses").val();
+			const json = window.localStorage.JSON;
+	
+			let wallet;
+	
+			try {
+				wallet = await decryptWallet(json, password);
+				await renderAddressAndBalances(wallet);
+			} catch (e) {
+				$("#divAddressesAndBalances").empty();
+				showError(e);
+				return;
+			} finally {
+				hideLoadingBar();
+			}
+		}
+	
+		// Sign transaction
+		// Sender address (our constant address for our wallet)
+		// Recipient address
+		// Value
+	
+		//Returns signed transaction object
+		async function signTransaction() {
+			let senderAddress = $("#senderAddress option:selected").attr("id");
+			let wallet = wallets[senderAddress];
+	
+			
+			// Validations
+			if (!wallet) {
+				showError("Invalid address!");
+				return;
+			}
+	
+			const recipient = $("#recipientAddress").val();
+			if (!recipient) {
+				showError("Invalid recipient!");
+				return;
+			}
+	
+			const value = $("#transferValue").val();
+			if (!value || value < 0) {
+				showError("Invalid transfer value!");
+				return;
+			}
+	
+			// Create Tx Object
+			const tx = {
+				to: recipient,
+				value: ethers.utils.parseEther(value.toString()),
+			};
+	
+			try {
+				const createReceipt = await wallet.signTransaction(tx);
+				console.log(`Sign Transaction Successful: ${createReceipt}`);
+				$("#textareaSignedTransaction").val(createReceipt);
+			} catch (e) {
+				$("#textareaSignedTransaction").val("Error: " + e);
+				showError(e);
+				return;
+			}
+		}
+	
+		//Send transaction:
+		// takes our signed transaction object
+		// takes blockchain node (url)
+		//and sends request to our node to send the transaction
+		async function sendTransaction() {
+			const recipient = $("#recipientAddress").val();
+			if (!recipient) {
+				showError("Invalid recipient!");
+				return;
+			}
+	
+			const value = $("#transferValue").val();
+			if (!value || value < 0) {
+				showError("Invalid transfer value!");
+				return;
+			}
+	
+			let senderAddress = $("#senderAddress option:selected").attr("id");
+			let wallet = wallets[senderAddress];
+	
+			if (!wallet) {
+				showError("Invalid address!");
+				return;
+			}
+	
+			console.log(
+				`Attempting to send ${value} ETH transaction from ${senderAddress} to ${recipient}`
+			);
+	
+			// Create Tx Object
+			const tx = {
+				to: recipient,
+				value: ethers.utils.parseEther(value.toString()),
+			};
+	
+			try {
+				const createReceipt = await wallet.sendTransaction(tx);
+				await createReceipt.wait();
+				const hash = createReceipt.hash;
+				console.log(`Transaction successful with hash: ${hash}`);
+				showInfo(`Transaction successful with hash: ${hash}`);
+				let etherscanUrl = "https://ropsten.etherscan.io/tx/" + hash;
+				$("#textareaSendTransactionResult").val(etherscanUrl);
+			} catch (e) {
+				$("#textareaSendTransactionResult").val("Error: " + e);
+				showError(e);
+				return;
+			}
+		}
+	
+		// clears our localStorage, "logging us out"
+		function logout() {
+			localStorage.clear();
+			showView("viewHome");
+		}
+	
+		// probably not needed?
+		function exportWalletToJSONFile() {
+			const data = new Blob([window.localStorage.JSON], {
+				type: "text/plain",
+			});
+	
+			let $a = $("<a>", {
+				href: window.URL.createObjectURL(data),
+				download: "exported-wallet.json",
+			});
+	
+			$("body").append($a);
+			$a[0].click();
+			$a.remove();
+		}
+	});
+})();
+
+
+
 
 
 

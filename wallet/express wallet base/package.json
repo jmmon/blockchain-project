@@ -4,13 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "nodemon index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1"
+    "bip32": "^3.0.1",
+    "bip39": "^3.0.4",
+    "bitcoinjs-lib": "^6.0.2",
+    "ejs": "^3.1.8",
+    "express": "^4.17.1",
+    "tiny-secp256k1": "^2.2.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

@@ -9,7 +9,7 @@
 		<nav class="navbar navbar-default">
 		  <div class="container-fluid">
 		    <div class="navbar-header">
-		      <a class="navbar-brand" href="/">Academy Wallet</a>
+		      <a class="navbar-brand" href="/">Kingsland Wallet</a>
 		    </div>
 		    <ul class="nav navbar-nav">
 		      <li class="active"><a href="/create">Create</a></li>
@@ -30,7 +30,7 @@
 		<div class="jumbotron col-sm-12">
 			<div class="col-sm-1"></div>
 			<h1 class="display-3">Create wallet!</h1>
-			<p class="lead">Fill the form bellow </p>
+			<p class="lead">Provide a password to encrypt your wallet: </p>
 
 			<form method="post" action="/create" class="row" enctype="application/x-www-form-urlencoded">
 
@@ -56,8 +56,12 @@
 		<div class="row">
 			<div class="alert alert-dismissible alert-success">
 				<button type="button" class="close" data-dismiss="alert">&times;</button>
+				<strong>PLEASE save your mnemonic! Without it, your funds are lost!</strong><br>
 				<strong>Your mnemonic is : </strong> <%= mnemonic %><br>
-				<strong>Your file is : </strong> <%= filename %>
+				<strong>Your file is : </strong> <%= filename %><br>
+				<strong>Generated Private Key </strong> <%= privateKey %><br>
+				<strong>Extracted Public Key </strong> <%= publicKey %><br>
+				<strong>Extracted Blockchain Address </strong> <%= address %>
 			</div>
 		</div>
 		<% } %>
