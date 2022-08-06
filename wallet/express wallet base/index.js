@@ -1,8 +1,22 @@
 const fs = require("fs");
 const path = require("path");
 const express = require("express");
+const ejsLayouts = require("express-ejs-layouts");
+
+const favicon = require("serve-favicon");
 
 const app = express();
+app.use(favicon(
+	path.join(__dirname, "public", "images", "favicon.ico"),
+	{ maxAge: 0 }
+));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.set("view engine", "ejs");
+app.engine("html", require("ejs").renderFile);
+app.use(express.static("public"));
+app.use(ejsLayouts);
+app.set("layout", "layouts/layout");
 
 const walletDirectory = "wallets/";
 if (!fs.existsSync(walletDirectory)) {
@@ -10,19 +24,7 @@ if (!fs.existsSync(walletDirectory)) {
 }
 
 (async () => {
-	const {
-		bip32,
-		bip39,
-		bjs
-	} = await import('./lib/walletUtils.mjs');
-
-
-
-	app.use(express.urlencoded({ extended: false }));
-	app.use(express.json());
-	app.set("view engine", "ejs");
-	app.engine("html", require("ejs").renderFile);
-	app.use(express.static("public"));
+	const { bip32, bip39, bjs } = await import("./lib/walletUtils.mjs");
 
 	//  Homepage
 	app.get("/", (req, res) => {
@@ -63,23 +65,28 @@ if (!fs.existsSync(walletDirectory)) {
 				Math.random(10000, 10000) +
 				".json";
 
-			fs.writeFile(walletDirectory + filename, jsonWallet, "utf-8", (err) => {
-				if (err) {
-					drawView(res, "create", {
-						mnemonic: undefined,
-						jsonWallet: undefined,
-						filename: null,
-						error: "Problem writing to disk: " + err.message,
-					});
-				} else {
-					drawView(res, "create", {
-						mnemonic: wallet.mnemonic.phrase,
-						jsonWallet: JSON.stringify(jsonWallet),
-						filename: filename,
-						error: undefined,
-					});
+			fs.writeFile(
+				walletDirectory + filename,
+				jsonWallet,
+				"utf-8",
+				(err) => {
+					if (err) {
+						drawView(res, "create", {
+							mnemonic: undefined,
+							jsonWallet: undefined,
+							filename: null,
+							error: "Problem writing to disk: " + err.message,
+						});
+					} else {
+						drawView(res, "create", {
+							mnemonic: wallet.mnemonic.phrase,
+							jsonWallet: JSON.stringify(jsonWallet),
+							filename: filename,
+							error: undefined,
+						});
+					}
 				}
-			});
+			);
 		});
 	});
 
@@ -150,23 +157,28 @@ if (!fs.existsSync(walletDirectory)) {
 				".json";
 
 			// Make a file with the wallet data
-			fs.writeFile(walletDirectory + filename, jsonWallet, "utf-8", (err) => {
-				if (err) {
-					drawView(res, "recover", {
-						message: undefined,
-						filename: undefined,
-						mnemonic: undefined,
-						error: "Recovery error: " + err.message,
-					});
-				} else {
-					drawView(res, "recover", {
-						message: "Wallet recover was successful!",
-						filename,
-						mnemonic: wallet.mnemonic.phrase,
-						error: undefined,
-					});
+			fs.writeFile(
+				walletDirectory + filename,
+				jsonWallet,
+				"utf-8",
+				(err) => {
+					if (err) {
+						drawView(res, "recover", {
+							message: undefined,
+							filename: undefined,
+							mnemonic: undefined,
+							error: "Recovery error: " + err.message,
+						});
+					} else {
+						drawView(res, "recover", {
+							message: "Wallet recover was successful!",
+							filename,
+							mnemonic: wallet.mnemonic.phrase,
+							error: undefined,
+						});
+					}
 				}
-			});
+			);
 		});
 	});
 
@@ -180,47 +192,51 @@ if (!fs.existsSync(walletDirectory)) {
 		const password = req.body.password;
 
 		//  read the file
-		fs.readFile(walletDirectory + filename, "utf8", async (err, jsonWallet) => {
-			if (err) {
-				drawView(res, "balance", {
-					wallets: undefined,
-					error: "Error with file writing",
-				});
-			}
-
-			ethers.Wallet.fromEncryptedJson(jsonWallet, password)
-				.then(async (wallet) => {
-					// generate 5 wallets from your master key
-
-					let derivationPath = "m/44'/60'/0'/0/";
-					let wallets = [];
-					const NUMBER_OF_DERIVATIONS = 5;
-
-					for (let i = 0; i < NUMBER_OF_DERIVATIONS; i++) {
-						let hdNode = ethers.utils.HDNode.fromMnemonic(
-							wallet.mnemonic.phrase
-						).derivePath(derivationPath + i);
-						let walletInstance = new ethers.Wallet(
-							hdNode.privateKey,
-							provider
-						);
-						let balance = await walletInstance.getBalance();
-
-						wallets.push({
-							keypair: walletInstance,
-							balance: ethers.utils.formatEther(balance),
-						});
-					}
-
-					drawView(res, "balance", { wallets, error: undefined });
-				})
-				.catch((err) => {
+		fs.readFile(
+			walletDirectory + filename,
+			"utf8",
+			async (err, jsonWallet) => {
+				if (err) {
 					drawView(res, "balance", {
 						wallets: undefined,
-						error: "Balance query error: " + err.message,
+						error: "Error with file writing",
 					});
-				});
-		});
+				}
+
+				ethers.Wallet.fromEncryptedJson(jsonWallet, password)
+					.then(async (wallet) => {
+						// generate 5 wallets from your master key
+
+						let derivationPath = "m/44'/60'/0'/0/";
+						let wallets = [];
+						const NUMBER_OF_DERIVATIONS = 5;
+
+						for (let i = 0; i < NUMBER_OF_DERIVATIONS; i++) {
+							let hdNode = ethers.utils.HDNode.fromMnemonic(
+								wallet.mnemonic.phrase
+							).derivePath(derivationPath + i);
+							let walletInstance = new ethers.Wallet(
+								hdNode.privateKey,
+								provider
+							);
+							let balance = await walletInstance.getBalance();
+
+							wallets.push({
+								keypair: walletInstance,
+								balance: ethers.utils.formatEther(balance),
+							});
+						}
+
+						drawView(res, "balance", { wallets, error: undefined });
+					})
+					.catch((err) => {
+						drawView(res, "balance", {
+							wallets: undefined,
+							error: "Balance query error: " + err.message,
+						});
+					});
+			}
+		);
 	});
 
 	app.get("/send", (req, res) => {
@@ -291,8 +307,4 @@ if (!fs.existsSync(walletDirectory)) {
 	app.listen(3000, () => {
 		console.log("App running on http://localhost:3000");
 	});
-
-
-
 })();
-
