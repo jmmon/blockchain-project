@@ -9,6 +9,10 @@
 <body>
 	<div class="contrainer">
 		<%- navbar %>
+
+		<% if (typeof id !== "null" && typeof id !== "undefined") { %>
+			<strong>Session ID: </strong> <%= id %><br />
+		<% } %>
 		
 		<%- body %>
 

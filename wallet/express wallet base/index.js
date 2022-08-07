@@ -2,6 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const ejsLayouts = require("express-ejs-layouts");
+const session = require('express-session');
+const genuuid = require("uid-safe")
 
 const favicon = require("serve-favicon");
 
@@ -10,6 +12,13 @@ app.use(favicon(
 	path.join(__dirname, "public", "images", "favicon.ico"),
 	{ maxAge: 0 }
 ));
+app.use(session({
+	genid: (req) => genuuid(18),
+	secret: 'keyboard cat',
+	resave: false,
+	rolling: true,
+	saveUninitialized: true,
+}));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.set("view engine", "ejs");
@@ -24,16 +33,28 @@ if (!fs.existsSync(walletDirectory)) {
 }
 
 (async () => {
-	const { bip32, bip39, bjs } = await import("./lib/walletUtils.mjs");
+	// const {default: { bip32, bip39, bjs }} = await import("./lib/walletUtils.js");
+	// console.log(typeof bip32);
+	// console.log(typeof bip39);
+	// console.log(typeof bjs);
+	const {default: { generateWallet }} = await import("./lib/walletUtils.js");
+	// console.log(typeof generateWallet);
+
 
 	//  Homepage
 	app.get("/", (req, res) => {
-		res.render(__dirname + "/views/index.html");
+		const id = req.session.id || null;
+		res.render(__dirname + "/views/index.html", {
+			id
+		});
 	});
 
 	//  Page for creating a wallet
 	app.get("/create", (req, res) => {
-		res.render(__dirname + "/views/create.html");
+		const id = req.session.id || null;
+		res.render(__dirname + "/views/create.html", {
+			id
+		});
 	});
 
 	//  Create endpoint
@@ -46,48 +67,65 @@ if (!fs.existsSync(walletDirectory)) {
 		if (password !== repeatPassword) {
 			res.render(path.join(__dirname, "views", "create.html"), {
 				mnemonic: undefined,
-				jsonWallet: undefined,
 				filename: null,
+				privateKey: undefined,
+				publicKey: undefined,
+				address: undefined,
 				error: "Passwords do not match",
 			});
 			return false;
 		}
 
 		// Generate wallet from random mnemonic
-		const wallet = new ethers.Wallet.createRandom();
+		const {mnemonic, privateKey, publicKey, address} = generateWallet();
+
+		// TODO: Encrypt and save into session storage
+
+
+		// req.session.wallet = ;
+
+		drawView(res, "create", {
+			mnemonic,
+			privateKey, 
+			publicKey, 
+			address,
+			filename: undefined,
+			error: undefined,
+		});
+
 
 		// Encrypt and save as json file
-		wallet.encrypt(password).then((jsonWallet) => {
-			let filename =
-				"UTC_JSON_WALLET_" +
-				Math.round(+new Date() / 1000) +
-				"_" +
-				Math.random(10000, 10000) +
-				".json";
+		// wallet.encrypt(password).then((jsonWallet) => {
+		// 	let filename =
+		// 		"UTC_JSON_WALLET_" +
+		// 		Math.round(+new Date() / 1000) +
+		// 		"_" +
+		// 		Math.random(10000, 10000) +
+		// 		".json";
 
-			fs.writeFile(
-				walletDirectory + filename,
-				jsonWallet,
-				"utf-8",
-				(err) => {
-					if (err) {
-						drawView(res, "create", {
-							mnemonic: undefined,
-							jsonWallet: undefined,
-							filename: null,
-							error: "Problem writing to disk: " + err.message,
-						});
-					} else {
-						drawView(res, "create", {
-							mnemonic: wallet.mnemonic.phrase,
-							jsonWallet: JSON.stringify(jsonWallet),
-							filename: filename,
-							error: undefined,
-						});
-					}
-				}
-			);
-		});
+		// 	fs.writeFile(
+		// 		walletDirectory + filename,
+		// 		jsonWallet,
+		// 		"utf-8",
+		// 		(err) => {
+		// 			if (err) {
+		// 				drawView(res, "create", {
+		// 					mnemonic: undefined,
+		// 					jsonWallet: undefined,
+		// 					filename: null,
+		// 					error: "Problem writing to disk: " + err.message,
+		// 				});
+		// 			} else {
+		// 				drawView(res, "create", {
+		// 					mnemonic: wallet.mnemonic.phrase,
+		// 					jsonWallet: JSON.stringify(jsonWallet),
+		// 					filename: filename,
+		// 					error: undefined,
+		// 				});
+		// 			}
+		// 		}
+		// 	);
+		// });
 	});
 
 	//load your wallet
@@ -307,4 +345,5 @@ if (!fs.existsSync(walletDirectory)) {
 	app.listen(3000, () => {
 		console.log("App running on http://localhost:3000");
 	});
+
 })();

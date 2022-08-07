@@ -1,11 +1,16 @@
-first wallet:
-pass: 
-test123
-mnem: 
-stone borrow silly woman castle bitter stay visa found stuff city clutch
+Storage options:
+	Session storage: user has to reload wallet each time
+	Cookie storage: store encrypted mnemonic in cookie?
+	Client localStorage: store encrypted mnemonic in browser
 
+Flow:
+	Generate mnemonic / keys / addresses
+		encrypt with password and save in storage
+		save hashed password in storage also?
 
-from: 0x36df38e1aE6350EE46668609aFb838637ac8bc48
-privateKey: 0x582bb0f3bba0e0c1c6320df97a76d107f53e62499a0d39ed19b1f2a6cd48022b
+	Require password for any commands
+		check hashed password vs saved hashed password
+	
 
-to: 0x0b027ab6Fcb516C7B79cE735c37Cf33eC8607EA1
+		
+	
