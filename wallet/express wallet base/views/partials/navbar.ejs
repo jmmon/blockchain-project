@@ -8,40 +8,46 @@
 			<% } %>
 		</div>
 		<ul class="nav navbar-nav">
-			<% if (active == 'create') { %>
-				<li class="active">
-			<% } else { %>
-				<li>
-			<% } %>
-			<a href="/create">Create</a></li>
+			<% if (wallet == undefined || wallet == null) { %>
+				<% if (active == 'create') { %>
+					<li class="active">
+				<% } else { %>
+					<li>
+				<% } %>
+				<a href="/create">Create</a></li>
 
-			<% if (active == 'balance') { %>
-				<li class="active">
-			<% } else { %>
-				<li>
-			<% } %>
-			<a href="/balance">Balance</a></li>
+				<% if (active == 'recover') { %>
+					<li class="active">
+				<% } else { %>
+					<li>
+				<% } %>
+				<a href="/recover">Recover</a></li>
 
-			<% if (active == 'send') { %>
-				<li class="active">
 			<% } else { %>
-				<li>
-			<% } %>
-			<a href="/send">Send</a></li>
 
-			<% if (active == 'load') { %>
-				<li class="active">
-			<% } else { %>
-				<li>
-			<% } %>
-			<a href="/load">Load</a></li>
+				<% if (active == 'balance') { %>
+					<li class="active">
+				<% } else { %>
+					<li>
+				<% } %>
+				<a href="/balance">Balance</a></li>
 
-			<% if (active == 'recover') { %>
-				<li class="active">
-			<% } else { %>
-				<li>
+				<% if (active == 'send') { %>
+					<li class="active">
+				<% } else { %>
+					<li>
+				<% } %>
+				<a href="/send">Send</a></li>
+
+				<% if (active == 'logout') { %>
+					<li class="active">
+				<% } else { %>
+					<li>
+				<% } %>
+				<a href="/logout">Logout</a></li>
+
 			<% } %>
-			<a href="/recover">Recover</a></li>
+
 		</ul>
 	</div>
 </nav>

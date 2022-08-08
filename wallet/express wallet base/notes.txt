@@ -30,3 +30,14 @@ load from mnemonic:
 	save into storage
 	(save address into storage)
 
+
+
+Views:
+(not logged in)
+	Create: create (and save to session) a new wallet/menomic
+(	Load: WAS load from file, but I won't have that functionality so probably don't need)
+	Recover: Load wallet from mnemonic; save with password; (saves to session)
+(logged in / password-protected)
+		Balance: take password to unlock, take node URL, (decrypt wallet and) fetch balance of the account from the node URL
+		Send: take password to unlock, take node URL, and then allow for signing transaction (with wallet), and finally allow for sending transaction to node URL
+		Logout: remove data from session (and redirect to home page?)

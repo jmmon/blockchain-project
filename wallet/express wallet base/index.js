@@ -52,21 +52,63 @@ if (!fs.existsSync(walletDirectory)) {
 
 	//  Homepage
 	app.get("/", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "index", {
-			id,
-			active: "index",
+		const active = "index";
+		const wallet = req.session.wallet || null;
+		drawView(res, active, {
+			wallet,
+			active,
 		});
 	});
 
 	//  Page for creating a wallet
 	app.get("/create", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "create", {
-			id,
-			active: "create",
+		const active = "create";
+		const wallet = req.session.wallet || null;
+		drawView(res, active, {
+			wallet,
+			active,
 		});
 
+	});
+
+	//recover wallet
+	app.get("/recover", (req, res) => {
+		const active = "recover";
+		const wallet = req.session.wallet || null;
+		drawView(res, active, {
+			wallet,
+			active,
+		});
+	});
+	
+	app.get("/balance", (req, res) => {
+		const active = "balance";
+		const wallet = req.session.wallet || null;
+		drawView(res, active, {
+			wallet,
+			active,
+			balances: undefined,
+			error: undefined,
+		});
+	});
+	
+	app.get("/send", (req, res) => {
+		const active = "send";
+		const wallet = req.session.wallet || null;
+		drawView(res, active, {
+			wallet,
+			active,
+		});
+	});
+
+	// logout simply removes wallet from session and loads index page
+	app.get("/logout", (req, res) => {
+		let active = "index";
+		req.session.wallet = undefined;
+		drawView(res, active, {
+			wallet: undefined,
+			active,
+		});
 	});
 
 	//  Create endpoint
@@ -78,6 +120,9 @@ if (!fs.existsSync(walletDirectory)) {
 		// Make simple validation
 		if (password !== repeatPassword) {
 			res.render(path.join(__dirname, "views", "create.html"), {
+				wallet: undefined,
+				active: "create",
+
 				mnemonic: undefined,
 				filename: null,
 				privateKey: undefined,
@@ -89,14 +134,20 @@ if (!fs.existsSync(walletDirectory)) {
 		}
 
 		// Generate wallet from random mnemonic
-		const { mnemonic, privateKey, publicKey, address } = generateWallet();
+		const wallet = generateWallet();
+		const { mnemonic, privateKey, publicKey, address } = wallet;
 		
 		// TODO: Encrypt and save into session storage
 		const encryptSuccess = await encryptAndSave(mnemonic, password, address, req);
 		console.log({encryptSuccess})
 
 		if (encryptSuccess === true) {
+			req.session.wallet = wallet;
+
 			drawView(res, "create", {
+				wallet: wallet,
+				active: "create",
+
 				mnemonic,
 				privateKey,
 				publicKey,
@@ -106,6 +157,9 @@ if (!fs.existsSync(walletDirectory)) {
 			});
 		} else {
 			drawView(res, "create", {
+				wallet: undefined,
+				active: "create",
+
 				mnemonic: null,
 				privateKey: null,
 				publicKey: null,
@@ -116,64 +170,59 @@ if (!fs.existsSync(walletDirectory)) {
 		}
 	});
 
-	//load your wallet
-	app.get("/load", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "load", {
-			id,
-			active: "load",
-		});
-	});
 
-	app.post("/load", (req, res) => {
-		// fetch user data (filename and password)
-		const filename = req.body.filename;
-		const password = req.body.password;
+	// app.post("/load", (req, res) => {
+	// 	const active = "load";
+	// 	// fetch user data (filename and password)
+	// 	const filename = req.body.filename;
+	// 	const password = req.body.password;
 
-		fs.readFile(walletDirectory + filename, "utf8", (err, jsonWallet) => {
-			//  Error handling
-			if (err) {
-				drawView(res, "load", {
-					address: undefined,
-					privateKey: undefined,
-					mnemonic: undefined,
-					error: "The file doesn't exist",
-				});
-				return;
-			}
+	// 	fs.readFile(walletDirectory + filename, "utf8", (err, jsonWallet) => {
+	// 		//  Error handling
+	// 		if (err) {
+	// 			drawView(res, active, {
+	// 				wallet: undefined,
+	// 				active,
 
-			// decrypt the wallet
-			ethers.Wallet.fromEncryptedJson(jsonWallet, password)
-				.then((wallet) => {
-					drawView(res, "load", {
-						address: wallet.address,
-						privateKey: wallet.privateKey,
-						mnemonic: wallet.mnemonic.phrase,
-						error: undefined,
-					});
-				})
-				.catch((err) => {
-					drawView(res, "load", {
-						address: undefined,
-						privateKey: undefined,
-						mnemonic: undefined,
-						error: "Bad pasword: " + err.message,
-					});
-				});
-		});
-	});
+	// 				address: undefined,
+	// 				privateKey: undefined,
+	// 				mnemonic: undefined,
+	// 				error: "The file doesn't exist",
+	// 			});
+	// 			return;
+	// 		}
 
-	//recover wallet
-	app.get("/recover", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "recover", {
-			id,
-			active: "recover",
-		});
-	});
+	// 		// decrypt the wallet
+	// 		ethers.Wallet.fromEncryptedJson(jsonWallet, password)
+	// 			.then((wallet) => {
+	// 				drawView(res, active, {
+	// 					wallet: undefined,
+	// 					active,
+
+	// 					address: wallet.address,
+	// 					privateKey: wallet.privateKey,
+	// 					mnemonic: wallet.mnemonic.phrase,
+	// 					error: undefined,
+	// 				});
+	// 			})
+	// 			.catch((err) => {
+	// 				drawView(res, active, {
+	// 					wallet: undefined,
+	// 					active,
+
+	// 					address: undefined,
+	// 					privateKey: undefined,
+	// 					mnemonic: undefined,
+	// 					error: "Bad pasword: " + err.message,
+	// 				});
+	// 			});
+	// 	});
+	// });
+
 
 	//recover wallet
 	app.post("/recover", (req, res) => {
+		const active = "recover";
 		// fetch user data (mnemonic and password)
 		const mnemonic = req.body.mnemonic;
 		const password = req.body.password;
@@ -197,14 +246,20 @@ if (!fs.existsSync(walletDirectory)) {
 				"utf-8",
 				(err) => {
 					if (err) {
-						drawView(res, "recover", {
+						drawView(res, active, {
+							wallet: undefined,
+							active,
+	
 							message: undefined,
 							filename: undefined,
 							mnemonic: undefined,
 							error: "Recovery error: " + err.message,
 						});
 					} else {
-						drawView(res, "recover", {
+						drawView(res, active, {
+							wallet: undefined,
+							active,
+	
 							message: "Wallet recover was successful!",
 							filename,
 							mnemonic: wallet.mnemonic.phrase,
@@ -216,27 +271,22 @@ if (!fs.existsSync(walletDirectory)) {
 		});
 	});
 
-	app.get("/balance", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "balance", {
-			id,
-			active: "balance",
-			balances: undefined,
-			error: undefined,
-		});
-	});
 
 	app.post("/balance", (req, res) => {
+		const active = "balance";
 		// fetch user data (filename and password)
 		const password = req.body.password;
+		const nodeUrl = req.body.nodeUrl;
 		// const wallet = req.session.wallet = {
 		// 	encryptedMnemonic,
 		// 	address,
 		// }
 
 		if (!req.session.wallet) {
-			drawView(res, "balance", {
-				wallets: undefined,
+			drawView(res, active, {
+				wallet: undefined,
+				active,
+
 				error: "Please load wallet from mnemonic, or create one."
 			});
 			return false;
@@ -251,7 +301,10 @@ if (!fs.existsSync(walletDirectory)) {
 
 		console.log({result});
 
-		drawView(res, "balance", {
+		drawView(res, active, {
+			wallet: undefined,
+			active,
+
 			active: "balance",
 			balances: "some balances",
 			error: undefined,
@@ -312,15 +365,9 @@ if (!fs.existsSync(walletDirectory)) {
 		// );
 	});
 
-	app.get("/send", (req, res) => {
-		const id = req.session.id || null;
-		drawView(res, "send", {
-			id,
-			active: "send",
-		});
-	});
 
 	app.post("/send", (req, res) => {
+		const active = "send";
 		// fetch user data (recipient,private key, and amount)
 		const recipient = req.body.recipient;
 		const privateKey = req.body.privateKey;
@@ -343,7 +390,10 @@ if (!fs.existsSync(walletDirectory)) {
 			// make instance of the wallet
 			wallet = new ethers.Wallet(privateKey, provider);
 		} catch (err) {
-			drawView(res, "send", {
+			drawView(res, active, {
+				wallet: undefined,
+				active,
+				
 				transactionHash: undefined,
 				error: err.message,
 			});
@@ -361,14 +411,20 @@ if (!fs.existsSync(walletDirectory)) {
 				gasLimit: gas * gasPrice,
 			})
 			.then((transaction) => {
-				drawView(res, "send", {
+				drawView(res, active, {
+					wallet: undefined,
+					active,
+
 					transactionHash: transaction.hash,
 					error: undefined,
 				});
 			})
 			.catch((err) => {
 				console.log(err);
-				drawView(res, "send", {
+				drawView(res, active, {
+					wallet: undefined,
+					active,
+
 					transactionHash: undefined,
 					error: err.message,
 				});

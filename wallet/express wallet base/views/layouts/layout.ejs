@@ -9,9 +9,10 @@
 <body>
 	<div class="contrainer">
 		<%- include("../partials/navbar") %>
+		<%- include("../partials/error") %>
 
-		<% if (typeof id !== "null" && typeof id !== "undefined") { %>
-			<strong>Session ID: </strong> <%= id %><br />
+		<% if (typeof wallet !== "null" && typeof wallet !== "undefined") { %>
+			<strong>Session ID: </strong> <%= wallet %><br />
 		<% } %>
 		
 		<%- body %>
