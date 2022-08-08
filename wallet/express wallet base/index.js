@@ -16,10 +16,8 @@ app.use(
 // app.use(cookieParser);
 app.use(
 	session({
-		// genid: (req) => genuuid(18),
 		secret: "keyboard cat",
 		resave: false,
-		// rolling: true,
 		saveUninitialized: true,
 	})
 );
@@ -45,6 +43,8 @@ app.set("layout", "layouts/layout");
 		},
 	} = await import("./lib/walletUtils.js");
 	// console.log({generateWallet, encrypt, decrypt, cryptPassword, comparePassword});
+
+	const {default: fetch} = await import('node-fetch')
 
 	//  Homepage
 	app.get("/", (req, res) => {
@@ -145,10 +145,6 @@ app.set("layout", "layouts/layout");
 				active,
 
 				mnemonic: undefined,
-				filename: null,
-				privateKey: undefined,
-				publicKey: undefined,
-				address: undefined,
 				error: "Passwords do not match",
 			});
 		}
@@ -158,8 +154,8 @@ app.set("layout", "layouts/layout");
 		console.log({walletGenerated: wallet});
 		const { mnemonic, privateKey, publicKey, address } = wallet;
 		
-		// TODO: Encrypt and save into session storage
-		const encryptedWallet = await encryptMnemWithPassword(mnemonic, password, address);
+		// TODO: Encrypt wallet data
+		const encryptedWallet = encryptMnemWithPassword(mnemonic, password, address);
 		console.log({encryptedWallet});
 
 		req.session.wallet = encryptedWallet;
@@ -170,10 +166,6 @@ app.set("layout", "layouts/layout");
 					active,
 	
 					mnemonic: undefined,
-					filename: null,
-					privateKey: undefined,
-					publicKey: undefined,
-					address: undefined,
 					error: "Error saving session!",
 				});
 			}
@@ -186,30 +178,9 @@ app.set("layout", "layouts/layout");
 				privateKey,
 				publicKey,
 				address,
-				filename: undefined,
 				error: undefined,
 			});
 		})
-
-
-
-
-		// if (encryptSuccess === true) {
-
-
-		// } else {
-		// 	drawView(res, active, {
-		// 		wallet: undefined,
-		// 		active: active,
-
-		// 		mnemonic: null,
-		// 		privateKey: null,
-		// 		publicKey: null,
-		// 		address: null,
-		// 		filename: undefined,
-		// 		error: "Problem encrypting: " + err.message,
-		// 	});
-		// }
 	});
 
 
@@ -219,53 +190,103 @@ app.set("layout", "layouts/layout");
 		// fetch user data (mnemonic and password)
 		const mnemonic = req.body.mnemonic;
 		const password = req.body.password;
+		const repeatPassword = req.body.confirmPassword;
 
-		// make wallet instance of this mnemonic
-		const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+		// Make simple validation
+		if (password !== repeatPassword) {
+			drawView(res, active, {
+				wallet: undefined,
+				active,
 
-		// encrypt and save the wallet
-		wallet.encrypt(password).then((jsonWallet) => {
-			let filename =
-				"UTC_JSON_WALLET_" +
-				Math.round(+new Date() / 1000) +
-				"_" +
-				Math.random(10000, 10000) +
-				".json";
+				mnemonic: mnemonic,
+				error: "Passwords do not match",
+			});
+		}
 
-			// Make a file with the wallet data
-			fs.writeFile(
-				walletDirectory + filename,
-				jsonWallet,
-				"utf-8",
-				(err) => {
-					if (err) {
-						drawView(res, active, {
-							wallet: undefined,
-							active,
+		const {privateKey, publicKey, address} = deriveKeysFromMnemonic(mnemonic);
+
+		console.log({privateKey, publicKey, address});
+
+		// const wallet = {mnemonic, ...keys};
+
+		// TODO: Encrypt wallet data
+		const encryptedWallet = encryptMnemWithPassword(mnemonic, password, address);
+		console.log({encryptedWallet});
+
+		req.session.wallet = encryptedWallet;
+		req.session.save((err) => {
+			if (err) {
+				drawView(res, active, {
+					wallet: undefined,
+					active,
 	
-							message: undefined,
-							filename: undefined,
-							mnemonic: undefined,
-							error: "Recovery error: " + err.message,
-						});
-					} else {
-						drawView(res, active, {
-							wallet: undefined,
-							active,
+					mnemonic: undefined,
+					error: "Error saving session!",
+				});
+			}
+
+			drawView(res, active, {
+				wallet: encryptedWallet,
+				active,
+
+				mnemonic,
+				privateKey,
+				publicKey,
+				address,
+				error: undefined,
+			});
+		})
+
+
+
+
+
+		// // make wallet instance of this mnemonic
+		// const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+
+		// // encrypt and save the wallet
+		// wallet.encrypt(password).then((jsonWallet) => {
+		// 	let filename =
+		// 		"UTC_JSON_WALLET_" +
+		// 		Math.round(+new Date() / 1000) +
+		// 		"_" +
+		// 		Math.random(10000, 10000) +
+		// 		".json";
+
+		// 	// Make a file with the wallet data
+		// 	fs.writeFile(
+		// 		walletDirectory + filename,
+		// 		jsonWallet,
+		// 		"utf-8",
+		// 		(err) => {
+		// 			if (err) {
+		// 				drawView(res, active, {
+		// 					wallet: undefined,
+		// 					active,
 	
-							message: "Wallet recover was successful!",
-							filename,
-							mnemonic: wallet.mnemonic.phrase,
-							error: undefined,
-						});
-					}
-				}
-			);
-		});
+		// 					message: undefined,
+		// 					filename: undefined,
+		// 					mnemonic: undefined,
+		// 					error: "Recovery error: " + err.message,
+		// 				});
+		// 			} else {
+		// 				drawView(res, active, {
+		// 					wallet: undefined,
+		// 					active,
+	
+		// 					message: "Wallet recover was successful!",
+		// 					filename,
+		// 					mnemonic: wallet.mnemonic.phrase,
+		// 					error: undefined,
+		// 				});
+		// 			}
+		// 		}
+		// 	);
+		// });
 	});
 
 
-	app.post("/balance", (req, res) => {
+	app.post("/balance", async (req, res) => {
 		console.log('balance post request');
 		const active = "balance";
 		// fetch user data (filename and password)
@@ -296,14 +317,29 @@ app.set("layout", "layouts/layout");
 
 		console.log({keys});
 
+		// TODO: fetch balance from node!
+		const data = await fetch(`${nodeUrl}/${keys.address}/balance`);
+		console.log('fetched data:', Object.keys(data));
 
-		drawView(res, active, {
-			wallet: req.session.wallet,
-			active,
+		if (data.size === 0) {
+			drawView(res, active, {
+				wallet: req.session.wallet,
+				active,
+	
+				balances: `No balances found!`,
+				error: undefined,
+			});
+		} else {
+			drawView(res, active, {
+				wallet: req.session.wallet,
+				active,
+	
+				balances: `Private Key:\n${keys.privateKey}\nPublic Key:\n${keys.publicKey}\nAddress:\n${keys.address}`,
+				error: undefined,
+			});
+		}
 
-			balances: `Private Key: ${keys.privateKey}\nPublic Key: ${keys.publicKey}\nAddress: ${keys.address}`,
-			error: undefined,
-		});
+		
 
 
 

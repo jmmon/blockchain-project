@@ -19,3 +19,12 @@ Public Key:
 Address: 
 1AtiQFoyEQBvr25CCP14tm9U2HWLN9cuPc
 	
+
+
+
+PLEASE save your mnemonic! Without it, your funds are lost!
+Your mnemonic is : machine mosquito blossom symptom album quote exist dynamic lonely goose drum pepper
+Your file is :
+Generated Private Key faf4bae1c67b9bf9d4614762db59e150274c3377039302cf9f62b7f508ed894e
+Extracted Public Key 0261b025e8c1af9f3ca0af6a1144f2db40b93b08a9ff55399fce63a8b6643e7788
+Extracted Blockchain Address 1DDXvzocDAmW8rLkkEuiQNcrQHX2Ze29cT

@@ -19,6 +19,7 @@
     "express": "^4.17.1",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.17.3",
+    "node-fetch": "^3.2.10",
     "serve-favicon": "^2.5.0",
     "tiny-secp256k1": "^2.2.1",
     "uid-safe": "^2.1.5"

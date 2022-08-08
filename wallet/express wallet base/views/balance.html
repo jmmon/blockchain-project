@@ -24,11 +24,11 @@
 	</form>
 </div>
 
-<div class="row"></div>
+<!-- create gap: -->
+<div class="row"></div> 
+
 <% if (typeof balances !== "undefined") { %>
-<div class="row">
-	<textarea>
-		<%= balances %>
-	</textarea>
+<div class="row" >
+	<textarea class="col mx-5" style="margin-left: 2rem; width: 600px; height: 300px;"><%= balances %></textarea>
 </div>
 <% } %>
