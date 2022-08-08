@@ -14,3 +14,19 @@ Flow:
 
 		
 	
+hash password
+encrypt mnemonic with hashedPassword?
+
+We could say: add it to session so we can access the wallet;
+
+	they want password protection so we need the password to decrypt wallet or need to check the password every time?
+
+	Could save the account into storage so it autofills when sending
+
+
+
+load from mnemonic:
+	enter (new password) for encrypt into session
+	save into storage
+	(save address into storage)
+

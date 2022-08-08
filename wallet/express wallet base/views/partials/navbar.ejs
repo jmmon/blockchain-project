@@ -1,0 +1,47 @@
+<nav class="navbar navbar-default">
+	<div class="container-fluid">
+		<div class="navbar-header">
+			<% if (active == 'index') { %>
+				<a class="navbar-brand" href="#">Kingsland Wallet</a>
+			<% } else { %>
+				<a class="navbar-brand" href="/">Kingsland Wallet</a>
+			<% } %>
+		</div>
+		<ul class="nav navbar-nav">
+			<% if (active == 'create') { %>
+				<li class="active">
+			<% } else { %>
+				<li>
+			<% } %>
+			<a href="/create">Create</a></li>
+
+			<% if (active == 'balance') { %>
+				<li class="active">
+			<% } else { %>
+				<li>
+			<% } %>
+			<a href="/balance">Balance</a></li>
+
+			<% if (active == 'send') { %>
+				<li class="active">
+			<% } else { %>
+				<li>
+			<% } %>
+			<a href="/send">Send</a></li>
+
+			<% if (active == 'load') { %>
+				<li class="active">
+			<% } else { %>
+				<li>
+			<% } %>
+			<a href="/load">Load</a></li>
+
+			<% if (active == 'recover') { %>
+				<li class="active">
+			<% } else { %>
+				<li>
+			<% } %>
+			<a href="/recover">Recover</a></li>
+		</ul>
+	</div>
+</nav>
