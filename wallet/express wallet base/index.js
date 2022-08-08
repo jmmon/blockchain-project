@@ -1,4 +1,3 @@
-const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const ejsLayouts = require("express-ejs-layouts");
@@ -6,7 +5,7 @@ const session = require("express-session");
 const genuuid = require("uid-safe");
 
 const favicon = require("serve-favicon");
-const e = require( "express" );
+const cookieParser = require('cookie-parser')
 
 const app = express();
 app.use(
@@ -14,15 +13,17 @@ app.use(
 		maxAge: 0,
 	})
 );
+// app.use(cookieParser);
 app.use(
 	session({
-		genid: (req) => genuuid(18),
+		// genid: (req) => genuuid(18),
 		secret: "keyboard cat",
 		resave: false,
-		rolling: true,
+		// rolling: true,
 		saveUninitialized: true,
 	})
 );
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.set("view engine", "ejs");
@@ -30,11 +31,6 @@ app.engine("html", require("ejs").renderFile);
 app.use(express.static("public"));
 app.use(ejsLayouts);
 app.set("layout", "layouts/layout");
-
-const walletDirectory = "wallets/";
-if (!fs.existsSync(walletDirectory)) {
-	fs.mkdirSync(walletDirectory);
-}
 
 
 (async () => {
@@ -52,18 +48,41 @@ if (!fs.existsSync(walletDirectory)) {
 
 	//  Homepage
 	app.get("/", (req, res) => {
+		// if (req.session.page_views) {
+		// 	req.session.page_views++;
+		// 	res.send("You visited this page " + req.session.page_views + " times");
+		// } else {
+		// 	req.session.page_views = 1;
+    //   res.send("Welcome to this page for the first time!");
+		// }
 		const active = "index";
-		const wallet = req.session.wallet || null;
+		const wallet = req.session.wallet;
 		drawView(res, active, {
 			wallet,
 			active,
 		});
 	});
 
+	// app.get("/test", (req, res) => {
+	// 	if (req.session.page_views) {
+	// 		req.session.page_views++;
+	// 		res.send("TEST: You visited this page " + req.session.page_views + " times");
+	// 	} else {
+	// 		req.session.page_views = 1;
+  //     res.send("TEST: Welcome to this page for the first time!");
+	// 	}
+	// 	// const active = "index";
+	// 	// const wallet = req.session.wallet || null;
+	// 	// drawView(res, active, {
+	// 	// 	wallet,
+	// 	// 	active,
+	// 	// });
+	// });
+
 	//  Page for creating a wallet
 	app.get("/create", (req, res) => {
 		const active = "create";
-		const wallet = req.session.wallet || null;
+		const wallet = req.session.wallet;
 		drawView(res, active, {
 			wallet,
 			active,
@@ -74,7 +93,7 @@ if (!fs.existsSync(walletDirectory)) {
 	//recover wallet
 	app.get("/recover", (req, res) => {
 		const active = "recover";
-		const wallet = req.session.wallet || null;
+		const wallet = req.session.wallet;
 		drawView(res, active, {
 			wallet,
 			active,
@@ -83,7 +102,8 @@ if (!fs.existsSync(walletDirectory)) {
 	
 	app.get("/balance", (req, res) => {
 		const active = "balance";
-		const wallet = req.session.wallet || null;
+		console.log(req.session.wallet);
+		const wallet = req.session.wallet;
 		drawView(res, active, {
 			wallet,
 			active,
@@ -94,7 +114,7 @@ if (!fs.existsSync(walletDirectory)) {
 	
 	app.get("/send", (req, res) => {
 		const active = "send";
-		const wallet = req.session.wallet || null;
+		const wallet = req.session.wallet;
 		drawView(res, active, {
 			wallet,
 			active,
@@ -113,15 +133,16 @@ if (!fs.existsSync(walletDirectory)) {
 
 	//  Create endpoint
 	app.post("/create", async (req, res) => {
+		const active = "create";
 		console.log("~req", req.body);
 		const password = req.body.password;
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
 		if (password !== repeatPassword) {
-			res.render(path.join(__dirname, "views", "create.html"), {
+			drawView(res, active, {
 				wallet: undefined,
-				active: "create",
+				active,
 
 				mnemonic: undefined,
 				filename: null,
@@ -130,23 +151,36 @@ if (!fs.existsSync(walletDirectory)) {
 				address: undefined,
 				error: "Passwords do not match",
 			});
-			return false;
 		}
 
 		// Generate wallet from random mnemonic
 		const wallet = generateWallet();
+		console.log({walletGenerated: wallet});
 		const { mnemonic, privateKey, publicKey, address } = wallet;
 		
 		// TODO: Encrypt and save into session storage
-		const encryptSuccess = await encryptAndSave(mnemonic, password, address, req);
-		console.log({encryptSuccess})
+		const encryptedWallet = await encryptMnemWithPassword(mnemonic, password, address);
+		console.log({encryptedWallet});
 
-		if (encryptSuccess === true) {
-			req.session.wallet = wallet;
+		req.session.wallet = encryptedWallet;
+		req.session.save((err) => {
+			if (err) {
+				drawView(res, active, {
+					wallet: undefined,
+					active,
+	
+					mnemonic: undefined,
+					filename: null,
+					privateKey: undefined,
+					publicKey: undefined,
+					address: undefined,
+					error: "Error saving session!",
+				});
+			}
 
-			drawView(res, "create", {
-				wallet: wallet,
-				active: "create",
+			drawView(res, active, {
+				wallet: encryptedWallet,
+				active: active,
 
 				mnemonic,
 				privateKey,
@@ -155,69 +189,28 @@ if (!fs.existsSync(walletDirectory)) {
 				filename: undefined,
 				error: undefined,
 			});
-		} else {
-			drawView(res, "create", {
-				wallet: undefined,
-				active: "create",
+		})
 
-				mnemonic: null,
-				privateKey: null,
-				publicKey: null,
-				address: null,
-				filename: undefined,
-				error: "Problem encrypting: " + err.message,
-			});
-		}
+
+
+
+		// if (encryptSuccess === true) {
+
+
+		// } else {
+		// 	drawView(res, active, {
+		// 		wallet: undefined,
+		// 		active: active,
+
+		// 		mnemonic: null,
+		// 		privateKey: null,
+		// 		publicKey: null,
+		// 		address: null,
+		// 		filename: undefined,
+		// 		error: "Problem encrypting: " + err.message,
+		// 	});
+		// }
 	});
-
-
-	// app.post("/load", (req, res) => {
-	// 	const active = "load";
-	// 	// fetch user data (filename and password)
-	// 	const filename = req.body.filename;
-	// 	const password = req.body.password;
-
-	// 	fs.readFile(walletDirectory + filename, "utf8", (err, jsonWallet) => {
-	// 		//  Error handling
-	// 		if (err) {
-	// 			drawView(res, active, {
-	// 				wallet: undefined,
-	// 				active,
-
-	// 				address: undefined,
-	// 				privateKey: undefined,
-	// 				mnemonic: undefined,
-	// 				error: "The file doesn't exist",
-	// 			});
-	// 			return;
-	// 		}
-
-	// 		// decrypt the wallet
-	// 		ethers.Wallet.fromEncryptedJson(jsonWallet, password)
-	// 			.then((wallet) => {
-	// 				drawView(res, active, {
-	// 					wallet: undefined,
-	// 					active,
-
-	// 					address: wallet.address,
-	// 					privateKey: wallet.privateKey,
-	// 					mnemonic: wallet.mnemonic.phrase,
-	// 					error: undefined,
-	// 				});
-	// 			})
-	// 			.catch((err) => {
-	// 				drawView(res, active, {
-	// 					wallet: undefined,
-	// 					active,
-
-	// 					address: undefined,
-	// 					privateKey: undefined,
-	// 					mnemonic: undefined,
-	// 					error: "Bad pasword: " + err.message,
-	// 				});
-	// 			});
-	// 	});
-	// });
 
 
 	//recover wallet
@@ -273,6 +266,7 @@ if (!fs.existsSync(walletDirectory)) {
 
 
 	app.post("/balance", (req, res) => {
+		console.log('balance post request');
 		const active = "balance";
 		// fetch user data (filename and password)
 		const password = req.body.password;
@@ -281,6 +275,7 @@ if (!fs.existsSync(walletDirectory)) {
 		// 	encryptedMnemonic,
 		// 	address,
 		// }
+		console.log(req.session.wallet);
 
 		if (!req.session.wallet) {
 			drawView(res, active, {
@@ -294,19 +289,19 @@ if (!fs.existsSync(walletDirectory)) {
 
 		// decrypt wallet and add to session
 		const encryptedMnemonic = req.session.wallet.encryptedMnemonic;
-		const decryptedMnemonic = decrypt(encryptedMnemonic, password);
-		console.log({decryptedWallet});
+		const decryptedMnemonic = decryptMnemWithPassword(encryptedMnemonic, password);
+		console.log({decryptedMnemonic});
 
-		const result = deriveKeysFromMnemonic(decryptedMnemonic);
+		const keys = deriveKeysFromMnemonic(decryptedMnemonic);
 
-		console.log({result});
+		console.log({keys});
+
 
 		drawView(res, active, {
-			wallet: undefined,
+			wallet: req.session.wallet,
 			active,
 
-			active: "balance",
-			balances: "some balances",
+			balances: `Private Key: ${keys.privateKey}\nPublic Key: ${keys.publicKey}\nAddress: ${keys.address}`,
 			error: undefined,
 		});
 
@@ -441,15 +436,23 @@ if (!fs.existsSync(walletDirectory)) {
 
 	// }
 
-	const encryptAndSave = (mnemonic, password, address, req) => {
-		const result = cryptPassword(password);
-		console.log({result});
-		const encryptedMnemonic = encrypt(mnemonic, result);
-		req.session.wallet = {
+	const encryptMnemWithPassword = (mnemonic, password, address) => {
+		console.log('encryptt with password');
+		// const hashedPassword = cryptPassword(password);
+		// console.log({result: hashedPassword});
+		const encryptedMnemonic = encrypt(mnemonic, password);
+		return {
 			encryptedMnemonic,
 			address,
-		}; 
-		return true;
+		};
+	}
+
+	const decryptMnemWithPassword = (encryptedMnemonic, password) => {
+		console.log('decrypt with password');
+		// const hashedPassword = cryptPassword(password);
+		// console.log({result: hashedPassword});
+		const decryptedMnemonic = decrypt(encryptedMnemonic, password);
+		return decryptedMnemonic;
 	}
 
 	function drawView(res, view, data) {

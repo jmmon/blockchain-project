@@ -20,21 +20,25 @@ const getAddress = (publicKey) => bjs.payments.p2pkh({
 
 const IV = Crypto.randomBytes(16);
 
-const padBuffer = (string, length = 32) => {
+const padBuffer = (string, bytes = 32) => {
 	const buffFromString = Buffer.from(string);
-	return Buffer.concat([buffFromString], length);
+	return Buffer.concat([buffFromString], bytes);
 }
 
 const encrypt = (toEncrypt, passphrase) => {
-	let cipher = Crypto.createCipheriv('aes-256-cbc', padBuffer(passphrase), IV);
-	let encrypted = cipher.update(toEncrypt, 'utf8', 'base64');
-	encrypted += cipher.final('base64');
+	passphrase = padBuffer(passphrase);
+	console.log({toEncrypt, paddedPassphrase: passphrase})
+	let cipher = Crypto.createCipheriv('aes-256-cbc', passphrase, IV);
+	let encrypted = cipher.update(toEncrypt, 'utf8', 'hex');
+	encrypted += cipher.final('hex');
 	return encrypted;
 };
 
 const decrypt = (encrypted, passphrase) => {
-	let decipher = Crypto.createDecipheriv('aes-256-cbc', padBuffer(passphrase), IV);
-	let decrypted = decipher.update(encrypted, 'base64', 'utf8');
+	passphrase = padBuffer(passphrase);
+	console.log({encrypted, paddedPassphrase: passphrase})
+	let decipher = Crypto.createDecipheriv('aes-256-cbc', passphrase, IV);
+	let decrypted = decipher.update(encrypted, 'hex', 'utf8');
 	decrypted += decipher.final('utf8');
 	return decrypted;
 };
