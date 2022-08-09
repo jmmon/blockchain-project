@@ -5,7 +5,6 @@ const session = require("express-session");
 const genuuid = require("uid-safe");
 
 const favicon = require("serve-favicon");
-const cookieParser = require('cookie-parser')
 
 const app = express();
 app.use(
@@ -46,15 +45,7 @@ app.set("layout", "layouts/layout");
 
 	const {default: fetch} = await import('node-fetch')
 
-	//  Homepage
 	app.get("/", (req, res) => {
-		// if (req.session.page_views) {
-		// 	req.session.page_views++;
-		// 	res.send("You visited this page " + req.session.page_views + " times");
-		// } else {
-		// 	req.session.page_views = 1;
-    //   res.send("Welcome to this page for the first time!");
-		// }
 		const active = "index";
 		const wallet = req.session.wallet;
 		drawView(res, active, {
@@ -63,23 +54,6 @@ app.set("layout", "layouts/layout");
 		});
 	});
 
-	// app.get("/test", (req, res) => {
-	// 	if (req.session.page_views) {
-	// 		req.session.page_views++;
-	// 		res.send("TEST: You visited this page " + req.session.page_views + " times");
-	// 	} else {
-	// 		req.session.page_views = 1;
-  //     res.send("TEST: Welcome to this page for the first time!");
-	// 	}
-	// 	// const active = "index";
-	// 	// const wallet = req.session.wallet || null;
-	// 	// drawView(res, active, {
-	// 	// 	wallet,
-	// 	// 	active,
-	// 	// });
-	// });
-
-	//  Page for creating a wallet
 	app.get("/create", (req, res) => {
 		const active = "create";
 		const wallet = req.session.wallet;
@@ -87,10 +61,8 @@ app.set("layout", "layouts/layout");
 			wallet,
 			active,
 		});
-
 	});
 
-	//recover wallet
 	app.get("/recover", (req, res) => {
 		const active = "recover";
 		const wallet = req.session.wallet;
@@ -107,17 +79,18 @@ app.set("layout", "layouts/layout");
 		drawView(res, active, {
 			wallet,
 			active,
-			balances: undefined,
-			error: undefined,
 		});
 	});
 	
 	app.get("/send", (req, res) => {
 		const active = "send";
 		const wallet = req.session.wallet;
+		const signedTransaction = req.session.signedTransaction;
 		drawView(res, active, {
 			wallet,
 			active,
+
+			signedTransaction,
 		});
 	});
 
@@ -154,11 +127,15 @@ app.set("layout", "layouts/layout");
 		console.log({walletGenerated: wallet});
 		const { mnemonic, privateKey, publicKey, address } = wallet;
 		
-		// TODO: Encrypt wallet data
-		const encryptedWallet = encryptMnemWithPassword(mnemonic, password, address);
-		console.log({encryptedWallet});
+		const encryptedMnemonic = encryptMnemWithPassword(mnemonic, password);
+		console.log({encryptedMnemonic});
 
-		req.session.wallet = encryptedWallet;
+		const mnemonicAndAddress = {
+			encryptedMnemonic,
+			address
+		}
+
+		req.session.wallet = mnemonicAndAddress;
 		req.session.save((err) => {
 			if (err) {
 				drawView(res, active, {
@@ -171,7 +148,7 @@ app.set("layout", "layouts/layout");
 			}
 
 			drawView(res, active, {
-				wallet: encryptedWallet,
+				wallet: mnemonicAndAddress,
 				active: active,
 
 				mnemonic,
@@ -210,10 +187,15 @@ app.set("layout", "layouts/layout");
 		// const wallet = {mnemonic, ...keys};
 
 		// TODO: Encrypt wallet data
-		const encryptedWallet = encryptMnemWithPassword(mnemonic, password, address);
-		console.log({encryptedWallet});
+		const encryptedMnemonic = encryptMnemWithPassword(mnemonic, password);
+		console.log({encryptedMnemonic});
 
-		req.session.wallet = encryptedWallet;
+		const mnemonicAndAddress = {
+			encryptedMnemonic,
+			address
+		}
+
+		req.session.wallet = mnemonicAndAddress;
 		req.session.save((err) => {
 			if (err) {
 				drawView(res, active, {
@@ -226,7 +208,7 @@ app.set("layout", "layouts/layout");
 			}
 
 			drawView(res, active, {
-				wallet: encryptedWallet,
+				wallet: mnemonicAndAddress,
 				active,
 
 				mnemonic,
@@ -295,66 +277,70 @@ app.set("layout", "layouts/layout");
 	app.post("/send", (req, res) => {
 		const active = "send";
 		// fetch user data (recipient,private key, and amount)
-		const recipient = req.body.recipient;
-		const privateKey = req.body.privateKey;
-		const amount = req.body.amount;
+		const body = req.body;
+		const wallet = req.session.wallet;
+		let signedTransaction = req.session.signedTransaction;
+		// const recipient = req.body.recipient;
+		// const privateKey = req.body.privateKey;
+		// const amount = req.body.amount;
 
-		//  Simple validation
-		if (
-			recipient === "" ||
-			(recipient === undefined && privateKey === "") ||
-			(privateKey === undefined && amount === "") ||
-			amount === undefined ||
-			amount <= 0
-		) {
-			return;
-		}
+		if (!signedTransaction) {
+			// Sign the transaction
+			// save it to session
+			// redraw this page with it so next time it sends
 
-		let wallet;
+			//simple validation
+			// if (
+			// 	recipient === "" ||
+			// 	(recipient === undefined && fromAddress === "") ||
+			// 	(fromAddress === undefined && amount === "") ||
+			// 	amount === undefined ||
+			// 	amount <= 0
+			// ) {
+			// 	drawView(res, active, {
+			// 	wallet,
+			// 	active,
 
-		try {
-			// make instance of the wallet
-			wallet = new ethers.Wallet(privateKey, provider);
-		} catch (err) {
+			// 	signedTransaction: undefined,
+			// 	transactionHash: undefined,
+			// error: "Please be sure boxes are filled correctly!",
+			// });
+			// }
+			//unlock wallet for signing
+
+			//save tx in session, and redraw with signed transaction prepared;
+			signedTransaction = {
+				from: body.fromAddress, 
+				to: body.recipient, 
+				value: body.value,
+				otherStuff: "blahblahblah, fetch default fee from server, sign and date"
+			};
+			req.session.signedTransaction = signedTransaction;
 			drawView(res, active, {
-				wallet: undefined,
+				wallet,
 				active,
-				
-				transactionHash: undefined,
-				error: err.message,
-			});
-			return;
+
+				signedTransaction,
+				transactionHash: "the transaction hash",
+			})
+
+		} else {
+			// Send the transaction, redraw with success message
+			const nodeUrl = body.nodeUrl;
+			
+			// post to node to submit signed transaction
+
+			const previousTransaction = req.session.signedTransaction;
+			drawView(res, active, {
+				wallet,
+				active,
+
+				signedTransaction: undefined,
+				transactionHash: "the transaction hash",
+				previousTransaction,
+			})
 		}
 
-		let gasPrice = 6;
-		let gas = 21000;
-
-		// broadcast the transaction to the network
-		wallet
-			.sendTransaction({
-				to: recipient,
-				value: ethers.utils.parseEther(amount),
-				gasLimit: gas * gasPrice,
-			})
-			.then((transaction) => {
-				drawView(res, active, {
-					wallet: undefined,
-					active,
-
-					transactionHash: transaction.hash,
-					error: undefined,
-				});
-			})
-			.catch((err) => {
-				console.log(err);
-				drawView(res, active, {
-					wallet: undefined,
-					active,
-
-					transactionHash: undefined,
-					error: err.message,
-				});
-			});
 	});
 
 	// Preset helper functions ===
@@ -367,21 +353,14 @@ app.set("layout", "layouts/layout");
 
 	// }
 
-	const encryptMnemWithPassword = (mnemonic, password, address) => {
+	const encryptMnemWithPassword = (mnemonic, password) => {
 		console.log('encryptt with password');
-		// const hashedPassword = cryptPassword(password);
-		// console.log({result: hashedPassword});
 		const encryptedMnemonic = encrypt(mnemonic, password);
-		return {
-			encryptedMnemonic,
-			address,
-		};
+		return encryptedMnemonic;
 	}
 
 	const decryptMnemWithPassword = (encryptedMnemonic, password) => {
 		console.log('decrypt with password');
-		// const hashedPassword = cryptPassword(password);
-		// console.log({result: hashedPassword});
 		const decryptedMnemonic = decrypt(encryptedMnemonic, password);
 		return decryptedMnemonic;
 	}

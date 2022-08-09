@@ -64,12 +64,11 @@ const comparePassword = (
    });
 };
 
-
-const generateWallet = () => {
-	const mnemonic = bip39.generateMnemonic();
+const deriveKeysFromMnemonic = (mnemonic) => {
 	const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
 	const masterNode = bip32.fromSeed(masterSeed);
 
+	// only generating the first account, (not change,) first address
 	const path = generatePathFromObject({
 		account: "0",
 		change: "0",
@@ -81,10 +80,17 @@ const generateWallet = () => {
 	const address = getAddress(publicKey);
 
 	return {
-		mnemonic,
 		privateKey: privateKey.toString('hex'),
 		publicKey: publicKey.toString('hex'),
 		address
+	};
+}
+
+const generateWallet = () => {
+	const mnemonic = bip39.generateMnemonic();
+	return {
+		mnemonic,
+		...deriveKeysFromMnemonic(mnemonic)
 	};
 }
 
@@ -108,27 +114,6 @@ const saveWallet = () => {
 	
 }
 
-const deriveKeysFromMnemonic = (mnemonic) => {
-	const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
-	const masterNode = bip32.fromSeed(masterSeed);
-
-	// only generating the first account, (not channge,) first address
-	const path = generatePathFromObject({
-		account: "0",
-		change: "0",
-		index: "0"
-	});
-
-	const privateKey = masterNode.derivePath(path).privateKey;
-	const publicKey = masterNode.derivePath(path).publicKey;
-	const address = getAddress(publicKey);
-
-	return {
-		privateKey: privateKey.toString('hex'),
-		publicKey: publicKey.toString('hex'),
-		address
-	};
-}
 
 
 const walletUtils = {
