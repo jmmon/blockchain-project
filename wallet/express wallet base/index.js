@@ -56,6 +56,7 @@ const authChecker = (req, res, next) => {
 			eccSign,
 			hashSha256,
 			generateBytes,
+			sliceSignature,
 			CONSTANTS,
 		},
 	} = await import("./lib/walletUtils.js");
@@ -346,7 +347,7 @@ const authChecker = (req, res, next) => {
 
 			// take json object, remove whitespace before hashing
 			// should be SHA-256 hash
-			const txDataHash = hashData(JSON.stringify(txData).replaceAll(" ", "")); 
+			const txDataHash = hashSha256(JSON.stringify(txData).replaceAll(" ", "")); 
 			console.log({txDataHash})
 			console.log({hex: txDataHash.toString('hex')})
 
@@ -365,7 +366,6 @@ const authChecker = (req, res, next) => {
 				transactionDataHash: txDataHash,
 			}
 
-
 			console.log({privateKey: keys.privateKey});
 			console.log({privateKeyBinary: parseInt(keys.privateKey, 16)});
 
@@ -374,7 +374,14 @@ const authChecker = (req, res, next) => {
 
 			const eccSignature = Buffer.from(eccSign(sha256TxDataHash, generateBytes(32)));
 			console.log('ecc signature:', {eccSignature})
-			const [r, s] = [eccSignature.toString('hex').slice(0, 64), eccSignature.toString('hex').slice(64)]
+
+			
+			console.log('-=-=- WITH Private Key -=-=-');
+			const privateKeyArray = Uint8Array.from(Buffer.from(keys.privateKey, 'hex'));
+			console.log({privateKeyArray, length: privateKeyArray.length});
+			const signature = Buffer.from(eccSign(sha256TxDataHash, privateKeyArray));
+			console.log({signature})
+			const {r, s} = sliceSignature(signature);
 			console.log({r, s});
 			
 

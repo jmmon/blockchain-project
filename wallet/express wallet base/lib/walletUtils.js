@@ -97,6 +97,11 @@ const hashSha256 = (data) => Buffer.from(crypto.createHash('sha256').update(data
 
 const generateBytes = (bytes) => crypto.randomBytes(bytes);
 
+const sliceSignature = (signature) => {
+	const [r, s] = [signature.toString('hex').slice(0, 64), signature.toString('hex').slice(64)]
+	return {r, s};
+}
+
 
 const walletUtils = {
 	generateWallet,
@@ -108,6 +113,7 @@ const walletUtils = {
 	eccSign,
 	hashSha256,
 	generateBytes,
+	sliceSignature,
 	CONSTANTS,
 };
 
