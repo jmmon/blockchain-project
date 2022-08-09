@@ -39,6 +39,11 @@
 						<label>Amount</label>
 						<input type="text" class="form-control" name="amount" />
 					</div>
+
+					<div class="form-group">
+						<label>Password</label>
+						<input type="password" class="form-control" name="password" required>
+					</div>
 	
 					<div class="form-group">
 						<input type="submit" class="btn btn-defautl" value="Sign Transaction" />
@@ -90,7 +95,10 @@
 		class="alert-link"
 		><%= transactionHash %></a
 	>
-	<br><br>
-	<textarea required disabled name="previousTransaction" cols="100" rows="15" class="form-control"><%= JSON.stringify(previousTransaction)%></textarea>
+	
+	<% if (typeof previousTransaction == 'object' && previousTransaction !== undefined) { %>
+		<br><br>
+		<textarea required disabled name="previousTransaction" cols="100" rows="15" class="form-control"><%= JSON.stringify(previousTransaction)%></textarea>
+	<% } %>
 </div>
 <% } %>

@@ -2,9 +2,9 @@ const path = require("path");
 const express = require("express");
 const ejsLayouts = require("express-ejs-layouts");
 const session = require("express-session");
-const genuuid = require("uid-safe");
 
 const favicon = require("serve-favicon");
+const { parse } = require( "url" );
 
 const app = express();
 app.use(
@@ -12,7 +12,7 @@ app.use(
 		maxAge: 0,
 	})
 );
-// app.use(cookieParser);
+
 app.use(
 	session({
 		secret: "keyboard cat",
@@ -29,6 +29,20 @@ app.use(express.static("public"));
 app.use(ejsLayouts);
 app.set("layout", "layouts/layout");
 
+const authChecker = (req, res, next) => {
+	// FOR TESTING:
+	req.session.wallet = {
+		encryptedMnemonic: 'ac94db3255bf41eaed41fd6237b5461aa7f1fb1f16999a5ef7cff62a0494da4d5d3acbd727aae59f939e85e88008821972256ace89a1eb2065b3d4f427a50c3c63e116e02440c81c1a4ae77dfb4d4af9',
+		address: '1GLCDWgdmGGmzpmVshPfjrQs47d6sC47FR'
+	}
+	
+	if (req.session.wallet) {
+		next();
+	} else {
+		res.redirect("/create");
+	}
+}
+
 
 (async () => {
 	const {
@@ -36,9 +50,13 @@ app.set("layout", "layouts/layout");
 			generateWallet,
 			encrypt,
 			decrypt,
-			cryptPassword,
+			hashData,
 			comparePassword,
 			deriveKeysFromMnemonic,
+			eccSign,
+			hashSha256,
+			generateBytes,
+			CONSTANTS,
 		},
 	} = await import("./lib/walletUtils.js");
 	// console.log({generateWallet, encrypt, decrypt, cryptPassword, comparePassword});
@@ -72,7 +90,7 @@ app.set("layout", "layouts/layout");
 		});
 	});
 	
-	app.get("/balance", (req, res) => {
+	app.get("/balance", authChecker, (req, res) => {
 		const active = "balance";
 		console.log(req.session.wallet);
 		const wallet = req.session.wallet;
@@ -82,7 +100,7 @@ app.set("layout", "layouts/layout");
 		});
 	});
 	
-	app.get("/send", (req, res) => {
+	app.get("/send", authChecker, (req, res) => {
 		const active = "send";
 		const wallet = req.session.wallet;
 		const signedTransaction = req.session.signedTransaction;
@@ -95,7 +113,7 @@ app.set("layout", "layouts/layout");
 	});
 
 	// logout simply removes wallet from session and loads index page
-	app.get("/logout", (req, res) => {
+	app.get("/logout", authChecker, (req, res) => {
 		let active = "index";
 		req.session.wallet = undefined;
 		drawView(res, active, {
@@ -285,7 +303,7 @@ app.set("layout", "layouts/layout");
 		// const amount = req.body.amount;
 
 		if (!signedTransaction) {
-			// Sign the transaction
+			// Sign the transaction data
 			// save it to session
 			// redraw this page with it so next time it sends
 
@@ -307,21 +325,66 @@ app.set("layout", "layouts/layout");
 			// });
 			// }
 			//unlock wallet for signing
+			const fee = CONSTANTS.defaultFee;
+
+			const encryptedMnemonic = req.session.wallet.encryptedMnemonic;
+			const decryptedMnemonic = decryptMnemWithPassword(encryptedMnemonic, body.password);
+			console.log({decryptedMnemonic});
+	
+			const keys = deriveKeysFromMnemonic(decryptedMnemonic);
+
 
 			//save tx in session, and redraw with signed transaction prepared;
-			signedTransaction = {
+			const txData = {
 				from: body.fromAddress, 
 				to: body.recipient, 
 				value: body.value,
-				otherStuff: "blahblahblah, fetch default fee from server, sign and date"
+				fee,
+				dateCreated: new Date().toISOString(),
+				senderPubKey: keys.publicKey,
 			};
+
+			// take json object, remove whitespace before hashing
+			// should be SHA-256 hash
+			const txDataHash = hashData(JSON.stringify(txData).replaceAll(" ", "")); 
+			console.log({txDataHash})
+			console.log({hex: txDataHash.toString('hex')})
+
+			const sha256TxDataHash = hashSha256(JSON.stringify(txData).replaceAll(" ", ""))
+			console.log({sha256TxDataHash});
+			console.log(Buffer.byteLength(sha256TxDataHash));
+
+			//2d4a6728973caf63e423bdd2552df36b7fc7523da90314d62fa2d2d69cdf33b0
+
+			// still need to actually sign it:
+			//ECDSA signature of the txDataHash!
+			// use deterministic ECDSA signature, based on secp256k1 and RFC-6979 with HMAC-SHA256
+
+			signedTransaction = {
+				...txData, 
+				transactionDataHash: txDataHash,
+			}
+
+
+			console.log({privateKey: keys.privateKey});
+			console.log({privateKeyBinary: parseInt(keys.privateKey, 16)});
+
+			const privateBuffer = Buffer.from(keys.privateKey);
+			console.log(Buffer.byteLength(privateBuffer));
+
+			const eccSignature = Buffer.from(eccSign(sha256TxDataHash, generateBytes(32)));
+			console.log('ecc signature:', {eccSignature})
+			const [r, s] = [eccSignature.toString('hex').slice(0, 64), eccSignature.toString('hex').slice(64)]
+			console.log({r, s});
+			
+
 			req.session.signedTransaction = signedTransaction;
 			drawView(res, active, {
 				wallet,
 				active,
 
 				signedTransaction,
-				transactionHash: "the transaction hash",
+				transactionHash: txDataHash,
 			})
 
 		} else {

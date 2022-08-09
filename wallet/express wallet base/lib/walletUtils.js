@@ -2,14 +2,17 @@ import BIP32Factory from 'bip32';
 import * as ecc from 'tiny-secp256k1';
 const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from 'bip39';
-
 import bjs from 'bitcoinjs-lib';
 
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+
+const IV = crypto.randomBytes(16);
 const purpose = "44"
 const coinType = "7789"
-
-import bcrypt from "bcrypt";
-import Crypto from "crypto";
+const CONSTANTS = {
+	defaultFee: 10,
+};
 
 const generatePathFromObject = ({ account, change, index }) => `m/${purpose}'/${coinType}'/${account}'/${change}/${index}`;
 
@@ -17,18 +20,13 @@ const getAddress = (publicKey) => bjs.payments.p2pkh({
 	pubkey: publicKey,
 }).address;
 
+const padBuffer = (string, bytes = 32) => Buffer.concat([Buffer.from(string)], bytes);
 
-const IV = Crypto.randomBytes(16);
-
-const padBuffer = (string, bytes = 32) => {
-	const buffFromString = Buffer.from(string);
-	return Buffer.concat([buffFromString], bytes);
-}
 
 const encrypt = (toEncrypt, passphrase) => {
 	passphrase = padBuffer(passphrase);
 	console.log({toEncrypt, paddedPassphrase: passphrase})
-	let cipher = Crypto.createCipheriv('aes-256-cbc', passphrase, IV);
+	let cipher = crypto.createCipheriv('aes-256-cbc', passphrase, IV);
 	let encrypted = cipher.update(toEncrypt, 'utf8', 'hex');
 	encrypted += cipher.final('hex');
 	return encrypted;
@@ -37,21 +35,20 @@ const encrypt = (toEncrypt, passphrase) => {
 const decrypt = (encrypted, passphrase) => {
 	passphrase = padBuffer(passphrase);
 	console.log({encrypted, paddedPassphrase: passphrase})
-	let decipher = Crypto.createDecipheriv('aes-256-cbc', passphrase, IV);
+	let decipher = crypto.createDecipheriv('aes-256-cbc', passphrase, IV);
 	let decrypted = decipher.update(encrypted, 'hex', 'utf8');
 	decrypted += decipher.final('utf8');
 	return decrypted;
 };
 
  
-const cryptPassword = (
-		password,
+const hashData = (
+		data,
 ) => {
-	console.log('cryptPassword function runs');
-	return bcrypt.hashSync(password, 10);
+	return bcrypt.hashSync(data, 10);
 };
 
-const comparePassword = (
+const compareHash = (
 		plainPass, 
 		hashword, 
 	// callback
@@ -94,47 +91,24 @@ const generateWallet = () => {
 	};
 }
 
-const getAccountBalance = () => {
-	
-}
+const eccSign = (hash, privateKey) => ecc.sign(Buffer.from(hash), privateKey);
 
-const signTransaction = () => {
-	
-}
+const hashSha256 = (data) => Buffer.from(crypto.createHash('sha256').update(data).digest());
 
-const sendTransaction = () => {
-	
-}
-
-const logout = () => {
-	
-}
-
-const saveWallet = () => {
-	
-}
-
+const generateBytes = (bytes) => crypto.randomBytes(bytes);
 
 
 const walletUtils = {
 	generateWallet,
 	encrypt, 
 	decrypt, 
-	cryptPassword, 
-	comparePassword,
+	hashData, 
+	compareHash,
 	deriveKeysFromMnemonic,
+	eccSign,
+	hashSha256,
+	generateBytes,
+	CONSTANTS,
 };
 
 export default walletUtils;
-
-
-
-
-
-/* 
-ESM scripts can only be imported (not required)
-CJS scripts cannot import (only require)
-ESM scripts can "default import" but not "named import"
-ESM scripts can require(CJS) but causes trouble
-
-*/
