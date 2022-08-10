@@ -38,9 +38,11 @@ router.get("/:tranHash", (req, res) => {
 
 // done
 router.post("/send", (req, res) => {
+	console.log('transaction received...');
 	const blockchain = req.app.get('blockchain');
-	const transactionData = req.body;
-	const requiredData = ["from", "to", "value", "fee", "dateCreated", "data", "senderPubKey", "senderSignature"];
+	const signedTransaction = req.body;
+	console.log({signedTransaction});
+	const requiredFields = ["from", "to", "value", "fee", "dateCreated", "data", "senderPubKey", "transactionDataHash", "senderSignature"];
 
 
 		//TODO: validate transaction data!!
@@ -50,14 +52,14 @@ router.post("/send", (req, res) => {
 
 
 	//check for missing data object
-	if (!transactionData) {
+	if (!signedTransaction) {
 		return res.status(400).send(JSON.stringify({errorMsg: "Missing all transaction data"}));
 	}
 
 	//check for missing fields
 	let missing = [];
-	const incomingDataKeys = Object.keys(transactionData);
-	for (const each of requiredData) {
+	const incomingDataKeys = Object.keys(signedTransaction);
+	for (const each of requiredFields) {
 		if (!incomingDataKeys.includes(each)) {
 			missing.push(each);
 		}
@@ -68,30 +70,30 @@ router.post("/send", (req, res) => {
 
 
 	//check for invalid values :
-	if (transactionData.value < 0) {
+	if (signedTransaction.value < 0) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'value' must be at least 0`}));
 	}
 
-	if (transactionData.fee < blockchain.config.minTransactionFee) {
+	if (signedTransaction.fee < blockchain.config.minTransactionFee) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'fee' must be at least ${blockchain.config.minTransactionFee}`}));
 	}
 
 	const currentTime = Date.now();
-	if (Date.parse(transactionData.dateCreated) > currentTime) {
-		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'dateCreated' cannot be created in the future! Transaction created: ${transactionData.dateCreated}; Current dateTime: ${currentTime.toISOString()}`}));
+	if (Date.parse(signedTransaction.dateCreated) > currentTime) {
+		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'dateCreated' cannot be created in the future! Transaction created: ${signedTransaction.dateCreated}; Current dateTime: ${currentTime.toISOString()}`}));
 	}
 
-	if (!blockchain.addressIsValid(transactionData.to)) {
+	if (!blockchain.addressIsValid(signedTransaction.to)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'to' address is invalid!`}));
 	}
-	if (!blockchain.addressIsValid(transactionData.from)) {
+	if (!blockchain.addressIsValid(signedTransaction.from)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'from' address is invalid!`}));
 	}
 
 	// checks sender account balance >= value + fee
-	const balancesOfSender = blockchain.getBalancesOfAddress(transactionData.from);
+	const balancesOfSender = blockchain.getBalancesOfAddress(signedTransaction.from);
 	// console.log('--attempting send transaction\n balances of from account:', {balancesOfSender});
-	if (balancesOfSender.confirmedBalance < (transactionData.value + transactionData.fee)) {
+	if (balancesOfSender.confirmedBalance < (signedTransaction.value + signedTransaction.fee)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'from' address does not have enough funds!`}));
 	}
 
@@ -107,7 +109,7 @@ router.post("/send", (req, res) => {
 
 
 	//check pendingTransactions for transaction with matching transactionDataHash (duplicate)
-	const newTransaction = blockchain.createTransaction(transactionData);
+	const newTransaction = blockchain.createTransaction(signedTransaction);
 	if (blockchain.findTransactionByHash(newTransaction.transactionDataHash)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: transaction is a duplicate!`}));
 	}

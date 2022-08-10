@@ -31,10 +31,10 @@ app.set("layout", "layouts/layout");
 
 const authChecker = (req, res, next) => {
 	// FOR TESTING:
-	req.session.wallet = {
-		encryptedMnemonic: 'ac94db3255bf41eaed41fd6237b5461aa7f1fb1f16999a5ef7cff62a0494da4d5d3acbd727aae59f939e85e88008821972256ace89a1eb2065b3d4f427a50c3c63e116e02440c81c1a4ae77dfb4d4af9',
-		address: '1GLCDWgdmGGmzpmVshPfjrQs47d6sC47FR'
-	}
+	// req.session.wallet = {
+	// 	encryptedMnemonic: 'ac94db3255bf41eaed41fd6237b5461aa7f1fb1f16999a5ef7cff62a0494da4d5d3acbd727aae59f939e85e88008821972256ace89a1eb2065b3d4f427a50c3c63e116e02440c81c1a4ae77dfb4d4af9',
+	// 	address: '1GLCDWgdmGGmzpmVshPfjrQs47d6sC47FR'
+	// }
 	
 	if (req.session.wallet) {
 		next();
@@ -42,31 +42,37 @@ const authChecker = (req, res, next) => {
 		res.redirect("/create");
 	}
 }
-
-
+// shaft armed broccoli peasant absurd siren drip gospel prevent excess donkey angry
 (async () => {
 	const {
 		default: {
 			generateWallet,
 			encrypt,
 			decrypt,
-			hashData,
-			comparePassword,
 			deriveKeysFromMnemonic,
 			eccSign,
 			hashSha256,
 			generateBytes,
-			sliceSignature,
+			splitSignature,
 			CONSTANTS,
 		},
 	} = await import("./lib/walletUtils.js");
-	// console.log({generateWallet, encrypt, decrypt, cryptPassword, comparePassword});
 
 	const {default: fetch} = await import('node-fetch')
 
 	app.get("/", (req, res) => {
 		const active = "index";
 		const wallet = req.session.wallet;
+
+		// if (!wallet) req.session.wallet = {
+		// 	encryptedMnemonic: 'ac94db3255bf41eaed41fd6237b5461aa7f1fb1f16999a5ef7cff62a0494da4d5d3acbd727aae59f939e85e88008821972256ace89a1eb2065b3d4f427a50c3c63e116e02440c81c1a4ae77dfb4d4af9',
+		// 	address: '1GLCDWgdmGGmzpmVshPfjrQs47d6sC47FR'
+		// }
+// 12CrQaLb9rVcQzgsAEnFZgcVcTT14UCMbW
+// 0007a00df70afa51bd02e59d060546c517a585f9004d6a012e
+// 000d35f19cef288c012ac3fb58b446f65ba102475a7f5ee0e9
+// 00a82b27067973d9637e47e914e7fb1769f34aa8aa58e686c4
+
 		drawView(res, active, {
 			wallet,
 			active,
@@ -142,7 +148,7 @@ const authChecker = (req, res, next) => {
 		}
 
 		// Generate wallet from random mnemonic
-		const wallet = generateWallet();
+		const wallet = await generateWallet();
 		console.log({walletGenerated: wallet});
 		const { mnemonic, privateKey, publicKey, address } = wallet;
 		
@@ -293,17 +299,16 @@ const authChecker = (req, res, next) => {
 	// have send view handle signing and sending:
 	// if we have signed transaction, we attempt the send;
 	// otherwise we sign transaction and reload the send view with the signed data
-	app.post("/send", (req, res) => {
+	app.post("/send", async (req, res) => {
 		const active = "send";
 		// fetch user data (recipient,private key, and amount)
 		const body = req.body;
 		const wallet = req.session.wallet;
-		let signedTransaction = req.session.signedTransaction;
 		// const recipient = req.body.recipient;
 		// const privateKey = req.body.privateKey;
 		// const amount = req.body.amount;
 
-		if (!signedTransaction) {
+		if (!req.session.signedTransaction) {
 			// Sign the transaction data
 			// save it to session
 			// redraw this page with it so next time it sends
@@ -336,81 +341,78 @@ const authChecker = (req, res, next) => {
 
 
 			//save tx in session, and redraw with signed transaction prepared;
-			const txData = {
-				from: body.fromAddress, 
+			let txData = {
+				from: keys.address, 
 				to: body.recipient, 
-				value: body.value,
+				value: body.amount,
 				fee,
 				dateCreated: new Date().toISOString(),
+				data: '',
 				senderPubKey: keys.publicKey,
 			};
 
-			// take json object, remove whitespace before hashing
-			// should be SHA-256 hash
-			const txDataHash = hashSha256(JSON.stringify(txData).replaceAll(" ", "")); 
-			console.log({txDataHash})
-			console.log({hex: txDataHash.toString('hex')})
-
-			const sha256TxDataHash = hashSha256(JSON.stringify(txData).replaceAll(" ", ""))
-			console.log({sha256TxDataHash});
-			console.log(Buffer.byteLength(sha256TxDataHash));
-
-			//2d4a6728973caf63e423bdd2552df36b7fc7523da90314d62fa2d2d69cdf33b0
+			// take json object, remove whitespace before hashing, should be SHA-256 hash
+			const txDataHashArray = hashSha256(JSON.stringify(txData).replaceAll(" ", ""));
 
 			// still need to actually sign it:
 			//ECDSA signature of the txDataHash!
 			// use deterministic ECDSA signature, based on secp256k1 and RFC-6979 with HMAC-SHA256
 
-			signedTransaction = {
-				...txData, 
-				transactionDataHash: txDataHash,
-			}
-
-			console.log({privateKey: keys.privateKey});
-			console.log({privateKeyBinary: parseInt(keys.privateKey, 16)});
-
-			const privateBuffer = Buffer.from(keys.privateKey);
-			console.log(Buffer.byteLength(privateBuffer));
-
-			const eccSignature = Buffer.from(eccSign(sha256TxDataHash, generateBytes(32)));
-			console.log('ecc signature:', {eccSignature})
-
+			txData["transactionDataHash"] = txDataHashArray.toString('hex');
 			
-			console.log('-=-=- WITH Private Key -=-=-');
+			
+			
 			const privateKeyArray = Uint8Array.from(Buffer.from(keys.privateKey, 'hex'));
-			console.log({privateKeyArray, length: privateKeyArray.length});
-			const signature = Buffer.from(eccSign(sha256TxDataHash, privateKeyArray));
-			console.log({signature})
-			const {r, s} = sliceSignature(signature);
-			console.log({r, s});
-			
+			const signature = Buffer.from(eccSign(txDataHashArray, privateKeyArray));
+			const {r, s} = splitSignature(signature);
 
-			req.session.signedTransaction = signedTransaction;
-			drawView(res, active, {
-				wallet,
-				active,
-
-				signedTransaction,
-				transactionHash: txDataHash,
+			txData["senderSignature"] = [r, s];
+			console.log('before saving',{txData});
+			req.session.signedTransaction = txData;
+			req.session.save(() => {
+				drawView(res, active, {
+					wallet,
+					active,
+	
+					signedTransaction: txData,
+				})
 			})
 
 		} else {
 			// Send the transaction, redraw with success message
 			const nodeUrl = body.nodeUrl;
-			
-			// post to node to submit signed transaction
+			console.log({sessionTx: req.session.signedTransaction});
 
+			// post to node to submit signed transaction
+			const response = await fetch(`${nodeUrl}/transactions/send`, {method: 'POST', body: JSON.stringify(req.session.signedTransaction), headers: {'Content-Type': 'application/json'}});
+
+			console.log({response});
+
+			if (response.status === 400) {
+				console.log(`catch err submitting transaction`);
+				const json = await response.json();
+				drawView(res, active, {
+					wallet,
+					active,
+	
+					signedTransaction: req.session.signedTransaction,
+					error: json.errorMsg,
+				});
+				return;
+			} 
+			
 			const previousTransaction = req.session.signedTransaction;
+			req.session.signedTransaction = undefined;
+
 			drawView(res, active, {
 				wallet,
 				active,
 
 				signedTransaction: undefined,
-				transactionHash: "the transaction hash",
+				transactionHash: previousTransaction.transactionDataHash,
 				previousTransaction,
-			})
+			});
 		}
-
 	});
 
 	// Preset helper functions ===
