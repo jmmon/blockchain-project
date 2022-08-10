@@ -187,7 +187,7 @@ const authChecker = (req, res, next) => {
 
 
 	//recover wallet
-	app.post("/recover", (req, res) => {
+	app.post("/recover", async (req, res) => {
 		const active = "recover";
 		// fetch user data (mnemonic and password)
 		const mnemonic = req.body.mnemonic;
@@ -205,7 +205,7 @@ const authChecker = (req, res, next) => {
 			});
 		}
 
-		const {privateKey, publicKey, address} = deriveKeysFromMnemonic(mnemonic);
+		const {privateKey, publicKey, address} = await deriveKeysFromMnemonic(mnemonic);
 
 		console.log({privateKey, publicKey, address});
 
@@ -265,11 +265,10 @@ const authChecker = (req, res, next) => {
 		}
 
 		// decrypt wallet and add to session
-		const encryptedMnemonic = req.session.wallet.encryptedMnemonic;
-		const decryptedMnemonic = decryptMnemWithPassword(encryptedMnemonic, password);
+		const decryptedMnemonic = decryptMnemWithPassword(req.session.wallet.encryptedMnemonic, password);
 		console.log({decryptedMnemonic});
 
-		const keys = deriveKeysFromMnemonic(decryptedMnemonic);
+		const keys = await deriveKeysFromMnemonic(decryptedMnemonic);
 
 		console.log({keys});
 
@@ -301,12 +300,10 @@ const authChecker = (req, res, next) => {
 	// otherwise we sign transaction and reload the send view with the signed data
 	app.post("/send", async (req, res) => {
 		const active = "send";
-		// fetch user data (recipient,private key, and amount)
-		const body = req.body;
+		const recipient = req.body.recipient;
+		const fromAddress = req.body.fromAddress;
+		const amount = req.body.amount;
 		const wallet = req.session.wallet;
-		// const recipient = req.body.recipient;
-		// const privateKey = req.body.privateKey;
-		// const amount = req.body.amount;
 
 		if (!req.session.signedTransaction) {
 			// Sign the transaction data
@@ -314,60 +311,71 @@ const authChecker = (req, res, next) => {
 			// redraw this page with it so next time it sends
 
 			//simple validation
-			// if (
-			// 	recipient === "" ||
-			// 	(recipient === undefined && fromAddress === "") ||
-			// 	(fromAddress === undefined && amount === "") ||
-			// 	amount === undefined ||
-			// 	amount <= 0
-			// ) {
-			// 	drawView(res, active, {
-			// 	wallet,
-			// 	active,
+			if (
+				recipient === "" ||
+				(recipient === undefined && fromAddress === "") ||
+				(fromAddress === undefined && amount === "") ||
+				amount === undefined ||
+				amount <= 0
+			) {
+				drawView(res, active, {
+					wallet,
+					active,
 
-			// 	signedTransaction: undefined,
-			// 	transactionHash: undefined,
-			// error: "Please be sure boxes are filled correctly!",
-			// });
-			// }
+					signedTransaction: undefined,
+					transactionHash: undefined,
+					error: "Please be sure boxes are filled correctly!",
+				});
+			}
+
 			//unlock wallet for signing
 			const fee = CONSTANTS.defaultFee;
 
 			const encryptedMnemonic = req.session.wallet.encryptedMnemonic;
-			const decryptedMnemonic = decryptMnemWithPassword(encryptedMnemonic, body.password);
+			const decryptedMnemonic = decryptMnemWithPassword(encryptedMnemonic, req.body.password);
 			console.log({decryptedMnemonic});
 	
-			const keys = deriveKeysFromMnemonic(decryptedMnemonic);
+			const keys = await deriveKeysFromMnemonic(decryptedMnemonic);
 
-
-			//save tx in session, and redraw with signed transaction prepared;
 			let txData = {
-				from: keys.address, 
-				to: body.recipient, 
-				value: body.amount,
+				from: fromAddress || wallet.address, 
+				to: recipient, 
+				value: amount,
 				fee,
 				dateCreated: new Date().toISOString(),
 				data: '',
 				senderPubKey: keys.publicKey,
 			};
 
-			// take json object, remove whitespace before hashing, should be SHA-256 hash
-			const txDataHashArray = hashSha256(JSON.stringify(txData).replaceAll(" ", ""));
+			const hashTransaction = ({from, to, value, fee, dateCreated, data, senderPubKey}) => {
+				// escape data field spaces
+				data = data.replaceAll(/\s/gm, "\ ");
+
+				const txDataJson = JSON.stringify({
+					from, to, value, fee, dateCreated, data, senderPubKey
+				});
+				
+				// replace non-escaped spaces
+				const dataNoNonEscapedSpaces = txDataJson.replace(/(?<!\\)\s/gm, '');
+	
+				return hashSha256(dataNoNonEscapedSpaces);
+			}
+
+			const txDataHashBuffer = hashTransaction(txData)
 
 			// still need to actually sign it:
 			//ECDSA signature of the txDataHash!
 			// use deterministic ECDSA signature, based on secp256k1 and RFC-6979 with HMAC-SHA256
 
-			txData["transactionDataHash"] = txDataHashArray.toString('hex');
-			
-			
-			
-			const privateKeyArray = Uint8Array.from(Buffer.from(keys.privateKey, 'hex'));
-			const signature = Buffer.from(eccSign(txDataHashArray, privateKeyArray));
-			const {r, s} = splitSignature(signature);
+			txData["transactionDataHash"] = txDataHashBuffer.toString('hex');
 
+			const privateKeyArray = Uint8Array.from(Buffer.from(keys.privateKey, 'hex'));
+			const signature = Buffer.from(eccSign(txDataHashBuffer, privateKeyArray));
+			const {r, s} = splitSignature(signature);
 			txData["senderSignature"] = [r, s];
+
 			console.log('before saving',{txData});
+
 			req.session.signedTransaction = txData;
 			req.session.save(() => {
 				drawView(res, active, {
@@ -380,7 +388,7 @@ const authChecker = (req, res, next) => {
 
 		} else {
 			// Send the transaction, redraw with success message
-			const nodeUrl = body.nodeUrl;
+			const nodeUrl = req.body.nodeUrl;
 			console.log({sessionTx: req.session.signedTransaction});
 
 			// post to node to submit signed transaction

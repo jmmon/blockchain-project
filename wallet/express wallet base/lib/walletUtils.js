@@ -20,16 +20,13 @@ const CONSTANTS = {
 const generatePathFromObject = ({ account = 0, change = null, index = null}) =>
 	`m/${purpose}'/${coinType}'/${account}'${change ? `/${change}${index ? `/${index}` : ''}` : ''}`;
 
-const getAddress = (node) =>
-	bjs.payments.p2pkh({
-		pubkey: node.publicKey,
-	}).address;
-
 const getCompressedPublicKey = async (compactPubKey) => {
 	return compactPubKey
 		.slice(2)
 		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 }
+
+const getAddressFromCompressedPublicKey = async (compressedPubKey) => await ripemd160(compressedPubKey);
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
@@ -71,19 +68,12 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	const hexPublicKeyCompressed = await getCompressedPublicKey(hexPublicKeyCompact);
 
 	//derive our address from our compressed public key
-	const hexAddress = await ripemd160(hexPublicKeyCompressed);
+	const hexAddress = await getAddressFromCompressedPublicKey(hexPublicKeyCompressed);
 
-	// const address = getAddress(account0change0index0);
-	// const hexAddress = address.toString("hex");
-	// const addressBufferHex = Buffer.from(address).toString('hex');
-
-	
-	// console.log({ address, hexAddress, addressBufferHex });
-
-	//private key: eea119144e607be38603ec00b3b166a1a6d0eb676bce5dd73277dbb8f0248917
-	// public key (compact): 034922d832a6bd2a1da82d362ae066f49a54e565fc964b13597dfb6482b2006695
-
-
+	//from mnemonic: talent rose armor father call budget bone toast bubble bargain fluid feel
+	//private key: f00c5b3bb9a6754b40a4100bb9e62e1c49aff981343f925ded7bd0adf4f36018
+	// public key: 212e35593185b30a9a33645a23a1be6fc39cbec7bffed1592f608e9a6c8726431
+	// address: 0feb1f7788c6191cacf7ec060a6326f57046bb7d
 
 	return {
 		privateKey: hexPrivateKey,
@@ -92,52 +82,6 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	};
 };
 
-// with elliptic:
-//from mnemonic, generate seed
-//get our masterNode (which contains xpriv and xpub) from our seed
-
-const deriveKeys = async (mnemonic) => {
-	const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
-	// Generate new keypair
-	const masterNode = bip32.fromSeed(masterSeed);
-	const account = masterNode.derivePath(generatePathFromObject({account: "0"}));
-	console.log({accountPrivateKey: account.privateKey.toString('hex'), accountPublicKey: account.publicKey.toString('hex')})
-	//private key: 45d500a02b1ac852fe9263e718e8b2b57b8b4ef8194095ff7259684f753d5633
-	// public key: 03428f92a2f58931887f82ccfd72351b7401cde1f5a33a98ae7059c9a528101394
-
-	const childBuffer = Buffer.from(account.privateKey);
-
-
-
-
-	const newKeyPair = ec.genKeyPair({ entropy: masterSeed });
-	console.log({ newKeyPair });
-
-	const publicKey = newKeyPair.getPublic("hex");
-	const publicKeyCompact = newKeyPair.getPublic(true, "hex");
-	const publicKeyCompressed = publicKeyCompact
-		.slice(2)
-		.concat(publicKeyCompact.slice(1, 2) % 2 === 0 ? 0 : 1);
-	const privateKey = newKeyPair.getPrivate("hex");
-
-	const address = await ripemd160(publicKeyCompressed);
-
-	console.log({
-		privateKey,
-		privateKeyLength: privateKey.length,
-		publicKey,
-		publicKeyLength: publicKey.length,
-		publicKeyCompressed,
-		publicKeyCompressedLength: publicKeyCompressed.length,
-		address,
-		addressLength: address.length,
-	});
-	return {
-		privateKey,
-		publicKeyCompressed,
-		address,
-	};
-};
 
 const generateWallet = async () => {
 	const mnemonic = bip39.generateMnemonic();
@@ -145,10 +89,6 @@ const generateWallet = async () => {
 		mnemonic,
 		...await deriveKeysFromMnemonic(mnemonic)
 	};
-	// return {
-	// 	mnemonic,
-	// 	...deriveKeys(mnemonic),
-	// };
 };
 
 const eccSign = (hash, privateKey) => ecc.sign(Buffer.from(hash), privateKey);

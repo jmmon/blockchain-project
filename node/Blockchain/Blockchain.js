@@ -790,7 +790,7 @@ class Blockchain {
 
 
 	addressIsValid(address) {
-		// if (address.length !== 40) return false;
+		if (address.length !== 40) return false;
 		// other validations ....?
 		return true;
 	}
