@@ -22,7 +22,7 @@ const getCompressedPublicKey = async (compactPubKey) => compactPubKey
 		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 
 // used to derive our address from our compressed public key
-const ripemd160 = (compressedPubKey) => crypto.createHash("ripemd160").update(compressedPubKey).digest('hex');
+const getAddressFromCompressedPubKey = (compressedPubKey) => crypto.createHash("ripemd160").update(compressedPubKey).digest('hex');
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
@@ -84,7 +84,7 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 		hexPublicKeyCompact
 	);
 
-	const hexAddress = ripemd160(
+	const hexAddress = getAddressFromCompressedPubKey(
 		hexPublicKeyCompressed
 	);
 	
@@ -175,6 +175,7 @@ const walletUtils = {
 	deriveKeysFromMnemonic,
 	signTransaction,
 	hashTransaction,
+	getAddressFromCompressedPubKey,
 	CONSTANTS,
 };
 

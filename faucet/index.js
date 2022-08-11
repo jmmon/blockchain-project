@@ -6,14 +6,24 @@ const favicon = require("serve-favicon");
 const ejs = require("ejs");
 const URL = require("url").URL;
 const fs = require("fs");
+const { get } = require("https");
 
-const payoutRecord = 'payoutRecord/'; //  TODO: set wallets directory
+const payoutRecord = "payoutRecord/"; //  TODO: set wallets directory
 
-if (!fs.existsSync(payoutRecord)) {
-  fs.mkdirSync(payoutRecord);
-}
+const initPayoutRecordDirectory = async() => {
+	if (!fs.existsSync(payoutRecord)) {
+		fs.mkdirSync(payoutRecord);
+	}
+	if (!fs.existsSync("payoutRecord/payoutRecord.json")) {
+		fs.writeFileSync("payoutRecord/payoutRecord.json", "{}");
+	}
+	return true;
+};
 
 const app = express();
+const port = 3007;
+
+let addressNumber = 0;
 
 app.use(
 	favicon(path.join(__dirname, "public", "images", "favicon.ico"), {
@@ -53,17 +63,99 @@ const authChecker = (req, res, next) => {
 			deriveKeysFromMnemonic,
 			signTransaction,
 			hashTransaction,
+			getAddressFromCompressedPubKey,
 			CONSTANTS,
 		},
 	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
 
-	app.get("/", (req, res) => {
+	initPayoutRecordDirectory();
+
+	const db = {
+		fileName: "payoutRecord.json",
+		build: async () => {},
+		add: async (data) => {},
+		remove: async () => {},
+	};
+
+	app.get("/", async (req, res) => {
 		const active = "index";
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
 		});
+
+		// for testing: add an item to our "db" on each get request
+
+		// We have an address. We need to check if it exists in our database (could use it as a key)
+		// if it exists,
+		//		we need to check the timestamp (the value) and make sure that one hour has passed.
+		// 		if not, we send an error
+		//		if so, we can update the value to the new timestamp and do our payout.
+
+		// if it doesn't exist,
+		// 		we can do the payout and add a new entry to our file (saving the timestamp)
+
+		// generate random address
+		// const address = "" + getAddressFromCompressedPubKey("" + Math.random());
+		const address = "" + getAddressFromCompressedPubKey("" + addressNumber);
+		console.log({ address });
+		addressNumber++;
+		if (addressNumber > 4) addressNumber = 0;
+
+		const currentTimeMs = Date.now();
+
+		const filePath = `${payoutRecord}${db.fileName}`;
+
+		// grab file contents (an array) and check if address exists
+		// eventually, overwrite file with our new array
+		try {
+			const fileContents = fs.readFileSync(filePath, "utf8");
+			console.log({fileContents});
+
+			const object = JSON.parse(fileContents);
+			console.log({object});
+
+			if (object[address]) {
+				// check timestamp
+				const previousTimestampMs = Date.parse(object[address]);
+				const differenceSeconds = (currentTimeMs - previousTimestampMs) / 1000;
+			
+				if (differenceSeconds > 1 * 60 * 60) {
+					// success, add it to file
+					object[address] = new Date(currentTimeMs).toISOString();
+					// TODO: do payout!
+
+				} else {
+					const endingTimestampMs = previousTimestampMs + (60 * 60 * 1000);
+					const secondsRemaining = (endingTimestampMs - currentTimeMs) / 1000;
+					const minutesRemaining = Math.ceil(secondsRemaining / 60);
+
+					// error, not enough time has passed
+					console.log(`Error: please wait about ${minutesRemaining} more minutes!`);
+				}
+
+			} else {
+				object[address] = new Date(currentTimeMs).toISOString();
+				// TODO: do payout!
+			}
+
+			try {
+				// then re-save to file
+				const dataJson = JSON.stringify(object);
+				fs.writeFileSync(filePath, dataJson);
+				console.log('Done rewriting to file!\n', {object}, '\n', dataJson);
+
+			} catch(err) {
+				console.log(err);
+			}
+			
+
+
+		} catch(err) {
+			console.log(err);
+		}
+		
 	});
 
 	// logout simply removes wallet from session and loads index page
@@ -153,7 +245,13 @@ const authChecker = (req, res, next) => {
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
-		redrawForInvalidPasswords(password, repeatPassword, res, active, mnemonic);
+		redrawForInvalidPasswords(
+			password,
+			repeatPassword,
+			res,
+			active,
+			mnemonic
+		);
 
 		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
 			mnemonic
@@ -224,7 +322,10 @@ const authChecker = (req, res, next) => {
 		}
 
 		// decrypt wallet and add to session
-		const response = decrypt(req.session.wallet.encryptedMnemonic, password);
+		const response = decrypt(
+			req.session.wallet.encryptedMnemonic,
+			password
+		);
 		if (response.error) {
 			drawView(res, active, {
 				wallet: req.session.wallet,
@@ -234,7 +335,9 @@ const authChecker = (req, res, next) => {
 			return;
 		}
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(response.data);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
+			response.data
+		);
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
@@ -247,7 +350,6 @@ const authChecker = (req, res, next) => {
 				active,
 				balances: `No balances found!`,
 			});
-
 		} else {
 			drawView(res, active, {
 				wallet: req.session.wallet,
@@ -278,11 +380,9 @@ const authChecker = (req, res, next) => {
 			// save it to session
 			// redraw this page with signed transaction
 
-
 			const recipient = req.body.recipient;
 			const amount = req.body.amount;
 			const password = req.body.password;
-
 
 			//simple validation
 			if (
@@ -300,7 +400,7 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			}
-			
+
 			// //unlock wallet for signing
 			// const decryptedMnemonic = decrypt(
 			// 	req.session.wallet.encryptedMnemonic,
@@ -320,7 +420,8 @@ const authChecker = (req, res, next) => {
 			}
 
 			// derive our keys
-			const {privateKey, publicKey, address} = await deriveKeysFromMnemonic(response.data);
+			const { privateKey, publicKey, address } =
+				await deriveKeysFromMnemonic(response.data);
 
 			// prepare and hash our transaction data
 			let txData = {
@@ -335,10 +436,7 @@ const authChecker = (req, res, next) => {
 			const txDataHashBuffer = hashTransaction(txData);
 
 			// attempt signing
-			const signResponse = signTransaction(
-				privateKey,
-				txDataHashBuffer
-			);
+			const signResponse = signTransaction(privateKey, txDataHashBuffer);
 			if (signResponse.error) {
 				drawView(res, active, {
 					wallet,
@@ -362,7 +460,6 @@ const authChecker = (req, res, next) => {
 					signedTransaction: txData,
 				});
 			});
-
 		} else {
 			// Send the transaction, redraw with success message
 			const nodeUrl = req.body.nodeUrl;
@@ -388,8 +485,7 @@ const authChecker = (req, res, next) => {
 				body: JSON.stringify(signedTransaction),
 				headers: { "Content-Type": "application/json" },
 			});
-			console.log({nodeResponse: response });
-
+			console.log({ nodeResponse: response });
 
 			if (response.status === 200) {
 				// save our sent transaction for displaying
@@ -416,7 +512,7 @@ const authChecker = (req, res, next) => {
 					error: json.errorMsg,
 				});
 				return;
-			} 
+			}
 
 			// other node errors (offline)
 			drawView(res, active, {
@@ -449,7 +545,7 @@ const authChecker = (req, res, next) => {
 	const drawView = (res, view, data) =>
 		res.render(__dirname + "/views/" + view + ".html", data);
 
-	app.listen(3000, () => {
-		console.log("App running on http://localhost:3000");
+	app.listen(port, () => {
+		console.log(`App running on http://localhost:${port}`);
 	});
 })();
