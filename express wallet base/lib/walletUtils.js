@@ -3,7 +3,6 @@ import * as ecc from "tiny-secp256k1";
 const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from "bip39";
 import crypto from "crypto";
-import ripemd160 from "ripemd160-js";
 
 const IV = crypto.randomBytes(16);
 const purpose = "44";
@@ -11,6 +10,10 @@ const coinType = "7789";
 const CONSTANTS = {
 	defaultFee: 10,
 };
+
+// crypto.getHashes().forEach(hash => {
+//  console.log(hash);
+// });
 
 const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	`m/${purpose}'/${coinType}'/${account}'${
@@ -23,8 +26,7 @@ const getCompressedPublicKey = async (compactPubKey) => {
 		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 };
 
-const getAddressFromCompressedPublicKey = async (compressedPubKey) =>
-	await ripemd160(compressedPubKey);
+const ripemd160 = (compressedPubKey) => crypto.createHash("ripemd160").update(compressedPubKey).digest('hex');
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
@@ -68,10 +70,10 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	);
 
 	//derive our address from our compressed public key
-	const hexAddress = await getAddressFromCompressedPublicKey(
+	const hexAddress = ripemd160(
 		hexPublicKeyCompressed
 	);
-
+	
 	return {
 		privateKey: hexPrivateKey,
 		publicKey: hexPublicKeyCompressed,
@@ -100,7 +102,7 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	const signature = Buffer.from(
 		ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 	);
-	
+
 	const [r, s] = splitSignature(signature);
 
 	return [r, s];

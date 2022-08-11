@@ -32,10 +32,10 @@ app.set("layout", "layouts/layout");
 
 const authChecker = (req, res, next) => {
 	if (req.session.wallet) {
-		next();
-	} else {
-		res.redirect("/create");
+		return next();
 	}
+
+	res.redirect("/create");
 };
 
 (async () => {

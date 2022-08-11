@@ -17,7 +17,6 @@
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.17.3",
     "node-fetch": "^3.2.10",
-    "ripemd160-js": "^1.2.0",
     "serve-favicon": "^2.5.0",
     "tiny-secp256k1": "^2.2.1"
   },
