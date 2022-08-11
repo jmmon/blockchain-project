@@ -5,99 +5,125 @@
 
 		<hr class="my-4" />
 		<% if (typeof signedTransaction !== 'object') { %>
-			<!-- no transaction yet, show our "Create and Sign transaction" form -->
-			
-			<form
-				class="row"
-				method="post"
-				enctype="application/x-www-form-urlencoded"
-			>
-				<div class="col-md-4 mb-3">
-					<div class="form-group">
-						<label>From Address</label>
-						<input
-							type="text"
-							class="form-control"
-							name="fromAddress"
-							required
-							disabled
-							value="<%= wallet.address %>"
-						/>
-					</div>
-	
-					<div class="form-group">
-						<label>Recipient Address</label>
-						<input
-							type="text"
-							class="form-control"
-							name="recipient"
-							required
-						/>
-					</div>
-	
-					<div class="form-group">
-						<label>Amount</label>
-						<input type="text" class="form-control" name="amount" />
-					</div>
+		<!-- no transaction yet, show our "Create and Sign transaction" form -->
 
-					<div class="form-group">
-						<label>Password</label>
-						<input type="password" class="form-control" name="password" required>
-					</div>
-	
-					<div class="form-group">
-						<input type="submit" class="btn btn-defautl" value="Sign Transaction" />
-					</div>
+		<form
+			class="row"
+			method="post"
+			enctype="application/x-www-form-urlencoded"
+		>
+			<div class="col-md-4 mb-3">
+				<div class="form-group">
+					<label>From Address</label>
+					<input
+						type="text"
+						class="form-control"
+						name="fromAddress"
+						required
+						disabled
+						value="<%= wallet.address %>"
+					/>
 				</div>
-			</form>
-			<% } else { %>
-				<!-- Transaction was included, show our "Send transaction" form -->
 
-				<form
-					class="row"
-					method="post"
-					enctype="application/x-www-form-urlencoded"
-				>
-					<div class="col-md-4 mb-3">
-						<div class="form-group">
-							<label>Signed Transaction:</label>
+				<div class="form-group">
+					<label>Recipient Address</label>
+					<input
+						type="text"
+						class="form-control"
+						name="recipient"
+						required
+					/>
+				</div>
 
-							<textarea required disabled name="signedTransaction" cols="100" rows="15" class="form-control"><%= JSON.stringify(signedTransaction)%></textarea>
-						</div>
-		
-						<div class="form-group">
-							<label>Blockchain Node URL</label>
-							<input
-								type="text"
-								class="form-control"
-								name="nodeUrl"
-								required
-							/>
-						</div>
-		
-						<div class="form-group">
-							<input type="submit" class="btn btn-defautl" value="Send" />
-						</div>
-					</div>
-				</form>
+				<div class="form-group">
+					<label>Amount</label>
+					<input
+						type="number"
+						class="form-control"
+						name="amount"
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<label>Password</label>
+					<input
+						type="password"
+						class="form-control"
+						name="password"
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<input
+						type="submit"
+						class="btn btn-defautl"
+						value="Sign Transaction"
+					/>
+				</div>
+			</div>
+		</form>
+		<% } else { %>
+		<!-- Transaction was included, show our "Send transaction" form -->
+
+		<form
+			class="row"
+			method="post"
+			enctype="application/x-www-form-urlencoded"
+		>
+			<div class="col-md-4 mb-3">
+				<div class="form-group">
+					<label>Signed Transaction:</label>
+					<textarea
+						required
+						disabled
+						name="signedTransaction"
+						cols="100"
+						rows="15"
+						class="form-control"
+					>
+<%= JSON.stringify(signedTransaction)%></textarea
+					>
+				</div>
+
+				<div class="form-group">
+					<label>Blockchain Node URL</label>
+					<input
+						type="text"
+						class="form-control"
+						name="nodeUrl"
+						required
+					/>
+				</div>
+
+				<div class="form-group">
+					<input type="submit" class="btn btn-defautl" value="Send" />
+				</div>
+			</div>
+		</form>
 		<% } %>
 	</div>
 </div>
 
-<% if (typeof previousTransaction == 'object' && previousTransaction !== undefined) { %>
+<% if (typeof previousTransaction == 'object' && previousTransaction !==
+undefined) { %>
 <div class="alert alert-dismissible alert-success">
 	<button type="button" class="close" data-dismiss="alert">&times;</button>
-	<strong>Transaction successful!</strong><br>
-	<strong>Transaction Hash:</strong><br>
-	<a
-		target="blank"
-		href="#"
-		class="alert-link"
-		><%= transactionHash %></a
+	<strong>Transaction successful!</strong><br />
+	<strong>Transaction Hash:</strong><br />
+	<a target="blank" href="#" class="alert-link"><%= transactionHash %></a>
+
+	<br /><br />
+	<textarea
+		required
+		disabled
+		name="previousTransaction"
+		cols="100"
+		rows="15"
+		class="form-control"
 	>
-	
-	
-		<br><br>
-		<textarea required disabled name="previousTransaction" cols="100" rows="15" class="form-control"><%= JSON.stringify(previousTransaction)%></textarea>
+<%= JSON.stringify(previousTransaction)%></textarea
+	>
 </div>
 <% } %>

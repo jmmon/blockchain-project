@@ -1,0 +1,18 @@
+{
+  "type": "module",
+  "name": "walletutils",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bip32": "^3.0.1",
+    "bip39": "^3.0.4",
+    "tiny-secp256k1": "^2.2.1"
+  }
+}

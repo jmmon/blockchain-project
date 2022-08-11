@@ -34,7 +34,6 @@ const authChecker = (req, res, next) => {
 	if (req.session.wallet) {
 		return next();
 	}
-
 	res.redirect("/create");
 };
 
@@ -49,7 +48,7 @@ const authChecker = (req, res, next) => {
 			hashTransaction,
 			CONSTANTS,
 		},
-	} = await import("./lib/walletUtils.js");
+	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
 
 	app.get("/", (req, res) => {
@@ -219,7 +218,6 @@ const authChecker = (req, res, next) => {
 
 		// decrypt wallet and add to session
 		const response = decrypt(req.session.wallet.encryptedMnemonic, password);
-		console.log({ decryptResponse: response });
 		if (response.error) {
 			drawView(res, active, {
 				wallet: req.session.wallet,
@@ -305,7 +303,6 @@ const authChecker = (req, res, next) => {
 
 			// decrypt wallet for signing
 			const response = decrypt(wallet.encryptedMnemonic, password);
-			console.log({ decryptResponse: response });
 			if (response.error) {
 				drawView(res, active, {
 					wallet,
