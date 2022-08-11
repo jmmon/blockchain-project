@@ -12,16 +12,19 @@ const CONSTANTS = {
 	defaultFee: 10,
 };
 
-const generatePathFromObject = ({ account = 0, change = null, index = null}) =>
-	`m/${purpose}'/${coinType}'/${account}'${change ? `/${change}${index ? `/${index}` : ''}` : ''}`;
+const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
+	`m/${purpose}'/${coinType}'/${account}'${
+		change ? `/${change}${index ? `/${index}` : ""}` : ""
+	}`;
 
 const getCompressedPublicKey = async (compactPubKey) => {
 	return compactPubKey
 		.slice(2)
 		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
-}
+};
 
-const getAddressFromCompressedPublicKey = async (compressedPubKey) => await ripemd160(compressedPubKey);
+const getAddressFromCompressedPublicKey = async (compressedPubKey) =>
+	await ripemd160(compressedPubKey);
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
@@ -56,14 +59,18 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	});
 
 	const account0change0index0 = masterNode.derivePath(path);
-	const hexPrivateKey = account0change0index0.privateKey.toString("hex")
+	const hexPrivateKey = account0change0index0.privateKey.toString("hex");
 	const hexPublicKeyCompact = account0change0index0.publicKey.toString("hex");
 
 	// convert our 03 or 02 address into a hex address with 1 or 0 appended to end:
-	const hexPublicKeyCompressed = await getCompressedPublicKey(hexPublicKeyCompact);
+	const hexPublicKeyCompressed = await getCompressedPublicKey(
+		hexPublicKeyCompact
+	);
 
 	//derive our address from our compressed public key
-	const hexAddress = await getAddressFromCompressedPublicKey(hexPublicKeyCompressed);
+	const hexAddress = await getAddressFromCompressedPublicKey(
+		hexPublicKeyCompressed
+	);
 
 	//from mnemonic: talent rose armor father call budget bone toast bubble bargain fluid feel
 	//private key: f00c5b3bb9a6754b40a4100bb9e62e1c49aff981343f925ded7bd0adf4f36018
@@ -77,39 +84,81 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	};
 };
 
-
 const generateWallet = async () => {
 	const mnemonic = bip39.generateMnemonic();
 	return {
 		mnemonic,
-		...await deriveKeysFromMnemonic(mnemonic)
+		...(await deriveKeysFromMnemonic(mnemonic)),
 	};
 };
 
-const eccSign = (hash, privateKey) => ecc.sign(Buffer.from(hash), privateKey);
 
-const hashSha256 = (data) =>
-	Buffer.from(crypto.createHash("sha256").update(data).digest());
 
-const generateBytes = (bytes) => crypto.randomBytes(bytes);
+// const generateBytes = (bytes) => crypto.randomBytes(bytes);
 
-const splitSignature = (signature) => {
-	const [r, s] = [
-		signature.toString("hex").slice(0, 64),
-		signature.toString("hex").slice(64),
-	];
-	return { r, s };
+const signTransaction = (privateKey, txDataHashBuffer) => {
+	// const eccSign = (hash, privateKey) => ecc.sign(Buffer.from(hash), privateKey);
+
+	const splitSignature = (signature) => {
+		return [
+			signature.toString("hex").slice(0, 64),
+			signature.toString("hex").slice(64),
+		];
+	};
+
+	const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, "hex"));
+	const signature = Buffer.from(
+		ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
+		// eccSign(txDataHashBuffer, privateKeyArray)
+	);
+	const [r, s] = splitSignature(signature);
+
+	return [r, s];
 };
+
+const removeSpaces = ({
+	from,
+	to,
+	value,
+	fee,
+	dateCreated,
+	data,
+	senderPubKey,
+}) => {
+	// escape data field spaces
+	data = data.replaceAll(/\s/gm, "\ ");
+
+	// rebuild to make sure order stays the same
+	const txDataJson = JSON.stringify({
+		from,
+		to,
+		value,
+		fee,
+		dateCreated,
+		data,
+		senderPubKey,
+	});
+
+	// replace non-escaped spaces
+	const escapedTxData = txDataJson.replace(
+		/(?<!\\)\s/gm,
+		""
+	);
+
+	return escapedTxData;
+}
+
+
+const hashTransaction = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
+
 
 const walletUtils = {
 	generateWallet,
 	encrypt,
 	decrypt,
 	deriveKeysFromMnemonic,
-	eccSign,
-	hashSha256,
-	generateBytes,
-	splitSignature,
+	signTransaction,
+	hashTransaction,
 	CONSTANTS,
 };
 
