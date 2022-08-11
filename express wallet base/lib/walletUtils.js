@@ -72,11 +72,6 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 		hexPublicKeyCompressed
 	);
 
-	//from mnemonic: talent rose armor father call budget bone toast bubble bargain fluid feel
-	//private key: f00c5b3bb9a6754b40a4100bb9e62e1c49aff981343f925ded7bd0adf4f36018
-	// public key: 212e35593185b30a9a33645a23a1be6fc39cbec7bffed1592f608e9a6c8726431
-	// address: 0feb1f7788c6191cacf7ec060a6326f57046bb7d
-
 	return {
 		privateKey: hexPrivateKey,
 		publicKey: hexPublicKeyCompressed,
@@ -93,12 +88,7 @@ const generateWallet = async () => {
 };
 
 
-
-// const generateBytes = (bytes) => crypto.randomBytes(bytes);
-
 const signTransaction = (privateKey, txDataHashBuffer) => {
-	// const eccSign = (hash, privateKey) => ecc.sign(Buffer.from(hash), privateKey);
-
 	const splitSignature = (signature) => {
 		return [
 			signature.toString("hex").slice(0, 64),
@@ -109,8 +99,8 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, "hex"));
 	const signature = Buffer.from(
 		ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
-		// eccSign(txDataHashBuffer, privateKeyArray)
 	);
+	
 	const [r, s] = splitSignature(signature);
 
 	return [r, s];
