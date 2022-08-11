@@ -1,0 +1,34 @@
+<div class="jumbotron col-sm-12">
+	<div class="col-sm-1"></div>
+	<h1 class="display-3">Check Account Balance:</h1>
+	<p class="lead">Safe, Confirmed, and Pending balances of first account:</p>
+			
+	<form method="post" class="row" enctype="application/x-www-form-urlencoded">
+
+		<div class="col-md-4 mb-3">
+
+			<div class="form-group">
+				<label>Blockchain Node</label>
+				<input type="text" class="form-control" name="nodeUrl" required>
+			</div>
+
+			<div class="form-group">
+				<label>Password</label>
+				<input type="password" class="form-control" name="password" required>
+			</div>
+
+			<div class="form-group">
+				<input type="submit" class="btn btn-defautl">
+			</div>
+		</div>
+	</form>
+</div>
+
+<!-- create gap: -->
+<div class="row"></div> 
+
+<% if (typeof balances !== "undefined") { %>
+<div class="row" >
+	<textarea class="col mx-5" style="margin-left: 2rem; width: 600px; height: 300px;"><%= balances %></textarea>
+</div>
+<% } %>
