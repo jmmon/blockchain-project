@@ -4,7 +4,7 @@ const ejsLayouts = require("express-ejs-layouts");
 const session = require("express-session");
 const favicon = require("serve-favicon");
 const ejs = require("ejs");
-// const { parse } = require("url");
+const URL = require("url").URL;
 
 const app = express();
 
@@ -65,7 +65,6 @@ const authChecker = (req, res, next) => {
 		const active = "index";
 		req.session.wallet = undefined;
 		drawView(res, active, {
-			wallet: undefined,
 			active,
 		});
 	});
@@ -86,7 +85,7 @@ const authChecker = (req, res, next) => {
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
-		redrawForInvalidPasswords(password, repeatPassword, active);
+		redrawForInvalidPasswords(password, repeatPassword, res, active);
 
 		// Generate wallet from random mnemonic
 		const wallet = await generateWallet();
@@ -94,12 +93,19 @@ const authChecker = (req, res, next) => {
 		const { mnemonic, privateKey, publicKey, address } = wallet;
 
 		// encrypt mnemonic with password
-		const encryptedMnemonic = encrypt(mnemonic, password);
-		console.log({ encryptedMnemonic });
+		const response = encrypt(mnemonic, password);
+		console.log({ encryptResponse: response });
+		if (response.error) {
+			drawView(res, active, {
+				active,
+				error: "Error encrypting wallet! Try again?",
+			});
+			return;
+		}
 
 		// save mnemonic and address to session
 		const mnemonicAndAddress = {
-			encryptedMnemonic,
+			encryptedMnemonic: response.data,
 			address,
 		};
 
@@ -107,23 +113,19 @@ const authChecker = (req, res, next) => {
 		req.session.save((err) => {
 			if (err) {
 				drawView(res, active, {
-					wallet: undefined,
 					active,
-
-					mnemonic: undefined,
 					error: "Error saving session!",
 				});
+				return;
 			}
 
 			drawView(res, active, {
 				wallet: mnemonicAndAddress,
-				active: active,
-
+				active,
 				mnemonic,
 				privateKey,
 				publicKey,
 				address,
-				error: undefined,
 			});
 		});
 	});
@@ -145,19 +147,27 @@ const authChecker = (req, res, next) => {
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
-		redrawForInvalidPasswords(password, repeatPassword, active, mnemonic);
+		redrawForInvalidPasswords(password, repeatPassword, res, active, mnemonic);
 
 		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
 			mnemonic
 		);
 		console.log({ privateKey, publicKey, address });
 
-		// Encrypt wallet data
-		const encryptedMnemonic = encrypt(mnemonic, password);
-		console.log({ encryptedMnemonic });
+		// encrypt mnemonic with password
+		const response = encrypt(mnemonic, password);
+		console.log({ encryptResponse: response });
+		if (response.error) {
+			drawView(res, active, {
+				active,
+				error: "Error encrypting wallet! Try again?",
+			});
+			return;
+		}
 
+		// save mnemonic and address to session
 		const mnemonicAndAddress = {
-			encryptedMnemonic,
+			encryptedMnemonic: response.data,
 			address,
 		};
 
@@ -165,23 +175,20 @@ const authChecker = (req, res, next) => {
 		req.session.save((err) => {
 			if (err) {
 				drawView(res, active, {
-					wallet: undefined,
 					active,
-
 					mnemonic,
 					error: "Error saving session!",
 				});
+				return;
 			}
 
 			drawView(res, active, {
 				wallet: mnemonicAndAddress,
 				active,
-
 				mnemonic,
 				privateKey,
 				publicKey,
 				address,
-				error: undefined,
 			});
 		});
 	});
@@ -204,21 +211,25 @@ const authChecker = (req, res, next) => {
 
 		if (!req.session.wallet) {
 			drawView(res, active, {
-				wallet: undefined,
 				active,
-
 				error: "Please load wallet from mnemonic, or create one.",
 			});
+			return;
 		}
 
 		// decrypt wallet and add to session
-		const decryptedMnemonic = decrypt(
-			req.session.wallet.encryptedMnemonic,
-			password
-		);
-		console.log({ decryptedMnemonic });
+		const response = decrypt(req.session.wallet.encryptedMnemonic, password);
+		console.log({ decryptResponse: response });
+		if (response.error) {
+			drawView(res, active, {
+				wallet: req.session.wallet,
+				active,
+				error: "Error decrypting wallet! Try a different password?",
+			});
+			return;
+		}
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(decryptedMnemonic);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(response.data);
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
@@ -229,18 +240,14 @@ const authChecker = (req, res, next) => {
 			drawView(res, active, {
 				wallet: req.session.wallet,
 				active,
-
 				balances: `No balances found!`,
-				error: undefined,
 			});
 
 		} else {
 			drawView(res, active, {
 				wallet: req.session.wallet,
 				active,
-
 				balances: `Private Key:\n${privateKey}\nPublic Key:\n${publicKey}\nAddress:\n${address}`,
-				error: undefined,
 			});
 		}
 	});
@@ -250,7 +257,6 @@ const authChecker = (req, res, next) => {
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
-
 			signedTransaction: req.session.signedTransaction,
 		});
 	});
@@ -260,9 +266,6 @@ const authChecker = (req, res, next) => {
 	// otherwise we sign transaction and reload the send view with the signed data
 	app.post("/send", async (req, res) => {
 		const active = "send";
-		const recipient = req.body.recipient;
-		const fromAddress = req.body.fromAddress;
-		const amount = req.body.amount;
 		const wallet = req.session.wallet;
 
 		if (!req.session.signedTransaction) {
@@ -270,61 +273,88 @@ const authChecker = (req, res, next) => {
 			// save it to session
 			// redraw this page with signed transaction
 
+
+			const recipient = req.body.recipient;
+			const amount = req.body.amount;
+			const password = req.body.password;
+
+
 			//simple validation
 			if (
 				recipient === "" ||
-				(recipient === undefined && fromAddress === "") ||
-				(fromAddress === undefined && amount === "") ||
+				(recipient === undefined && amount === "") ||
 				amount === undefined ||
-				amount <= 0
+				amount <= 0 ||
+				!wallet
 			) {
 				drawView(res, active, {
 					wallet,
 					active,
 
-					signedTransaction: undefined,
-					transactionHash: undefined,
 					error: "Please be sure boxes are filled correctly!",
 				});
+				return;
 			}
 			
-			//unlock wallet for signing
-			const decryptedMnemonic = decrypt(
-				req.session.wallet.encryptedMnemonic,
-				req.body.password
-			);
-			console.log({ decryptedMnemonic });
+			// //unlock wallet for signing
+			// const decryptedMnemonic = decrypt(
+			// 	req.session.wallet.encryptedMnemonic,
+			// 	req.body.password
+			// );
+			// console.log({ decryptedMnemonic });
+
+			// decrypt wallet for signing
+			const response = decrypt(wallet.encryptedMnemonic, password);
+			console.log({ decryptResponse: response });
+			if (response.error) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: "Error decrypting wallet! Try a different password?",
+				});
+				return;
+			}
 
 			// derive our keys
-			const keys = await deriveKeysFromMnemonic(decryptedMnemonic);
+			const {privateKey, publicKey, address} = await deriveKeysFromMnemonic(response.data);
 
 			// prepare and hash our transaction data
 			let txData = {
-				from: fromAddress || wallet.address,
+				from: address,
 				to: recipient,
 				value: amount,
 				fee: CONSTANTS.defaultFee,
 				dateCreated: new Date().toISOString(),
 				data: "",
-				senderPubKey: keys.publicKey,
+				senderPubKey: publicKey,
 			};
 			const txDataHashBuffer = hashTransaction(txData);
 
-			// add our hash and signature fields
-			txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
-			txData["senderSignature"] = signTransaction(
-				keys.privateKey,
+			// attempt signing
+			const signResponse = signTransaction(
+				privateKey,
 				txDataHashBuffer
 			);
+			if (signResponse.error) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: "Error signing transaction!",
+				});
+				return;
+			}
 
-			console.log("before saving", { txData });
+			// add our hash and signature fields
+			txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
+			txData["senderSignature"] = signResponse.data;
+
+			console.log("tx data before saving", { txData });
 
 			req.session.signedTransaction = txData;
 			req.session.save(() => {
 				drawView(res, active, {
 					wallet,
 					active,
-
 					signedTransaction: txData,
 				});
 			});
@@ -332,41 +362,64 @@ const authChecker = (req, res, next) => {
 		} else {
 			// Send the transaction, redraw with success message
 			const nodeUrl = req.body.nodeUrl;
-			console.log({ sessionTx: req.session.signedTransaction });
+			const signedTransaction = req.session.signedTransaction;
+			console.log({ sessionTx: signedTransaction });
 
-			// post to node to submit signed transaction
-			const response = await fetch(`${nodeUrl}/transactions/send`, {
-				method: "POST",
-				body: JSON.stringify(req.session.signedTransaction),
-				headers: { "Content-Type": "application/json" },
-			});
-			console.log({ response });
-
-			if (response.status === 400) {
-				console.log(`error submitting transaction`);
-				const json = await response.json();
-				console.log('testing if i need to response.json():', {response, json});
+			// nodeUrl validation
+			try {
+				new URL(nodeUrl);
+			} catch (err) {
 				drawView(res, active, {
 					wallet,
 					active,
-
-					signedTransaction: req.session.signedTransaction,
-					error: json.errorMsg,
+					signedTransaction,
+					error: "Please use a valid Node URL",
 				});
 				return;
 			}
 
-			// save our sent transaction for displaying
-			const previousTransaction = req.session.signedTransaction;
-			req.session.signedTransaction = undefined;
+			// post to node to submit signed transaction
+			const response = await fetch(`${nodeUrl}/transactions/send`, {
+				method: "POST",
+				body: JSON.stringify(signedTransaction),
+				headers: { "Content-Type": "application/json" },
+			});
+			console.log({nodeResponse: response });
 
+
+			if (response.status === 200) {
+				// save our sent transaction for displaying
+				const previousTransaction = signedTransaction;
+				req.session.signedTransaction = undefined;
+
+				drawView(res, active, {
+					wallet,
+					active,
+					transactionHash: previousTransaction.transactionDataHash,
+					previousTransaction,
+				});
+				return;
+			}
+
+			console.log(`error submitting transaction`);
+			const json = await response.json();
+
+			if (response.status === 400) {
+				drawView(res, active, {
+					wallet,
+					active,
+					signedTransaction,
+					error: json.errorMsg,
+				});
+				return;
+			} 
+
+			// other node errors (offline)
 			drawView(res, active, {
 				wallet,
 				active,
-
-				signedTransaction: undefined,
-				transactionHash: previousTransaction.transactionDataHash,
-				previousTransaction,
+				signedTransaction,
+				error: "Error connecting to node",
 			});
 		}
 	});
@@ -376,15 +429,14 @@ const authChecker = (req, res, next) => {
 	const redrawForInvalidPasswords = (
 		password,
 		repeatPassword,
+		res,
 		active,
 		mnemonic = undefined
 	) => {
 		if (password !== repeatPassword) {
 			drawView(res, active, {
-				wallet: undefined,
 				active,
-
-				mnemonic: mnemonic,
+				mnemonic,
 				error: "Passwords do not match",
 			});
 		}

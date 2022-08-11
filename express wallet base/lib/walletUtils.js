@@ -11,42 +11,58 @@ const CONSTANTS = {
 	defaultFee: 10,
 };
 
-// crypto.getHashes().forEach(hash => {
-//  console.log(hash);
-// });
-
 const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	`m/${purpose}'/${coinType}'/${account}'${
 		change ? `/${change}${index ? `/${index}` : ""}` : ""
 	}`;
 
-const getCompressedPublicKey = async (compactPubKey) => {
-	return compactPubKey
+// convert our 03... or 02... address into address with ...1 or ...0 (appended to end):
+const getCompressedPublicKey = async (compactPubKey) => compactPubKey
 		.slice(2)
 		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
-};
 
+// used to derive our address from our compressed public key
 const ripemd160 = (compressedPubKey) => crypto.createHash("ripemd160").update(compressedPubKey).digest('hex');
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
 
 const encrypt = (toEncrypt, passphrase) => {
-	passphrase = padBuffer(passphrase);
-	console.log({ toEncrypt, paddedPassphrase: passphrase });
-	let cipher = crypto.createCipheriv("aes-256-cbc", passphrase, IV);
-	let encrypted = cipher.update(toEncrypt, "utf8", "hex");
-	encrypted += cipher.final("hex");
-	return encrypted;
+	let response = {data: null, error: null};
+	try {
+		passphrase = padBuffer(passphrase);
+		console.log({ toEncrypt, paddedPassphrase: passphrase });
+		let cipher = crypto.createCipheriv("aes-256-cbc", passphrase, IV);
+		let encrypted = cipher.update(toEncrypt, "utf8", "hex");
+		encrypted += cipher.final("hex");
+
+		response = {data: encrypted, error: null};
+
+	} catch(err) {
+		response = {data: null, error: err};
+
+	} finally {
+		return response;
+	}
 };
 
 const decrypt = (encrypted, passphrase) => {
-	passphrase = padBuffer(passphrase);
-	console.log({ encrypted, paddedPassphrase: passphrase });
-	let decipher = crypto.createDecipheriv("aes-256-cbc", passphrase, IV);
-	let decrypted = decipher.update(encrypted, "hex", "utf8");
-	decrypted += decipher.final("utf8");
-	return decrypted;
+	let response = {data: null, error: null};
+	try {
+		passphrase = padBuffer(passphrase);
+		console.log({ encrypted, paddedPassphrase: passphrase });
+		let decipher = crypto.createDecipheriv("aes-256-cbc", passphrase, IV);
+		let decrypted = decipher.update(encrypted, "hex", "utf8");
+		decrypted += decipher.final("utf8");
+
+		response = {data: decrypted, error: null};
+
+	} catch(err) {
+		response = {data: null, error: err};
+
+	} finally {
+		return response;
+	}
 };
 
 const deriveKeysFromMnemonic = async (mnemonic) => {
@@ -64,12 +80,10 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	const hexPrivateKey = account0change0index0.privateKey.toString("hex");
 	const hexPublicKeyCompact = account0change0index0.publicKey.toString("hex");
 
-	// convert our 03 or 02 address into a hex address with 1 or 0 appended to end:
 	const hexPublicKeyCompressed = await getCompressedPublicKey(
 		hexPublicKeyCompact
 	);
 
-	//derive our address from our compressed public key
 	const hexAddress = ripemd160(
 		hexPublicKeyCompressed
 	);
@@ -91,21 +105,31 @@ const generateWallet = async () => {
 
 
 const signTransaction = (privateKey, txDataHashBuffer) => {
-	const splitSignature = (signature) => {
-		return [
-			signature.toString("hex").slice(0, 64),
-			signature.toString("hex").slice(64),
-		];
-	};
+	let response = {data: null, error: null};
+	try {
+		const splitSignature = (signature) => {
+			return [
+				signature.toString("hex").slice(0, 64),
+				signature.toString("hex").slice(64),
+			];
+		};
+	
+		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, "hex"));
+		const signature = Buffer.from(
+			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
+		);
+	
+		const [r, s] = splitSignature(signature);
+	
+		response = {data: [r, s], error: null};
 
-	const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, "hex"));
-	const signature = Buffer.from(
-		ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
-	);
+	} catch(err) {
+		response = {data: null, error: err};
 
-	const [r, s] = splitSignature(signature);
-
-	return [r, s];
+	} finally {
+		return response;
+	}
+	
 };
 
 const removeSpaces = ({

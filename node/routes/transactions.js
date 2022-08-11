@@ -28,10 +28,10 @@ router.get("/:tranHash", (req, res) => {
 
 	if (foundTransaction) {
 		return res.status(200).send(JSON.stringify(foundTransaction));
+
 	} else {
 		return res.status(400).send(JSON.stringify({errorMsg: "Transaction not found"}));
 	}
-
 });
 
 
@@ -92,7 +92,7 @@ router.post("/send", (req, res) => {
 
 	// checks sender account balance >= value + fee
 	const balancesOfSender = blockchain.getBalancesOfAddress(signedTransaction.from);
-	// console.log('--attempting send transaction\n balances of from account:', {balancesOfSender});
+
 	if (balancesOfSender.confirmedBalance < (signedTransaction.value + signedTransaction.fee)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: 'from' address does not have enough funds!`}));
 	}
