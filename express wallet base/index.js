@@ -209,9 +209,7 @@ const authChecker = (req, res, next) => {
 
 		console.log({privateKey, publicKey, address});
 
-		// const wallet = {mnemonic, ...keys};
-
-		// TODO: Encrypt wallet data
+		// Encrypt wallet data
 		const encryptedMnemonic = encryptMnemWithPassword(mnemonic, password);
 		console.log({encryptedMnemonic});
 
@@ -425,30 +423,12 @@ const authChecker = (req, res, next) => {
 
 	// Preset helper functions ===
 
-	// const unlockWallet = (password, req,) => {
-
-
-
-
-
-	// }
-
-	const encryptMnemWithPassword = (mnemonic, password) => {
-		console.log('encryptt with password');
-		const encryptedMnemonic = encrypt(mnemonic, password);
-		return encryptedMnemonic;
-	}
-
-	const decryptMnemWithPassword = (encryptedMnemonic, password) => {
-		console.log('decrypt with password');
-		const decryptedMnemonic = decrypt(encryptedMnemonic, password);
-		return decryptedMnemonic;
-	}
-
-	function drawView(res, view, data) {
-		res.render(__dirname + "/views/" + view + ".html", data);
-	}
-
+	const encryptMnemWithPassword = (mnemonic, password) => encrypt(mnemonic, password);
+	
+	const decryptMnemWithPassword = (encryptedMnemonic, password) => decrypt(encryptedMnemonic, password);
+	
+	const drawView = (res, view, data) => res.render(__dirname + "/views/" + view + ".html", data);
+	
 	app.listen(3000, () => {
 		console.log("App running on http://localhost:3000");
 	});

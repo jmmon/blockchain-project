@@ -2,13 +2,8 @@ import BIP32Factory from "bip32";
 import * as ecc from "tiny-secp256k1";
 const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from "bip39";
-import bjs from "bitcoinjs-lib";
 import crypto from "crypto";
-
-// var elliptic = require('elliptic')
-import elliptic from "elliptic";
 import ripemd160 from "ripemd160-js";
-var ec = new elliptic.ec("secp256k1");
 
 const IV = crypto.randomBytes(16);
 const purpose = "44";
