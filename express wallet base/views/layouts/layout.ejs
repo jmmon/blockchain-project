@@ -10,10 +10,6 @@
 	<div class="contrainer">
 		<%- include("../partials/navbar") %>
 		<%- include("../partials/error") %>
-
-		<% if (typeof wallet !== "null" && typeof wallet !== "undefined") { %>
-			<strong>Session Wallet: </strong> <%= wallet %><br />
-		<% } %>
 		
 		<%- body %>
 

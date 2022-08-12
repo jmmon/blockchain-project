@@ -3,6 +3,7 @@ import * as ecc from "tiny-secp256k1";
 const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from "bip39";
 import crypto from "crypto";
+import fetch from 'node-fetch';
 
 const IV = crypto.randomBytes(16);
 const purpose = "44";
@@ -64,6 +65,7 @@ const decrypt = (encrypted, passphrase) => {
 		return response;
 	}
 };
+
 
 const deriveKeysFromMnemonic = async (mnemonic) => {
 	const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
@@ -168,6 +170,77 @@ const removeSpaces = ({
 const hashTransaction = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
 
 
+const decryptAndSign = async (walletOrKeys, recipient, amount, password = '') => {
+	let keys;
+	if (walletOrKeys.encryptedMnemonic) {
+		// decrypt wallet for signing
+		const response = decrypt(walletOrKeys.encryptedMnemonic, password);
+		if (response.error) {
+			return {data: null, error: "Error decrypting wallet! Try a different password?"};
+		}
+
+		// derive our keys
+		keys = await deriveKeysFromMnemonic(response.data);
+	} else {
+		keys = walletOrKeys;
+	}
+
+	const {privateKey, publicKey, address} = keys;
+	
+
+	// prepare and hash our transaction data
+	let txData = {
+		from: address,
+		to: recipient,
+		value: amount,
+		fee: CONSTANTS.defaultFee,
+		dateCreated: new Date().toISOString(),
+		data: "",
+		senderPubKey: publicKey,
+	};
+	const txDataHashBuffer = hashTransaction(txData);
+
+	// attempt signing
+	const signResponse = signTransaction(privateKey, txDataHashBuffer);
+	if (signResponse.error) {
+		return {data: null, error: "Error signing transaction!"};
+	}
+
+	// add our hash and signature fields
+	txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
+	txData["senderSignature"] = signResponse.data;
+
+	console.log("tx data before saving", { txData });
+	return {data: txData, error: null};
+}
+
+const submitTransaction = async (nodeUrl, signedTransaction) => {
+	// post to node to submit signed transaction
+	const response = await fetch(`${nodeUrl}/transactions/send`, {
+		method: "POST",
+		body: JSON.stringify(signedTransaction),
+		headers: { "Content-Type": "application/json" },
+	});
+	console.log({ nodeResponse: response });
+
+	if (response.status === 200) {
+		// save our sent transaction for displaying
+		return {data: signedTransaction.transactionDataHash, error: null};
+	}
+
+	console.log(`error submitting transaction`);
+	const json = await response.json();
+
+	if (response.status === 400) {
+		// data / validation error
+		return {data: null, error: json.errorMsg};
+	}
+
+	// other node errors (offline)
+	return {data: null, error: "Error connecting to node"};
+}
+
+
 const walletUtils = {
 	generateWallet,
 	encrypt,
@@ -176,6 +249,8 @@ const walletUtils = {
 	signTransaction,
 	hashTransaction,
 	getAddressFromCompressedPubKey,
+	decryptAndSign,
+	submitTransaction,
 	CONSTANTS,
 };
 

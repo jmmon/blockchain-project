@@ -108,22 +108,22 @@
 
 <% if (typeof previousTransaction == 'object' && previousTransaction !==
 undefined) { %>
-<div class="alert alert-dismissible alert-success">
-	<button type="button" class="close" data-dismiss="alert">&times;</button>
-	<strong>Transaction successful!</strong><br />
-	<strong>Transaction Hash:</strong><br />
-	<a target="blank" href="#" class="alert-link"><%= transactionHash %></a>
+	<div class="alert alert-dismissible alert-success">
+		<button type="button" class="close" data-dismiss="alert">&times;</button>
+		<strong>Transaction successful!</strong><br />
+		<strong>Transaction Hash:</strong><br />
+		<a target="blank" href="#" class="alert-link"><%= transactionHash %></a>
 
-	<br /><br />
-	<textarea
-		required
-		disabled
-		name="previousTransaction"
-		cols="100"
-		rows="15"
-		class="form-control"
-	>
-<%= JSON.stringify(previousTransaction)%></textarea
-	>
-</div>
+		<br /><br />
+		<textarea
+			required
+			disabled
+			name="previousTransaction"
+			cols="100"
+			rows="15"
+			class="form-control"
+		>
+	<%= JSON.stringify(previousTransaction)%></textarea
+		>
+	</div>
 <% } %>

@@ -13,6 +13,7 @@
   "dependencies": {
     "bip32": "^3.0.1",
     "bip39": "^3.0.4",
+    "node-fetch": "^3.2.10",
     "tiny-secp256k1": "^2.2.1"
   }
 }

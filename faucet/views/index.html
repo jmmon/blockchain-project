@@ -1,18 +1,81 @@
-<div class="row">
-	<div class="jumbotron col-sm-12">
-		<div class="col-sm-3">
-			<img src="../images/wallet.png" />
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Faucet</title>
+	<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="../css/stylesheet.css">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+</head>
+<body>
+	<div class="contrainer">
+		<%- include("./partials/error") %>
+
+		<div class="jumbotron col-sm-12">
+			<div class="col-sm-1"></div>
+			<h1 class="display-3">Welcome to our Faucet!</h1>
+			<p class="lead">Enter your address and a nodeUrl to receive some coins!</p>
+		
+			<% if (typeof transactionData === 'undefined') { %>
+				<form
+					method="post"
+					action="/"
+					class="row"
+					enctype="application/x-www-form-urlencoded"
+				>
+					<div class="col-md-4 mb-3">
+						<div class="form-group">
+							<label>Address</label>
+							<input
+								type="text"
+								name="address"
+								class="form-control"
+								required
+							/>
+						</div>
+		
+						<div class="form-group">
+							<label>NodeUrl</label>
+							<input
+								type="text"
+								name="nodeUrl"
+								class="form-control"
+								required
+							/>
+						</div>
+		
+						<div class="form-group">
+							<label>Are you human?</label>
+							<input
+								type="checkbox"
+								name="captcha"
+								class="form-control"
+								required
+							/>
+						</div>
+		
+						<div class="form-group">
+							<input type="submit" class="btn btn-defautl" />
+						</div>
+					</div>
+				</form>
+		
+			<% } else { %>
+				<!-- display our transaction data -->
+		
+				<div class="alert alert-dismissible alert-success">
+					<button type="button" class="close" data-dismiss="alert">&times;</button>
+					<strong>Transaction successful!</strong><br />
+					<span>We sent <%= transactionData.amount %> coins to address</span><br>
+					<a target="blank" href="#" class="alert-link"><strong><%= transactionData.address %></strong></a><br>
+		
+					<strong>tx:</strong><a target="blank" href="#" class="alert-link"><%= transactionData.transactionDataHash %></a><small></small></a>
+				</div>
+				
+				<a href="/" class="btn btn-defaultl"><input class="btn btn-defaultl" value="Back"></a>
+			<% } %>
 		</div>
 
-		<div class="col-sm-9">
-			<h1 class="display-3">Welcome to our Wallet!</h1>
-
-			<hr class="my-4" />
-
-			<p>
-				With this wallet you can create deterministic wallet, check the
-				balance of address and send a transaction
-			</p>
-		</div>
-	</div>
+		<div class="credits">Icon made by [author link] from www.flaticon.com </div>
 </div>
+</body>
+</html>

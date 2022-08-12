@@ -44,9 +44,8 @@ const authChecker = (req, res, next) => {
 			encrypt,
 			decrypt,
 			deriveKeysFromMnemonic,
-			signTransaction,
-			hashTransaction,
-			CONSTANTS,
+			decryptAndSign,
+			submitTransaction,
 		},
 	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
@@ -271,11 +270,9 @@ const authChecker = (req, res, next) => {
 			// save it to session
 			// redraw this page with signed transaction
 
-
 			const recipient = req.body.recipient;
 			const amount = req.body.amount;
 			const password = req.body.password;
-
 
 			//simple validation
 			if (
@@ -293,66 +290,24 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			}
+
+			const {data, error} = await decryptAndSign(wallet, recipient, amount, password);
+
+			if (error) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: error,
+				});
+				return;
+			} 
 			
-			// //unlock wallet for signing
-			// const decryptedMnemonic = decrypt(
-			// 	req.session.wallet.encryptedMnemonic,
-			// 	req.body.password
-			// );
-			// console.log({ decryptedMnemonic });
-
-			// decrypt wallet for signing
-			const response = decrypt(wallet.encryptedMnemonic, password);
-			if (response.error) {
-				drawView(res, active, {
-					wallet,
-					active,
-					error: "Error decrypting wallet! Try a different password?",
-				});
-				return;
-			}
-
-			// derive our keys
-			const {privateKey, publicKey, address} = await deriveKeysFromMnemonic(response.data);
-
-			// prepare and hash our transaction data
-			let txData = {
-				from: address,
-				to: recipient,
-				value: amount,
-				fee: CONSTANTS.defaultFee,
-				dateCreated: new Date().toISOString(),
-				data: "",
-				senderPubKey: publicKey,
-			};
-			const txDataHashBuffer = hashTransaction(txData);
-
-			// attempt signing
-			const signResponse = signTransaction(
-				privateKey,
-				txDataHashBuffer
-			);
-			if (signResponse.error) {
-				drawView(res, active, {
-					wallet,
-					active,
-					error: "Error signing transaction!",
-				});
-				return;
-			}
-
-			// add our hash and signature fields
-			txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
-			txData["senderSignature"] = signResponse.data;
-
-			console.log("tx data before saving", { txData });
-
-			req.session.signedTransaction = txData;
+			req.session.signedTransaction = data;
 			req.session.save(() => {
 				drawView(res, active, {
 					wallet,
 					active,
-					signedTransaction: txData,
+					signedTransaction: data,
 				});
 			});
 
@@ -375,48 +330,26 @@ const authChecker = (req, res, next) => {
 				return;
 			}
 
-			// post to node to submit signed transaction
-			const response = await fetch(`${nodeUrl}/transactions/send`, {
-				method: "POST",
-				body: JSON.stringify(signedTransaction),
-				headers: { "Content-Type": "application/json" },
-			});
-			console.log({nodeResponse: response });
+			const response = submitTransaction(nodeUrl, signedTransaction);
 
-
-			if (response.status === 200) {
-				// save our sent transaction for displaying
-				const previousTransaction = signedTransaction;
-				req.session.signedTransaction = undefined;
-
-				drawView(res, active, {
-					wallet,
-					active,
-					transactionHash: previousTransaction.transactionDataHash,
-					previousTransaction,
-				});
-				return;
-			}
-
-			console.log(`error submitting transaction`);
-			const json = await response.json();
-
-			if (response.status === 400) {
+			if (response.error) {
 				drawView(res, active, {
 					wallet,
 					active,
 					signedTransaction,
-					error: json.errorMsg,
+					error: response.error,
 				});
 				return;
-			} 
+			}
 
-			// other node errors (offline)
+			//success:
+			const previousTransaction = signedTransaction;
+			req.session.signedTransaction = undefined;
 			drawView(res, active, {
 				wallet,
 				active,
-				signedTransaction,
-				error: "Error connecting to node",
+				transactionHash: previousTransaction.transactionDataHash,
+				previousTransaction,
 			});
 		}
 	});
