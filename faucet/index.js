@@ -9,6 +9,7 @@ const { get } = require("https");
 
 const payoutRecord = "payoutRecord/"; //  TODO: set wallets directory
 const filePath = `${payoutRecord}payoutRecord.json`;
+const COIN_AMOUNT = 1000000;
 
 const app = express();
 const port = 3007;
@@ -117,7 +118,7 @@ const db = {
 		}
 	},
 
-	findAndSave(address, callback) {
+	findAndSave(address, nodeUrl, callback) {
 		// grab file contents (an array) and
 		// eventually, overwrite file with our new array
 		let object = this.get();
@@ -125,7 +126,7 @@ const db = {
 
 		if (success) {
 			const updatedDatabase = this.save(object);
-			return callback(success, updatedDatabase);
+			return callback(success, updatedDatabase, address, nodeUrl);
 		}
 		return callback(false);
 	},
@@ -143,6 +144,14 @@ const db = {
 
 	db.init();
 
+	/* testing target wallet
+	Your mnemonic is : prosper during cross void flower oyster unveil mercy multiply effort person illegal
+Generated Private Key fe203b722fbf8eac6d7281453e09d130573c774991189f35eb4b102f8af941f2
+Extracted Public Key 145fc6f57e917473c55c17c625c92f3cd811c6b9393501e30c01bde00a9ec6ef0
+Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
+	
+	*/
+
 	const faucetWalletInfo = {
 		mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
 		privateKey: '51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
@@ -150,7 +159,7 @@ const db = {
 		address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
 	};
 
-	const signAndSend = async (success, object = undefined) => {
+	const signAndSend = async (success, object = undefined, address = '', nodeUrl = '') => {
 		if (success) {
 			console.log({newDatabase: object});
 			// payout! sign and send transaction
@@ -162,19 +171,18 @@ const db = {
 
 			const getConfirmedBalance = async (nodeUrl, address) => {
 				// fetch balance from node!
-				const balanceData = await fetch(`${nodeUrl}/${address}/balance`);
-				console.log("fetched data keys:", Object.keys(balanceData));
+				const balances = await fetch(`${nodeUrl}/address/${address}/balance`);
+				const data = await balances.json();
+				console.log("fetched data:", {data});
 
-				if (balanceData.size === 0) {
-					return 0;
-				} else {
-					return balanceData.confirmedBalance;
-				}
+				return balances.confirmedBalance;
 			}
 
-			const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
-			const confirmedBalance = await getConfirmedBalance(nodeUrlShouldComeFromHtml, faucetWalletInfo.address);
-			const amount = (confirmedBalance > 1) ? 1 : confirmedBalance;
+			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
+			const confirmedBalance = await getConfirmedBalance(nodeUrl, faucetWalletInfo.address);
+			const amount = (confirmedBalance => COIN_AMOUNT) ? COIN_AMOUNT : confirmedBalance;
+
+			console.log({confirmedBalance, amount});
 
 			const signedTransaction = await decryptAndSign(
 				keys, // faucet keys
@@ -187,7 +195,7 @@ const db = {
 				return {data: null, error: signedTransaction.error};
 			}
 
-			const submitResponse = await submitTransaction(nodeUrlShouldComeFromHtml, signedTransaction);
+			const submitResponse = await submitTransaction(nodeUrl, signedTransaction.data);
 
 			if (submitResponse.error) {
 				console.log('submit error:', submitResponse.error);
@@ -195,7 +203,7 @@ const db = {
 			}
 
 			//transaction was signed and sent! draw success view:
-			return {data: {transactionDataHash: signedTransaction.transactionDataHash, amount}, error: null};
+			return {data: {transactionDataHash: signedTransaction.data.transactionDataHash, amount}, error: null};
 
 		} else {
 			// error saving, do not send transaction
@@ -246,7 +254,7 @@ const db = {
 		}
 
 		// else we try sending a transaction to the recipient
-		const response = await db.findAndSave(address, signAndSend);
+		const response = await db.findAndSave(address, nodeUrl, signAndSend);
 		console.log('db save and send response: should have data with transaction data, and null error', {response});
 
 		const transactionData = {...response.data, address}; // transactionDataHash, amount
@@ -268,6 +276,11 @@ const db = {
 				error: undefined,
 			});
 		});
+	});
+
+	app.get("/donate", async (req, res) => {
+		const active = "donate";
+		drawView(res, active, {address: faucetWalletInfo.address});
 	});
 
 	// Preset helper functions ===

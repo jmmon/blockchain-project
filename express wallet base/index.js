@@ -5,6 +5,7 @@ const session = require("express-session");
 const favicon = require("serve-favicon");
 const ejs = require("ejs");
 const URL = require("url").URL;
+// const cors = require("cors");
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(
 		maxAge: 0,
 	})
 );
+// app.use(cors());
 
 app.use(
 	session({
@@ -50,8 +52,16 @@ const authChecker = (req, res, next) => {
 	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
 
-	app.get("/", (req, res) => {
+	app.get("/", async (req, res) => {
 		const active = "index";
+
+		// const balancesResponse = await fetch(`http://localhost:5555/address/a78fb34736836feb9cd2114e1215f9e3f0c1987d/balance`);
+		// console.log('response:', balancesResponse);
+		// // const body = await balancesResponse.text();
+		// const json = await balancesResponse.json();
+		// // console.log('response.text:', {body});
+		// console.log('response.json:', {json});
+
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
@@ -230,23 +240,17 @@ const authChecker = (req, res, next) => {
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
-		const balanceData = await fetch(`${nodeUrl}/${address}/balance`);
-		console.log("fetched data keys:", Object.keys(balanceData));
+		const balancesResponse = await fetch(`${nodeUrl}/address/${address}/balance`);
+		const json = await balancesResponse.json();
 
-		if (balanceData.size === 0) {
-			drawView(res, active, {
-				wallet: req.session.wallet,
-				active,
-				balances: `No balances found!`,
-			});
+		console.log("fetched data:", {json});
+		
 
-		} else {
-			drawView(res, active, {
-				wallet: req.session.wallet,
-				active,
-				balances: `Private Key:\n${privateKey}\nPublic Key:\n${publicKey}\nAddress:\n${address}`,
-			});
-		}
+		drawView(res, active, {
+			wallet: req.session.wallet,
+			active,
+			balances: `Safe Balance: ${json.safeBalance}\nConfirmed Balance: ${json.confirmedBalance}\nPending Balance: ${json.pendingBalance}`,
+		});
 	});
 
 	app.get("/send", authChecker, (req, res) => {

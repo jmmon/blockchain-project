@@ -170,7 +170,7 @@ const removeSpaces = ({
 const hashTransaction = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
 
 
-const decryptAndSign = async (walletOrKeys, recipient, amount, password = '') => {
+const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => {
 	let keys;
 	if (walletOrKeys.encryptedMnemonic) {
 		// decrypt wallet for signing
@@ -192,7 +192,7 @@ const decryptAndSign = async (walletOrKeys, recipient, amount, password = '') =>
 	let txData = {
 		from: address,
 		to: recipient,
-		value: amount,
+		value,
 		fee: CONSTANTS.defaultFee,
 		dateCreated: new Date().toISOString(),
 		data: "",

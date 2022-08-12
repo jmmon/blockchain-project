@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Faucet | Donate</title>
+	<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="../css/stylesheet.css">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+</head>
+<body>
+	<div class="contrainer">
+		<%- include("./partials/error") %>
+
+		<div class="row">
+			<div class="jumbotron col-sm-12">
+				<div class="col-sm-1"></div>
+				<h1 class="display-3">Want to donate?</h1>
+				<p class="lead">If you're done with your coins, you can send them back to our address:</p>
+				<strong><%= address %></strong>
+
+				<!-- for fun, could have the server fetch to detect new transactions (while donate page is loaded) and display when a user donates -->
+			
+			</div>
+		</div>
+
+		<div class="row">
+			<a href="/" class="btn btn-defaultl"><input class="btn btn-defaultl" value="Back"></a>
+		</div>
+
+		<div class="credits">Icon made by [author link] from www.flaticon.com </div>
+	</div>
+</body>
+</html>

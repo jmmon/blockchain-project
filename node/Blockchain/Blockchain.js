@@ -958,9 +958,8 @@ class Blockchain {
 
 		console.log(`balances (v2) for address ${address}:\n${JSON.stringify(balances)}`);
 		
-
 		// for testing, double check against previous version (hopefully it's correct lol)
-		console.log(`balances (v1) for address ${address}:\n${JSON.stringify(this.oldGetBalancesOfAddress(address))}`);
+		this.oldGetBalancesOfAddress(address);
 
 
 		return balances;
