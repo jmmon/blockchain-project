@@ -9,16 +9,20 @@ const fs = require("fs");
 const { get } = require("https");
 
 const payoutRecord = "payoutRecord/"; //  TODO: set wallets directory
+const filePath = `${payoutRecord}payoutRecord.json]`;
 
 const initPayoutRecordDirectory = async() => {
 	if (!fs.existsSync(payoutRecord)) {
 		fs.mkdirSync(payoutRecord);
 	}
-	if (!fs.existsSync("payoutRecord/payoutRecord.json")) {
-		fs.writeFileSync("payoutRecord/payoutRecord.json", "{}");
+	if (!fs.existsSync(filePath)) {
+		fs.writeFileSync(filePath, "{}");
 	}
 	return true;
 };
+
+
+
 
 const app = express();
 const port = 3007;
@@ -71,12 +75,91 @@ const authChecker = (req, res, next) => {
 
 	initPayoutRecordDirectory();
 
-	const db = {
-		fileName: "payoutRecord.json",
-		build: async () => {},
-		add: async (data) => {},
-		remove: async () => {},
-	};
+
+
+	const dbUpdate = (object) => {
+		try {
+			// then re-save to file
+			const dataJson = JSON.stringify(object);
+			fs.writeFileSync(filePath, dataJson);
+			console.log('Done rewriting to file!\n', {object}, '\n', dataJson);
+
+		} catch(err) {
+			console.log(err);
+		}
+	}
+
+	const dbGet = () => {
+		let object = {};
+		try {
+			const fileContents = fs.readFileSync(filePath, "utf8");
+			object = JSON.parse(fileContents);
+			console.log({object});
+
+		} catch(err) {
+			console.log(err);
+		}
+		return object;
+	}
+
+	const updateAddress = (object) => {
+		// request timestamp
+		const currentTimeMs = Date.now();
+
+		// if already exists
+		if (object[address]) {
+			// check timestamp
+			const previousTimestampMs = Date.parse(object[address]);
+			const differenceSeconds = (currentTimeMs - previousTimestampMs) / 1000;
+
+			// if waited an hour or more
+			if (differenceSeconds >= 4) { // 3600
+				// add to file
+				object[address] = new Date(currentTimeMs).toISOString();
+				return true;
+
+			} else {
+				// error, not enough time has passed
+				const endingTimestampMs = previousTimestampMs + (60 * 60 * 1000);
+				const secondsRemaining = (endingTimestampMs - currentTimeMs) / 1000;
+				const minutesRemaining = Math.ceil(secondsRemaining / 60);
+				console.log(`Error: please wait about ${minutesRemaining} more minutes!`);
+
+				return false;
+			}
+
+		}
+
+		// new address, save the timestamp
+		object[address] = new Date(currentTimeMs).toISOString();
+		return true;
+	}
+
+	const updateDb = (address, callback) => {
+		// We have an address. We need to check if it exists in our database (could use it as a key)
+		// if it exists,
+		//		we need to check the timestamp (the value) and make sure that one hour has passed.
+		// 		if not, we send an error
+		//		if so, we can update the value to the new timestamp and do our payout.
+
+		// if it doesn't exist,
+		// 		we can do the payout and add a new entry to our file (saving the timestamp)
+
+		// grab file contents (an array) and 
+		// eventually, overwrite file with our new array
+		let object = dbGet();
+
+		const success = updateAddress(object);
+
+		if (success) {
+			dbUpdate(object);
+			return callback(success, object);
+		}
+		return callback(false);
+		
+	}
+
+
 
 	app.get("/", async (req, res) => {
 		const active = "index";
@@ -87,74 +170,21 @@ const authChecker = (req, res, next) => {
 
 		// for testing: add an item to our "db" on each get request
 
-		// We have an address. We need to check if it exists in our database (could use it as a key)
-		// if it exists,
-		//		we need to check the timestamp (the value) and make sure that one hour has passed.
-		// 		if not, we send an error
-		//		if so, we can update the value to the new timestamp and do our payout.
-
-		// if it doesn't exist,
-		// 		we can do the payout and add a new entry to our file (saving the timestamp)
-
+		
 		// generate random address
-		// const address = "" + getAddressFromCompressedPubKey("" + Math.random());
 		const address = "" + getAddressFromCompressedPubKey("" + addressNumber);
 		console.log({ address });
+		// for testing duplicate addresses
 		addressNumber++;
 		if (addressNumber > 4) addressNumber = 0;
 
-		const currentTimeMs = Date.now();
-
-		const filePath = `${payoutRecord}${db.fileName}`;
-
-		// grab file contents (an array) and check if address exists
-		// eventually, overwrite file with our new array
-		try {
-			const fileContents = fs.readFileSync(filePath, "utf8");
-			console.log({fileContents});
-
-			const object = JSON.parse(fileContents);
-			console.log({object});
-
-			if (object[address]) {
-				// check timestamp
-				const previousTimestampMs = Date.parse(object[address]);
-				const differenceSeconds = (currentTimeMs - previousTimestampMs) / 1000;
-			
-				if (differenceSeconds > 1 * 60 * 60) {
-					// success, add it to file
-					object[address] = new Date(currentTimeMs).toISOString();
-					// TODO: do payout!
-
-				} else {
-					const endingTimestampMs = previousTimestampMs + (60 * 60 * 1000);
-					const secondsRemaining = (endingTimestampMs - currentTimeMs) / 1000;
-					const minutesRemaining = Math.ceil(secondsRemaining / 60);
-
-					// error, not enough time has passed
-					console.log(`Error: please wait about ${minutesRemaining} more minutes!`);
-				}
-
+		updateDb(address, (success, object = undefined) => {
+			if (success) {
+				// payout!
 			} else {
-				object[address] = new Date(currentTimeMs).toISOString();
-				// TODO: do payout!
+				// error saving, do not send transaction
 			}
-
-			try {
-				// then re-save to file
-				const dataJson = JSON.stringify(object);
-				fs.writeFileSync(filePath, dataJson);
-				console.log('Done rewriting to file!\n', {object}, '\n', dataJson);
-
-			} catch(err) {
-				console.log(err);
-			}
-			
-
-
-		} catch(err) {
-			console.log(err);
-		}
+		});
 		
 	});
 
