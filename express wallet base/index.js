@@ -8,6 +8,7 @@ const URL = require("url").URL;
 // const cors = require("cors");
 
 const app = express();
+const PORT = 3003;
 
 app.use(
 	favicon(path.join(__dirname, "public", "images", "favicon.ico"), {
@@ -379,7 +380,7 @@ const authChecker = (req, res, next) => {
 	const drawView = (res, view, data) =>
 		res.render(__dirname + "/views/" + view + ".html", data);
 
-	app.listen(3000, () => {
-		console.log("App running on http://localhost:3000");
+	app.listen(PORT, () => {
+		console.log(`App running on http://localhost:${PORT}`);
 	});
 })();

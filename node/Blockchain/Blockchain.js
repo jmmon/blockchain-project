@@ -3,7 +3,7 @@
 const fetch = import("node-fetch");
 const crypto = require("crypto");
 const Transaction = require("./Transaction");
-const Block = require('./Block');
+const Block = require("./Block");
 
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
@@ -14,11 +14,6 @@ const sortObjectByKeys = (object) => {
 	sortedKeys.forEach((key) => (newObject[key] = object[key]));
 	return newObject;
 };
-
-
-
-
-
 
 class Blockchain {
 	constructor(config) {
@@ -50,32 +45,36 @@ class Blockchain {
 
 	//calculate cumulative difficulty:
 	//notes: difficulty for difficulty(p) === 16 * difficulty(p-1)
-		//cumulativeDifficulty == how much effort spent to calculate it
-		//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
-		//where d0, d1, ... dn == difficulties of the individual blocks
+	//cumulativeDifficulty == how much effort spent to calculate it
+	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
+	//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
-		const lastBlockDifficulty = this.chain[this.chain.length - 1].difficulty;
+		const lastBlockDifficulty =
+			this.chain[this.chain.length - 1].difficulty;
 		const addedDifficulty = this.cumulateDifficulty(lastBlockDifficulty);
 		this.cumulativeDifficulty += addedDifficulty;
-		console.log(`--Cumulative Difficulty: ${JSON.stringify({lastBlockDifficulty, addedDifficulty, cumulativeDifficulty: this.cumulativeDifficulty})}`)
-
+		console.log(
+			`--Cumulative Difficulty: ${JSON.stringify({
+				lastBlockDifficulty,
+				addedDifficulty,
+				cumulativeDifficulty: this.cumulativeDifficulty,
+			})}`
+		);
 	}
 
 	cumulateDifficulty(difficulty) {
 		return 16 ** difficulty;
 	}
 
-
-
 	clearIncludedPendingTransactions(block) {
-		const remainingTransactions = this.pendingTransactions.filter(tx => !block.transactions.includes(tx));
-		
+		const remainingTransactions = this.pendingTransactions.filter(
+			(tx) => !block.transactions.includes(tx)
+		);
+
 		// console.log(`Pruning pending transactions...\n--------\nPending Transactions: ${JSON.stringify(this.pendingTransactions)}\n--------\nTransactions in Block: ${JSON.stringify(block.transactions)}\n--------\nRemaining Pending Transactions: ${JSON.stringify(remainingTransactions)}`);
 
 		this.pendingTransactions = [...remainingTransactions];
 	}
-
-
 
 	//need to ONLY clear pending transactions which were included in the new block!
 	addValidBlock(block) {
@@ -88,9 +87,11 @@ class Blockchain {
 
 		const newDifficulty = this.darkGravityWave();
 
-		this.difficulty = (newDifficulty > this.config.difficultyLimit) ? this.config.difficultyLimit : newDifficulty;
+		this.difficulty =
+			newDifficulty > this.config.difficultyLimit
+				? this.config.difficultyLimit
+				: newDifficulty;
 	}
-
 
 	createGenesisBlock() {
 		const faucetFundingTransaction = this.createFaucetGenesisTransaction();
@@ -128,10 +129,10 @@ class Blockchain {
 				"1",
 				this.config.nullAddress,
 				blockDataHash
-			), 
-			nonce: minedBlockCandidate.nonce, 
-			dateCreated: minedBlockCandidate.dateCreated, 
-			blockHash: minedBlockCandidate.blockHash
+			),
+			nonce: minedBlockCandidate.nonce,
+			dateCreated: minedBlockCandidate.dateCreated,
+			blockHash: minedBlockCandidate.blockHash,
 		};
 
 		this.chain.push(genesisBlock);
@@ -143,7 +144,6 @@ class Blockchain {
 		//propagate block to peers?
 	}
 
-
 	createFaucetGenesisTransaction() {
 		return this.createCoinbaseTransaction({
 			to: this.config.faucetAddress,
@@ -151,7 +151,6 @@ class Blockchain {
 			data: "genesis tx",
 		});
 	}
-
 
 	createCoinbaseTransaction({
 		from = this.config.nullAddress,
@@ -175,26 +174,36 @@ class Blockchain {
 				dateCreated,
 				data,
 				senderPubKey,
-				senderSignature
+				senderSignature,
 			}),
 			minedInBlockIndex: minedInBlockIndex,
-			transferSuccessful: transferSuccessful
+			transferSuccessful: transferSuccessful,
 		};
 	}
 
-	getTransactionDataHash({from, to, value, fee, dateCreated, data, senderPubKey}) {
-		return SHA256(JSON.stringify(sortObjectByKeys({
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-		})));
+	getTransactionDataHash({
+		from,
+		to,
+		value,
+		fee,
+		dateCreated,
+		data,
+		senderPubKey,
+	}) {
+		return SHA256(
+			JSON.stringify(
+				sortObjectByKeys({
+					from,
+					to,
+					value,
+					fee,
+					dateCreated,
+					data,
+					senderPubKey,
+				})
+			)
+		);
 	}
-
-
 
 	createTransaction({
 		from,
@@ -214,7 +223,15 @@ class Blockchain {
 			dateCreated,
 			data,
 			senderPubKey,
-			this.getTransactionDataHash({from, to, value, fee, dateCreated, data, senderPubKey}),
+			this.getTransactionDataHash({
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+			}),
 			senderSignature
 		);
 	}
@@ -241,33 +258,38 @@ class Blockchain {
 		return false;
 	}
 
-	
-
 	async registerPeer({ nodeIdentifier, peerUrl }) {
 		// if nodeId is already connected, don't try to connect again
 		if (this.nodes.get(nodeIdentifier)) {
-			return {status: 409, errorMsg: `Already connected to peer ${peerUrl}`};
+			return {
+				status: 409,
+				errorMsg: `Already connected to peer ${peerUrl}`,
+			};
 		}
 
 		console.log(`verifying peer's chainID...`);
 		const response = await fetch(`${peerUrl}/info`);
 		const peerInfo = await response.json();
 		if (response.statusCode === 200) {
-			const isSameChain = this.config.genesisBlock.chainId === peerInfo["chainId"];
+			const isSameChain =
+				this.config.genesisBlock.chainId === peerInfo["chainId"];
 
 			if (!isSameChain) {
 				return {
-					status: 400, 
-					errorMsg: `Chain ID does not match!`, 
-					thisChainId: ourChainId, 
-					peerChainId
+					status: 400,
+					errorMsg: `Chain ID does not match!`,
+					thisChainId: ourChainId,
+					peerChainId,
 				};
 			}
 			console.log(`--verified!`);
 		} else {
-			return {status: 404, message: `Network error! Could not get peer's chainId!`};
+			return {
+				status: 404,
+				message: `Network error! Could not get peer's chainId!`,
+			};
 		}
-		
+
 		console.log(`adding node to our list...`);
 		this.nodes.add({
 			[nodeIdentifier]: peerUrl,
@@ -277,52 +299,52 @@ class Blockchain {
 		//synchronize chain and pending transactions?
 		syncPeerChain(peerInfo, peerUrl);
 
-
 		// send request to other node to connect to our node
-		console.log(`asking other node to friend us back...`)
-		const otherNodeResponse = await requestPeer({ nodeIdentifier, peerUrl });
+		console.log(`asking other node to friend us back...`);
+		const otherNodeResponse = await requestPeer({
+			nodeIdentifier,
+			peerUrl,
+		});
 		if (otherNodeResponse.status === 200) {
 			console.log(`--Other peer has connected to us!`);
 		}
 		if (otherNodeResponse.status === 409) {
 			console.log(`--Other peer was ALREADY connected!`);
 		}
-		console.log(`--${{otherNodeResponse}}`);
+		console.log(`--${{ otherNodeResponse }}`);
 
-		return {status: 200, message: `Connected to peer ${peerUrl}`}
+		return { status: 200, message: `Connected to peer ${peerUrl}` };
 	}
-
-
 
 	async requestPeer({ nodeIdentifier, peerUrl }) {
-		return await (await fetch(`${peerUrl}/peers/connect`, {
-			method: "POST",
-			body: JSON.stringify({nodeIdentifier, peerUrl}),
-			headers: {'Content-Type': 'application/json'},
-		})).json();
+		return await (
+			await fetch(`${peerUrl}/peers/connect`, {
+				method: "POST",
+				body: JSON.stringify({ nodeIdentifier, peerUrl }),
+				headers: { "Content-Type": "application/json" },
+			})
+		).json();
 	}
-
-
 
 	//validate genesis block, should be exactly the same
 	//validate each block from first to last:
-			//validate that all block fields are present && with valid values
-			//validate transactions in the block:
-					//validate transaction fields and values; recalc transactionDataHash; validate signature;
-					//re-execute all transactions?; re-calculate values of minedInBlockIndex and transferSuccessful fields;
-			//recalculate blockDataHash && blockHash
-			//ensure blockHash matches difficulty
-			//validate prevBlockHash === hash of previous block
+	//validate that all block fields are present && with valid values
+	//validate transactions in the block:
+	//validate transaction fields and values; recalc transactionDataHash; validate signature;
+	//re-execute all transactions?; re-calculate values of minedInBlockIndex and transferSuccessful fields;
+	//recalculate blockDataHash && blockHash
+	//ensure blockHash matches difficulty
+	//validate prevBlockHash === hash of previous block
 	//recalculate cumulative difficulty of incoming chain
-			//if > this.cumulativeDifficulty:
-					//replace current chain with incoming chain
-					//clear all current mining jobs (they are invalid)
+	//if > this.cumulativeDifficulty:
+	//replace current chain with incoming chain
+	//clear all current mining jobs (they are invalid)
 
 	//calculate cumulative difficulty: ????
 	//(note: difficulty for difficulty(p) === 16 * difficulty(p-1))
 	//cumulativeDifficulty == how much effort spent to calculate it
 	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
-			//where d0, d1, ... dn == difficulties of the individual blocks
+	//where d0, d1, ... dn == difficulties of the individual blocks
 	validateChain(chain) {
 		let lastBlock = chain[0];
 		let currentIndex = 1;
@@ -351,8 +373,6 @@ class Blockchain {
 		return true;
 	}
 
-
-
 	async syncPeerChain(peerInfo, peerUrl) {
 		console.log(`Attempting sync with new peer...`);
 		if (peerInfo.cumulativeDifficulty > this.cumulativeDifficulty) {
@@ -360,7 +380,6 @@ class Blockchain {
 			//validate chain (blocks, transactions, etc??)
 			//if valid, replace our chain and notify peers about the new chain??
 		}
-
 
 		const ourChainLength = this.chain.length;
 
@@ -373,11 +392,9 @@ class Blockchain {
 				if (this.validateChain(chain)) {
 					this.chain = chain;
 					return true;
-
 				} else {
 					console.log(`Error: Peer chain is not valid`);
 				}
-
 			} else {
 				// our chain is longer
 				console.log(`--Our chain is longer`);
@@ -389,13 +406,9 @@ class Blockchain {
 		return false;
 	}
 
-
-
-	
 	synchronizePendingTransactions(peerUrl) {
 		//fetch /transactions/pending and append missing transactions
 		// be sure to check for duplicated hashes!
-
 	}
 
 	// synchronizeChain() {
@@ -430,18 +443,14 @@ class Blockchain {
 	// 	return false;
 	// }
 
-
-
 	// static methods (exist on the class itself, not on an instantiation of the class)
 	hash(block) {
 		return SHA256(JSON.stringify(sortObjectByKeys(block)));
 	}
 
-
 	getLastBlock() {
 		return this.chain[this.chain.length - 1];
 	}
-
 
 	// // increase block nonce until block hash is valid
 	// proofOfWork(block) {
@@ -450,17 +459,14 @@ class Blockchain {
 	// 	}
 	// }
 
-
 	//check if hash starts with 4 zeros; 4 being the difficulty
 	validProof(block, difficulty = this.difficulty) {
 		return this.validHash(this.hash(block), difficulty);
 	}
 
-
 	validHash(hash, difficulty = this.config.startDifficulty || 1) {
 		return hash.slice(0, difficulty) === "0".repeat(difficulty);
 	}
-
 
 	mineBlock(block, nonce = 0) {
 		let timestamp = new Date().toISOString();
@@ -480,9 +486,6 @@ class Blockchain {
 		};
 	}
 
-
-
-
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
 		const hash = SHA256(blockDataHash + "|" + timestamp + "|" + nonce);
 
@@ -491,46 +494,40 @@ class Blockchain {
 		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
-
-
-
 	getTransactionConfirmations(
 		transaction,
 		lastBlockIndex = this.getLastBlock().index
 	) {
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
 		if (!transactionBlockIndex) return 0;
-		return (lastBlockIndex - transactionBlockIndex + 1); // if indexes are the same we have 1 confirmation
+		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
-
-
-
 
 	// difficulty adjustment
 	//TODO: start averaging immediately, instead of forcing to wait x blocks!
 	//done, testing
 	darkGravityWave(newestBlockIndex = this.getLastBlock().index) {
 		const targetSpacing = this.config.targetBlockTimeSeconds;
-		const pastBlocks = this.config.difficultyOverPastBlocks;	//max blocks to count
+		const pastBlocks = this.config.difficultyOverPastBlocks; //max blocks to count
 		const minimumDifficulty = 1;
 
 		let actualTimespan = 0; // counts our actual total block times
 
-		let difficultyAverage = 0
+		let difficultyAverage = 0;
 		let pastDifficultyAverage = 0;
 
 		// check for odd cases at start of chain; return our minimum difficulty
-		if (newestBlockIndex == 0) { //genesis block 
+		if (newestBlockIndex == 0) {
+			//genesis block
 			return this.config.startDifficulty;
 		}
-		
-		
+
 		// STEP 1: loop backward over our blocks starting at newest block
 		let count; // blocks counted
-		
+
 		for (count = 0; count < pastBlocks; ) {
 			count++; // increment at the start so we don't need to try to subtract 1 sometimes, after the loop
-			const thisBlockIndex = newestBlockIndex - (count - 1); 
+			const thisBlockIndex = newestBlockIndex - (count - 1);
 			const thisIterationBlock = this.chain[thisBlockIndex];
 			//example: count == 1 => block == newest block
 			// count == 2 => block == newest block - 1
@@ -538,16 +535,16 @@ class Blockchain {
 			// STEP A: Calculate our average block difficulties
 			if (count === 1) {
 				// For the first block, just grab the difficulty
-				difficultyAverage = thisIterationBlock.difficulty
-
+				difficultyAverage = thisIterationBlock.difficulty;
 			} else {
 				// else we calculate our rolling average for this block
 				// basically, previous weighted for (previous blocks + 1 == count blocks), + this.difficulty, all over (count + 1)
 				//so slightly more weight given to past trend vs current difficulty
-				difficultyAverage = (
-					(pastDifficultyAverage * count) + thisIterationBlock.difficulty
-				) / (count + 1);
-			
+				difficultyAverage =
+					(pastDifficultyAverage * count +
+						thisIterationBlock.difficulty) /
+					(count + 1);
+
 				// const k = 2. / (1 + pastBlocks);
 				// //EMA == difficulty * k + lastEMA * (1 - k);
 				// difficultyAverage = thisIterationBlock.difficulty * k + pastDifficultyAverage * (1 - k);
@@ -565,10 +562,9 @@ class Blockchain {
 			}
 		}
 
-
 		// STEP 2: set up the new difficulty
 		let newDifficulty = difficultyAverage;
-		
+
 		// targetTimespan is time the countBlocks should have taken to be generated
 		let targetTimespan = count * targetSpacing;
 
@@ -588,34 +584,31 @@ class Blockchain {
 
 		//calculate new difficulty based on actual and target timespan
 		// newDifficulty *= (actualTimespan / targetTimespan);
-		newDifficulty *= (targetTimespan / adjustedTimespan);
-
+		newDifficulty *= targetTimespan / adjustedTimespan;
 
 		// // STEP 4: make sure we're above our minimum difficulty
 		// // not really needed
-		if (newDifficulty <  minimumDifficulty) {
+		if (newDifficulty < minimumDifficulty) {
 			newDifficulty = minimumDifficulty; //our minimum
 		}
 
 		const previousBlockTime = this.getBlockTimeByIndex(newestBlockIndex);
 		const blockTimeDifferenceRatio = 1.5;
 
-
-	// 	//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty! 
-	// 	// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
-	// // up to 3/2 target time, don't increase difficulty.
-	// 	if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
-	// 		if (newDifficulty > this.difficulty) {
-	// 			newDifficulty = this.difficulty;
-	// 		}
-	// 	}
-	// // down to 2/3 target time, don't increase difficulty.
-	// 	if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
-	// 		if (newDifficulty < this.difficulty) {
-	// 			newDifficulty = this.difficulty;
-	// 		}
-	// 	}
-
+		// 	//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty!
+		// 	// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
+		// // up to 3/2 target time, don't increase difficulty.
+		// 	if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
+		// 		if (newDifficulty > this.difficulty) {
+		// 			newDifficulty = this.difficulty;
+		// 		}
+		// 	}
+		// // down to 2/3 target time, don't increase difficulty.
+		// 	if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
+		// 		if (newDifficulty < this.difficulty) {
+		// 			newDifficulty = this.difficulty;
+		// 		}
+		// 	}
 
 		// limit difficulty based on estimated time for next block
 		// if bumping difficulty by 1 will put our block time past 1.5x the target, make sure we do not allow increasing difficulty by more than 1!
@@ -625,17 +618,29 @@ class Blockchain {
 		if (newDifficulty >= this.difficulty + 1) {
 			const timeIncreaseFromOneBumpInDifficulty = previousBlockTime * 16;
 
-			if (timeIncreaseFromOneBumpInDifficulty > targetSpacing * (blockTimeDifferenceRatio || this.config.difficultyAdjustmentRatio)) {
-				newDifficulty = (this.difficulty + 1);
+			if (
+				timeIncreaseFromOneBumpInDifficulty >
+				targetSpacing *
+					(blockTimeDifferenceRatio ||
+						this.config.difficultyAdjustmentRatio)
+			) {
+				newDifficulty = this.difficulty + 1;
 			}
 		}
 
 		//logging data
-		console.log({targetTimespan, actualTimespan, adjustedTimespan, previousDifficulty: this.chain[newestBlockIndex].difficulty, previousBlockTime, pastDifficultyAverage: difficultyAverage, newDifficulty});
+		console.log({
+			targetTimespan,
+			actualTimespan,
+			adjustedTimespan,
+			previousDifficulty: this.chain[newestBlockIndex].difficulty,
+			previousBlockTime,
+			pastDifficultyAverage: difficultyAverage,
+			newDifficulty,
+		});
 
 		return Math.round(newDifficulty);
 	}
-
 
 	getBlockTimeByIndex(index) {
 		if (index < 1) return this.config.targetBlockTimeSeconds;
@@ -643,7 +648,6 @@ class Blockchain {
 		const prevBlockDateMs = Date.parse(this.chain[index - 1].dateCreated);
 		return (thisBlockDateMs - prevBlockDateMs) / 1000;
 	}
-
 
 	// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
 	// STEP 2: add pendingTransactions to our transactions list
@@ -668,20 +672,23 @@ class Blockchain {
 		const index = coinbaseTransaction.minedInBlockIndex;
 
 		const prepareTransactions = (pendingTransactions, blockIndex) => {
-			return pendingTransactions.map(txData => ({
-				...txData, 
+			return pendingTransactions.map((txData) => ({
+				...txData,
 				transferSuccessful: true,
-				minedInBlockIndex: blockIndex
+				minedInBlockIndex: blockIndex,
 			}));
 		};
 
-		const pendingTransactions = prepareTransactions(this.pendingTransactions, index);
+		const pendingTransactions = prepareTransactions(
+			this.pendingTransactions,
+			index
+		);
 
 		const transactions = [
 			coinbaseTransaction, // prepend
-			...pendingTransactions
+			...pendingTransactions,
 		];
-		
+
 		const prevBlockHash = this.hash(this.chain[this.chain.length - 1]);
 
 		const blockDataHash = SHA256(
@@ -715,7 +722,6 @@ class Blockchain {
 		};
 	}
 
-
 	clearMiningJobs() {
 		this.miningJobs.clear();
 	}
@@ -732,13 +738,10 @@ class Blockchain {
 		);
 	}
 
-
 	// getBlockTime(block) {
 	// 	const blockIndex = block.index;
 	// 	return this.getBlockTimeByIndex(blockIndex);
 	// }
-
-
 
 	// step 1: find block candidate by its blockDataHash
 	// step 2: verify hash and difficulty
@@ -748,13 +751,16 @@ class Blockchain {
 	// if block is already mined, we were too slow so we return a sad error message!
 	submitMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
 		if (this.miningJobs.size === 0) {
-			return {status: 404, message: "No mining jobs! Node must've reset"};
+			return {
+				status: 404,
+				message: "No mining jobs! Node must've reset",
+			};
 		}
-		
+
 		const foundBlock = this.miningJobs.get(blockDataHash) || null;
 
 		if (!foundBlock) {
-			return {status: 404, message: "Mining job missing!"};
+			return { status: 404, message: "Mining job missing!" };
 		}
 
 		const isValid = this.validateBlockHash(
@@ -766,9 +772,9 @@ class Blockchain {
 		);
 
 		if (!isValid) {
-			return {status: 400, message: "Block hash is not valid!"};
+			return { status: 400, message: "Block hash is not valid!" };
 		}
-		
+
 		const completeBlock = { ...foundBlock, nonce, dateCreated, blockHash };
 
 		if (completeBlock.index < this.chain.length) {
@@ -787,19 +793,13 @@ class Blockchain {
 		};
 	}
 
-
-
 	addressIsValid(address) {
 		if (address.length !== 40) return false;
 		// other validations ....?
 		return true;
 	}
 
-
-
-
-
-	//return balance of address	
+	//return balance of address
 	//	crawl blockchain and build balances of address
 
 	// each successful RECEIVED transaction will ADD value
@@ -813,13 +813,11 @@ class Blockchain {
 	//confirmed transactions == ones included in blocks
 	//pending transactions == ALL transactions (i.e. confirmed transactions + pending transactions)
 
-
-
 	// transactions with {to: ourAddress} && successful will add value
 	// 	if transaction has >= 6 confirmations, add to safeBalance
 	// 	if transaction has >= 1 confirmations, add to confirmedBalance
 
-	//transactions with {from: ourAddress}:		
+	//transactions with {from: ourAddress}:
 	//	if transaction has >= 6 confirmations:
 	//     subtract fee from safeBalance
 	//     if successful, also subtract value from safeBalance
@@ -830,66 +828,8 @@ class Blockchain {
 	// pending transactions: take confirmedBalance and:
 	// (for pending transactions) if {to: ourAddress}:
 	//		add to pendingBalance
-	// (for pending transactions) if {from: ourAddress}: 
+	// (for pending transactions) if {from: ourAddress}:
 	//    subtract (fee + value) from pendingBalance
-	oldGetBalancesOfAddress(address) {
-		const chainTipIndex = this.getLastBlock().index;
-		const balances = {
-			safeBalance: 0,
-			confirmedBalance: 0,
-			pendingBalance: 0,
-		};
-
-		const totalTheIncomingConfirmedTransactions = (block) => {
-			// check transactions in block (i.e. confirmed && safe):
-			//	HANDLING TRANSACTIONS TO OUR ADDRESS:
-			// all transactions with >= 1 confirmation (i.e. in a mined block)
-			const confirmedIncomingSuccessfulTransactions = block.transactions.filter(transaction => transaction.to === address && transaction.transferSuccessful);
-			// all transactions with >= 6 confirmations
-			const confirmedIncomingSafeTransactions = confirmedIncomingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount)
-			
-			// add values to our balances
-			confirmedIncomingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance += transaction.value);
-			confirmedIncomingSafeTransactions.forEach(transaction => balances.safeBalance += transaction.value);
-		}
-	
-		const totalTheOutgoingConfirmedTransactions = (block) => {
-			//	HANDLING TRANSACTIONS FROM OUR ADDRESS:
-			// all transactions with >= 1 confirmation (i.e. in a mined block)
-			const confirmedOutgoingSuccessfulTransactions = block.transactions.filter(transaction => transaction.from === address && transaction.transferSuccessful);
-			// all transactions with >= 6 confirmations
-			const confirmedOutgoingSafeTransactions = confirmedOutgoingSuccessfulTransactions.filter(transaction => this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount)
-			
-			// subtract values && fees from our balances
-			confirmedOutgoingSuccessfulTransactions.forEach(transaction => balances.confirmedBalance -= (transaction.fee + transaction.value));
-			confirmedOutgoingSafeTransactions.forEach(transaction => balances.safeBalance -= (transaction.fee + transaction.value));
-		}
-	
-		const totalThePendingTransactions = () => {
-			//pending balance also includes confirmed balance
-			balances.pendingBalance += balances.confirmedBalance;
-
-			const pendingIncomingTransactions = this.pendingTransactions.filter(transaction => transaction.to === address);
-			pendingIncomingTransactions.forEach(transaction => balances.pendingBalance += transaction.value);
-			
-			const pendingOutgoingTransactions = this.pendingTransactions.filter(transaction => transaction.from === address);
-			pendingOutgoingTransactions.forEach(transaction => balances.pendingBalance -= (transaction.fee + transaction.value));
-		}
-	
-		// handles all transactions with confirmations
-		for (const block of this.chain) {
-			totalTheIncomingConfirmedTransactions(block);
-			totalTheOutgoingConfirmedTransactions(block);
-		}
-	
-		// handle the pending transactions
-		totalThePendingTransactions();
-	
-		console.log(`balances for address ${address}:\n${JSON.stringify(balances)}`);
-
-		return balances;
-	}
-
 
 	getBalancesOfAddress(address) {
 		const chainTipIndex = this.getLastBlock().index;
@@ -899,77 +839,104 @@ class Blockchain {
 			pendingBalance: 0,
 		};
 
-		const confirmedTransactions = this.getConfirmedTransactionsByAddress(address);
-		
-		const pendingTransactions = this.getPendingTransactionsByAddress(address);
+		const confirmedTransactions =
+			this.getConfirmedTransactions(address);
 
-		if (confirmedTransactions.length === 0
-			&& pendingTransactions.length === 0) {
-				return balances; // return 0s balance object
+		const pendingTransactions =
+			this.getPendingTransactions(address);
+
+		if (
+			confirmedTransactions.length === 0 &&
+			pendingTransactions.length === 0
+		) {
+			return balances; // return 0s balance object
 		}
 
 		if (confirmedTransactions.length > 0) {
-			balances.confirmedBalance += confirmedTransactions
-				.reduce((acc, transaction) => {
-					if (transaction.to === address && transaction.transferSuccessful) {
+			balances.confirmedBalance += confirmedTransactions.reduce(
+				(acc, transaction) => {
+					if (
+						transaction.to === address &&
+						transaction.transferSuccessful
+					) {
 						return acc + +transaction.value;
 					}
 					if (transaction.from === address) {
-						if (transaction.transferSuccessful) {
-							return acc - (+transaction.value + +transaction.fee);
-						} else {
-							return acc - +transaction.fee;
-						}
+						return acc - (+transaction.fee (transaction.transferSuccessful) ? +transaction.value : 0);
+
+						// if (transaction.transferSuccessful) {
+						// 	return (
+						// 		acc - (+transaction.value + +transaction.fee)
+						// 	);
+						// } else {
+						// 	return acc - +transaction.fee;
+						// }
 					}
-				}, 0);
-	
-			balances.safeBalance += confirmedTransactions
-				.reduce((acc, transaction) => {
-					if (this.getTransactionConfirmations(transaction, chainTipIndex) >= this.config.safeConfirmCount) {
-						if (transaction.to === address && transaction.transferSuccessful) {
+				},
+				0
+			);
+
+			balances.safeBalance += confirmedTransactions.reduce(
+				(acc, transaction) => {
+					if (
+						this.getTransactionConfirmations(
+							transaction,
+							chainTipIndex
+						) >= this.config.safeConfirmCount
+					) {
+						if (
+							transaction.to === address &&
+							transaction.transferSuccessful
+						) {
 							return acc + +transaction.value;
 						}
 						if (transaction.from === address) {
-							if (transaction.transferSuccessful) {
-								return acc - (+transaction.value + +transaction.fee);
-							} else {
-								return acc - +transaction.fee;
-							}
+							return acc - (+transaction.fee + (transaction.transferSuccessful) ? transaction.value : 0);
+							// if (transaction.transferSuccessful) {
+							// 	return (
+							// 		acc -
+							// 		(+transaction.value + +transaction.fee)
+							// 	);
+							// } else {
+							// 	return acc - +transaction.fee;
+							// }
 						}
 					}
 					return acc;
-				}, 0);
+				},
+				0
+			);
 		}
-		
+
 		balances.pendingBalance += +balances.confirmedBalance; // pending balance also includes confirmed balance
 
 		if (pendingTransactions.length > 0) {
-			balances.pendingBalance += pendingTransactions
-				.reduce((acc, transaction) => {
+			// testing if this works!
+			const [receivedTotal, sentTotal] = pendingTransactions.reduce(
+				([acc, acc2], transaction) => {
 					if (transaction.to === address) {
-						return acc + +transaction.value;
+						acc += +transaction.value;
 					}
 					if (transaction.from === address) {
-						return acc - (+transaction.value + +transaction.fee);
+						acc2 += +transaction.value + transaction.fee;
 					}
-				}, 0);
+					return [acc, acc2];
+				},
+				[0, 0]
+			);
+
+			console.log({ receivedTotal, sentTotal });
+			balances.confirmedBalance -= sentTotal;
+
+			balances.pendingBalance += receivedTotal - sentTotal;
 		}
-	
 
-		console.log(`balances (v2) for address ${address}:\n${JSON.stringify(balances)}`);
-		
-		// for testing, double check against previous version (hopefully it's correct lol)
-		this.oldGetBalancesOfAddress(address);
-
+		console.log(
+			`balances (v2) for address ${address}:\n${JSON.stringify(balances)}`
+		);
 
 		return balances;
 	}
-
-
-	
-
-
-
 
 	//return transactions array of address
 	//	crawl blockchain and build transaction list related to address
@@ -980,48 +947,50 @@ class Blockchain {
 	// pending transactions will not have "minedInBlockIndex"
 	getTransactionsByAddress(address) {
 		const transactions = [
-			...this.getConfirmedTransactionsByAddress(address),
-			...this.getPendingTransactionsByAddress(address)
+			...this.getConfirmedTransactions(address),
+			...this.getPendingTransactions(address),
 		];
 
 		// sort by parsed date string
-		transactions.sort((a, b) => Date.parse(a.dateCreated) - Date.parse(b.dateCreated))
+		transactions.sort(
+			(a, b) => Date.parse(a.dateCreated) - Date.parse(b.dateCreated)
+		);
 
-		return transactions
-	}
-
-
-	getConfirmedTransactionsByAddress(address) {
-		let transactions = [];
-		for (const block of this.chain) {
-			transactions = [
-				...transactions, // keep previous ones
-				...block.transactions.filter(transaction => transaction.to === address || transaction.from === address) // add new ones
-			];
-		}
-		return transactions; // returns empty array if none found
-	}
-
-	getPendingTransactionsByAddress(address) {
-		return this.pendingTransactions.filter(transaction => transaction.to === address || transaction.from === address)
-	}
-
-	getPendingTransactions() {
-		return this.pendingTransactions;
-	}
-
-	getConfirmedTransactions() {
-		let transactions = [];
-		for (const block of this.chain) {
-			for (const transaction of block.transactions) {
-				transactions.push(transaction);
-			}
-		}
 		return transactions;
 	}
 
+	getConfirmedTransactions(address = null) {
+		let transactions = [];
+		if (!address) {
+			for (const block of this.chain) {
+				for (const transaction of block.transactions) {
+					transactions.push(transaction);
+				}
+			}
 
+		} else {
+			for (const block of this.chain) {
+				transactions = [
+					...transactions, // keep previous ones
+					...block.transactions.filter(
+						(transaction) =>
+							transaction.to === address ||
+							transaction.from === address
+					), // add new ones
+				];
+			}
+		}
+		
+		return transactions; // returns empty array if none found
+	}
 
+	getPendingTransactions(address = null) {
+		if (!address) return this.pendingTransactions;
+		return this.pendingTransactions.filter(
+			(transaction) =>
+				transaction.to === address || transaction.from === address
+		);
+	}
 
 
 	// list all accounts that have non-zero CONFIRMED balance (in blocks)
@@ -1040,36 +1009,39 @@ class Blockchain {
 	// sent coins: subtract value+fee from {from: address} balance
 
 	getAllConfirmedAccountBalances() {
-		console.log('---Getting all confirmed account balances...');
+		console.log("---Getting all confirmed account balances...");
 		let balances = {};
 		for (const block of this.chain) {
-			console.log('scanning block', block.index);
+			console.log("scanning block", block.index);
 			for (const transaction of block.transactions) {
-				console.log('found transaction', transaction.transactionDataHash);
-				const {from, to, value, fee} = transaction;
+				// console.log('found transaction', transaction.transactionDataHash);
+				const { from, to, value, fee } = transaction;
 				//handle {to: address}
 				if (to in balances) {
-					console.log('adding to existing entry for received transaction');
+					console.log(
+						"adding to existing entry for received transaction"
+					);
 					balances[to] += value;
 				} else {
-					console.log('creating new entry for received transaction');
+					console.log("creating new entry for received transaction");
 					balances[to] = value;
 				}
 
 				//handle {from: address}
 				if (from in balances) {
-					console.log('adding to existing entry for sent transaction');
-					balances[from] -= (fee + value);
+					console.log(
+						"adding to existing entry for sent transaction"
+					);
+					balances[from] -= fee + value;
 				} else {
-					console.log('creating new entry for sent transaction');
+					console.log("creating new entry for sent transaction");
 					balances[from] = 0 - (fee + value);
 				}
 			}
 		}
-		console.log('---done collecting balances');
+		console.log("---done collecting balances");
 		return balances;
 	}
-
 
 	filterOutNonZeroBalances(balances) {
 		const prunedBalances = {};
