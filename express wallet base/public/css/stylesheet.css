@@ -1,3 +1,18 @@
 .credits {
 	display: none;
 }
+
+* {
+	font-size: 20px;
+}
+
+input,
+input.form-control,
+textarea,
+textarea.form-control {
+	font-size: 20px;
+}
+
+/* .form-group {
+	width: 100%;
+} */
