@@ -4,3 +4,9 @@ Not calculating correctly after coin is submitted into transaction...
 	Sender's confirmed balance should be reduced,
 		check pending transactions, tally any outgoing transactions?
 	(Receiver's pending balance is correctly increased)
+
+
+
+
+Wallet: Recover:
+	Should check the mnemonic to be sure it is a list of words, 12-24 multiples of 3

@@ -210,7 +210,6 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 	txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
 	txData["senderSignature"] = signResponse.data;
 
-	console.log("tx data before saving", { txData });
 	return {data: txData, error: null};
 }
 
@@ -221,23 +220,28 @@ const submitTransaction = async (nodeUrl, signedTransaction) => {
 		body: JSON.stringify(signedTransaction),
 		headers: { "Content-Type": "application/json" },
 	});
-	console.log({ nodeResponse: response });
+	console.log({ submitTransactionResponse: response });
 
+	// save our sent transaction for displaying
 	if (response.status === 200) {
-		// save our sent transaction for displaying
-		return {data: signedTransaction.transactionDataHash, error: null};
+		return {data: signedTransaction, error: null};
 	}
 
 	console.log(`error submitting transaction`);
 	const json = await response.json();
 
+	// data / validation error
 	if (response.status === 400) {
-		// data / validation error
 		return {data: null, error: json.errorMsg};
 	}
 
-	// other node errors (offline)
+	// 404, etc
 	return {data: null, error: "Error connecting to node"};
+}
+
+const fetchAddressBalance = async (nodeUrl, address) => {
+	const response = await fetch(`${nodeUrl}/address/${address}/balance`);
+	return await response.json();
 }
 
 
@@ -251,6 +255,7 @@ const walletUtils = {
 	getAddressFromCompressedPubKey,
 	decryptAndSign,
 	submitTransaction,
+	fetchAddressBalance,
 	CONSTANTS,
 };
 

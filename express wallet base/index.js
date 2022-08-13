@@ -49,6 +49,7 @@ const authChecker = (req, res, next) => {
 			deriveKeysFromMnemonic,
 			decryptAndSign,
 			submitTransaction,
+			fetchAddressBalance,
 		},
 	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
@@ -241,16 +242,13 @@ const authChecker = (req, res, next) => {
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
-		const balancesResponse = await fetch(`${nodeUrl}/address/${address}/balance`);
-		const json = await balancesResponse.json();
-
-		console.log("fetched data:", {json});
-		
+		const balances = await fetchAddressBalance(nodeUrl, address);
+		console.log("fetched data json:", {balances});
 
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
-			balances: `Safe Balance: ${json.safeBalance}\nConfirmed Balance: ${json.confirmedBalance}\nPending Balance: ${json.pendingBalance}`,
+			balances: `Safe Balance: ${balances.safeBalance}\nConfirmed Balance: ${balances.confirmedBalance}\nPending Balance: ${balances.pendingBalance}`,
 		});
 	});
 
@@ -297,6 +295,8 @@ const authChecker = (req, res, next) => {
 			}
 
 			const {data, error} = await decryptAndSign(wallet, recipient, amount, password);
+			
+			console.log("decryptAndSign:", {data, error});
 
 			if (error) {
 				drawView(res, active, {
@@ -335,25 +335,25 @@ const authChecker = (req, res, next) => {
 				return;
 			}
 
-			const response = submitTransaction(nodeUrl, signedTransaction);
+			const {data, error} = await submitTransaction(nodeUrl, signedTransaction);
 
-			if (response.error) {
+			if (error) {
 				drawView(res, active, {
 					wallet,
 					active,
 					signedTransaction,
-					error: response.error,
+					error: error,
 				});
 				return;
 			}
 
 			//success:
-			const previousTransaction = signedTransaction;
+			const previousTransaction = data;
 			req.session.signedTransaction = undefined;
 			drawView(res, active, {
 				wallet,
 				active,
-				transactionHash: previousTransaction.transactionDataHash,
+				transactionHash: data.transactionDataHash ?? undefined,
 				previousTransaction,
 			});
 		}
