@@ -32,6 +32,7 @@
 						class="form-control"
 						name="recipient"
 						required
+						<%- typeof recipient !== 'undefined' ? 'value="' + recipient + '"' : '' %>
 					/>
 				</div>
 
@@ -42,6 +43,7 @@
 						class="form-control"
 						name="amount"
 						required
+						<%- typeof amount !== 'undefined' ? 'value="' + amount + '"' : '' %>
 					/>
 				</div>
 
@@ -56,6 +58,17 @@
 				</div>
 
 				<div class="form-group">
+					<label>Blockchain Node URL</label>
+					<input
+						type="text"
+						class="form-control"
+						name="nodeUrl"
+						required
+						<%- typeof nodeUrl !== 'undefined' ? 'value="' + nodeUrl + '"' : typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl + '"': '' %>
+					/>
+				</div>
+
+				<div class="form-group">
 					<input
 						type="submit"
 						class="btn btn-defautl"
@@ -64,6 +77,7 @@
 				</div>
 			</div>
 		</form>
+
 		<% } else { %>
 		<!-- Transaction was included, show our "Send transaction" form -->
 
@@ -94,6 +108,7 @@
 						class="form-control"
 						name="nodeUrl"
 						required
+						<%- typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl + '"' : '' %>
 					/>
 				</div>
 

@@ -5,7 +5,6 @@ import * as bip39 from "bip39";
 import crypto from "crypto";
 import fetch from 'node-fetch';
 
-const IV = crypto.randomBytes(16);
 const purpose = "44";
 const coinType = "7789";
 const CONSTANTS = {
@@ -29,15 +28,16 @@ const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
 
 const encrypt = (toEncrypt, passphrase) => {
+	const IV = crypto.randomBytes(16);
 	let response = {data: null, error: null};
 	try {
 		passphrase = padBuffer(passphrase);
-		console.log({ toEncrypt, paddedPassphrase: passphrase });
+		console.log('encrypting:', { toEncrypt, paddedPassphrase: passphrase });
 		let cipher = crypto.createCipheriv("aes-256-cbc", passphrase, IV);
 		let encrypted = cipher.update(toEncrypt, "utf8", "hex");
 		encrypted += cipher.final("hex");
 
-		response = {data: encrypted, error: null};
+		response = {data: {IV, encrypted}, error: null};
 
 	} catch(err) {
 		response = {data: null, error: err};
@@ -47,11 +47,13 @@ const encrypt = (toEncrypt, passphrase) => {
 	}
 };
 
-const decrypt = (encrypted, passphrase) => {
+const decrypt = ({IV, encrypted}, passphrase) => {
 	let response = {data: null, error: null};
 	try {
 		passphrase = padBuffer(passphrase);
-		console.log({ encrypted, paddedPassphrase: passphrase });
+		console.log('decrypting:', { IV, encrypted, paddedPassphrase: passphrase });
+		IV = Buffer.from(IV);
+		console.log({IV});
 		let decipher = crypto.createDecipheriv("aes-256-cbc", passphrase, IV);
 		let decrypted = decipher.update(encrypted, "hex", "utf8");
 		decrypted += decipher.final("utf8");
@@ -174,7 +176,9 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 	let keys;
 	if (walletOrKeys.encryptedMnemonic) {
 		// decrypt wallet for signing
-		const response = decrypt(walletOrKeys.encryptedMnemonic, password);
+		
+		const encrypted = {IV: walletOrKeys.IV, encrypted: walletOrKeys.encryptedMnemonic};
+		const response = decrypt(encrypted, password);
 		if (response.error) {
 			return {data: null, error: "Error decrypting wallet! Try a different password?"};
 		}
@@ -185,10 +189,8 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 		keys = walletOrKeys;
 	}
 
-	const {privateKey, publicKey, address} = keys;
-	
-
 	// prepare and hash our transaction data
+	const {privateKey, publicKey, address} = keys;
 	let txData = {
 		from: address,
 		to: recipient,

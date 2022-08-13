@@ -33,6 +33,25 @@ app.use(express.static("public"));
 app.use(ejsLayouts);
 app.set("layout", "layouts/layout");
 
+// app.use((req, res, next) => {
+// 	if (!req.session.wallet) {
+// 		const TESTING_WALLET = {
+// 			encryptedMnemonic: '84cb1b815fff36ca2027bc6d665794df3f66a99f2d60ab0bf4a3362fb4d7bb9b556cb3fe789a03c777f6f037705aa2697551ac1dd7f9ff90e58f82a56daccba20faadecc88ef522ef0945587e7c20d9352400a45ba6b2c83698ce61a44717ec1',
+// 			address: 'a78fb34736836feb9cd2114e1215f9e3f0c1987d',
+// 		}
+// 		req.session.wallet = TESTING_WALLET;
+// 	}
+// 	next();
+// })
+
+	/* testing target wallet
+	Your mnemonic is : prosper during cross void flower oyster unveil mercy multiply effort person illegal
+Generated Private Key fe203b722fbf8eac6d7281453e09d130573c774991189f35eb4b102f8af941f2
+Extracted Public Key 145fc6f57e917473c55c17c625c92f3cd811c6b9393501e30c01bde00a9ec6ef0
+Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
+	
+	*/
+
 const authChecker = (req, res, next) => {
 	if (req.session.wallet) {
 		return next();
@@ -56,13 +75,7 @@ const authChecker = (req, res, next) => {
 
 	app.get("/", async (req, res) => {
 		const active = "index";
-
-		// const balancesResponse = await fetch(`http://localhost:5555/address/a78fb34736836feb9cd2114e1215f9e3f0c1987d/balance`);
-		// console.log('response:', balancesResponse);
-		// // const body = await balancesResponse.text();
-		// const json = await balancesResponse.json();
-		// // console.log('response.text:', {body});
-		// console.log('response.json:', {json});
+		
 
 		drawView(res, active, {
 			wallet: req.session.wallet,
@@ -115,7 +128,8 @@ const authChecker = (req, res, next) => {
 
 		// save mnemonic and address to session
 		const mnemonicAndAddress = {
-			encryptedMnemonic: response.data,
+			IV: response.data.IV,
+			encryptedMnemonic: response.data.encrypted,
 			address,
 		};
 
@@ -177,7 +191,8 @@ const authChecker = (req, res, next) => {
 
 		// save mnemonic and address to session
 		const mnemonicAndAddress = {
-			encryptedMnemonic: response.data,
+			IV: response.data.IV,
+			encryptedMnemonic: response.data.encrypted,
 			address,
 		};
 
@@ -228,8 +243,10 @@ const authChecker = (req, res, next) => {
 		}
 
 		// decrypt wallet and add to session
-		const response = decrypt(req.session.wallet.encryptedMnemonic, password);
-		if (response.error) {
+		const encrypted = {IV: req.session.wallet.IV, encrypted: req.session.wallet.encryptedMnemonic}
+		const {data, error} = decrypt(encrypted, password);
+		console.log('balance decrypted wallet:', data);
+		if (error) {
 			drawView(res, active, {
 				wallet: req.session.wallet,
 				active,
@@ -238,7 +255,7 @@ const authChecker = (req, res, next) => {
 			return;
 		}
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(response.data);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(data);
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
@@ -257,6 +274,7 @@ const authChecker = (req, res, next) => {
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
+			transactionInfo: req.session.transactionInfo,
 			signedTransaction: req.session.signedTransaction,
 		});
 	});
@@ -267,17 +285,21 @@ const authChecker = (req, res, next) => {
 	app.post("/send", async (req, res) => {
 		const active = "send";
 		const wallet = req.session.wallet;
-
+		const nodeUrl = req.body.nodeUrl;
+		
 		if (!req.session.signedTransaction) {
 			// Sign the transaction data
 			// save it to session
 			// redraw this page with signed transaction
-
+			
 			const recipient = req.body.recipient;
 			const amount = req.body.amount;
 			const password = req.body.password;
+			const addressFromForm = req.body.fromAddress;
 
-			//simple validation
+			console.log('testing "value" fromAddress:', addressFromForm);
+
+			//validation errors
 			if (
 				recipient === "" ||
 				(recipient === undefined && amount === "") ||
@@ -294,10 +316,9 @@ const authChecker = (req, res, next) => {
 				return;
 			}
 
+			// decrypt and sign errors
 			const {data, error} = await decryptAndSign(wallet, recipient, amount, password);
-			
 			console.log("decryptAndSign:", {data, error});
-
 			if (error) {
 				drawView(res, active, {
 					wallet,
@@ -306,19 +327,39 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			} 
+
+			// fetch balance to see if the transaction will work
+			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
+			console.log("fetched data json:", {balances});
+			if (balances.confirmedBalance < amount) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: 'Your account does not have enough funds!',
+				});
+				return;
+			}
+
+			const transactionInfo = {
+				hash: data.transactionDataHash ?? undefined,
+				signedTransaction: data,
+				nodeUrl,
+			};
 			
+			// success
+			req.session.transactionInfo = transactionInfo;
 			req.session.signedTransaction = data;
 			req.session.save(() => {
 				drawView(res, active, {
 					wallet,
 					active,
+					transactionInfo,
 					signedTransaction: data,
 				});
 			});
 
 		} else {
 			// Send the transaction, redraw with success message
-			const nodeUrl = req.body.nodeUrl;
 			const signedTransaction = req.session.signedTransaction;
 			console.log({ sessionTx: signedTransaction });
 
@@ -335,13 +376,14 @@ const authChecker = (req, res, next) => {
 				return;
 			}
 
+			//submit transaction error
 			const {data, error} = await submitTransaction(nodeUrl, signedTransaction);
-
+			req.session.signedTransaction = undefined;
 			if (error) {
 				drawView(res, active, {
 					wallet,
 					active,
-					signedTransaction,
+					signedTransaction: undefined,
 					error: error,
 				});
 				return;
@@ -350,6 +392,7 @@ const authChecker = (req, res, next) => {
 			//success:
 			const previousTransaction = data;
 			req.session.signedTransaction = undefined;
+			req.session.transactionInfo = undefined;
 			drawView(res, active, {
 				wallet,
 				active,
