@@ -1,29 +1,29 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const cors = require('cors');
+const Blockchain = require("./Blockchain/Blockchain.js");
+const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
+const port = undefined;
+const host = undefined;
+
+const blockchain = new Blockchain();
+
+const nodeInfo = {
+	nodeId: nodeIdentifier,
+	host: host ?? blockchain.config.defaultServerHost,
+	port: port ?? blockchain.config.defaultServerPort,
+	selfUrl: `http://${this.host}:${this.port}`,
+};
+
+console.log({ nodeIdentifier: nodeInfo.nodeId });
+console.log(blockchain);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const Blockchain = require("./Blockchain/Blockchain.js");
-const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
-const blockchain = new Blockchain();
-
-const port = undefined;
-
-const nodeInfo = {
-	nodeId: nodeIdentifier,
-	host: "localhost",
-	port: port || blockchain.config.defaultServerPort,
-	selfUrl: `http://${this.host}:${this.port}`,
-};
-
 app.set("blockchain", blockchain);
 app.set("nodeInfo", nodeInfo);
-
-console.log({ nodeIdentifier });
-console.log(blockchain);
 
 /* 
 NODE:
@@ -57,7 +57,7 @@ app.use("/mining", require("./routes/mining"));
 app.get("/info", (req, res) => {
 	const data = {
 		about: "name of the node",
-		nodeId: nodeIdentifier,
+		nodeId: nodeInfo.nodeId,
 		chainId: blockchain.config.genesisBlock.blockHash,
 		nodeUrl: nodeInfo.selfUrl,
 		peers: blockchain.nodes.size,
