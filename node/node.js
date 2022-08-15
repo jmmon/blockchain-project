@@ -6,17 +6,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CONFIG = require("./Blockchain/config");
 const Blockchain = require("./Blockchain/Blockchain.js");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
-const blockchain = new Blockchain(CONFIG);
+const blockchain = new Blockchain();
 
 const port = undefined;
 
 const nodeInfo = {
 	nodeId: nodeIdentifier,
 	host: "localhost",
-	port: port || CONFIG.defaultServerPort,
+	port: port || blockchain.config.defaultServerPort,
 	selfUrl: `http://${this.host}:${this.port}`,
 };
 
@@ -55,8 +54,6 @@ app.use("/transactions", require("./routes/transactions"));
 app.use("/address", require("./routes/address"));
 app.use("/mining", require("./routes/mining"));
 
-
-
 app.get("/info", (req, res) => {
 	const data = {
 		about: "name of the node",
@@ -74,7 +71,6 @@ app.get("/info", (req, res) => {
 	res.status(200).send(JSON.stringify(data));
 });
 
-
 // done
 // return ALL balances in the network
 //non-zero + confirmed (in blocks)
@@ -84,26 +80,6 @@ app.get("/balances", (req, res) => {
 	console.log({allBalances, balances});
 	return res.status(200).send(JSON.stringify(balances));
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 app.listen(nodeInfo.port, () => {
 	console.log(`node listening on port ${nodeInfo.port}`);

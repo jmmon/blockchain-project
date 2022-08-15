@@ -16,7 +16,7 @@ const sortObjectByKeys = (object) => {
 };
 
 class Blockchain {
-	constructor(config) {
+	constructor(config = require('./config')) {
 		this.config = config;
 		this.chain = [];
 		this.pendingTransactions = [];
