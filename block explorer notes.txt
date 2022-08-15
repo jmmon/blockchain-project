@@ -7,5 +7,5 @@ Block explorer functionality:
 	view confirmed transactions,
 	view pending transactions,
 	view accounts & balances,
-	view peers,
+	view peers "view peers map",
 	view network difficulty,
