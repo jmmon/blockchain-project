@@ -3,7 +3,6 @@ const crypto = require("node:crypto");
 const cors = require('cors');
 
 const app = express();
-// app.use(cors({origin: ["http://localhost:3000","http://localhost:3007"]}));
 app.use(cors());
 app.use(express.json());
 
