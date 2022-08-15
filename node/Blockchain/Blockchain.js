@@ -504,7 +504,6 @@ class Blockchain {
 	}
 
 	// difficulty adjustment
-	//TODO: start averaging immediately, instead of forcing to wait x blocks!
 	//done, testing
 	darkGravityWave(newestBlockIndex = this.getLastBlock().index) {
 		const targetSpacing = this.config.targetBlockTimeSeconds;
@@ -583,11 +582,9 @@ class Blockchain {
 		}
 
 		//calculate new difficulty based on actual and target timespan
-		// newDifficulty *= (actualTimespan / targetTimespan);
 		newDifficulty *= targetTimespan / adjustedTimespan;
 
-		// // STEP 4: make sure we're above our minimum difficulty
-		// // not really needed
+		// STEP 4: make sure we're above our minimum difficulty
 		if (newDifficulty < minimumDifficulty) {
 			newDifficulty = minimumDifficulty; //our minimum
 		}
@@ -595,20 +592,20 @@ class Blockchain {
 		const previousBlockTime = this.getBlockTimeByIndex(newestBlockIndex);
 		const blockTimeDifferenceRatio = 1.5;
 
-		// 	//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty!
-		// 	// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
-		// // up to 3/2 target time, don't increase difficulty.
-		// 	if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
-		// 		if (newDifficulty > this.difficulty) {
-		// 			newDifficulty = this.difficulty;
-		// 		}
-		// 	}
-		// // down to 2/3 target time, don't increase difficulty.
-		// 	if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
-		// 		if (newDifficulty < this.difficulty) {
-		// 			newDifficulty = this.difficulty;
-		// 		}
-		// 	}
+		//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty!
+		// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
+		// up to 3/2 target time, don't increase difficulty.
+		if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
+			if (newDifficulty > this.difficulty) {
+				newDifficulty = this.difficulty;
+			}
+		}
+		// down to 2/3 target time, don't increase difficulty.
+		if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
+			if (newDifficulty < this.difficulty) {
+				newDifficulty = this.difficulty;
+			}
+		}
 
 		// limit difficulty based on estimated time for next block
 		// if bumping difficulty by 1 will put our block time past 1.5x the target, make sure we do not allow increasing difficulty by more than 1!
