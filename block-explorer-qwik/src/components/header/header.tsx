@@ -14,6 +14,19 @@ export default component$(() => {
           <a href="/">Qwik City 🏙</a>
         </section>
         <nav>
+          <a href="/info" class={{ active: pathname.startsWith('/info') }}>
+            Blockchain Info
+          </a>
+          <a href="/accounts" class={{ active: pathname.startsWith('/accounts') }}>
+            Accounts
+          </a>
+          <a href="/transactions" class={{ active: pathname.startsWith('/transactions') }}>
+            Transactions
+          </a>
+          <a href="/blocks" class={{ active: pathname.startsWith('/blocks') }}>
+            Blocks
+          </a>
+          |
           <a href="/blog" class={{ active: pathname.startsWith('/blog') }}>
             Blog
           </a>

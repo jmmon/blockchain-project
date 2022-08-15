@@ -35,7 +35,7 @@ export default component$(() => {
 												<ul class="ml-2">
 													{transactions.map((transaction, index) => 
 													(
-														<ul class="ml-2">{"{"}
+														<ul class="ml-2">{`${index}: {`}
 															{Object.keys(transaction).map((txKey) =>(<li class="ml-2">{txKey}: {transaction[txKey]}</li>))}
 														{(transactions.length - 1 > index) ? "}," : "}"}</ul>
 														)
@@ -59,11 +59,6 @@ export default component$(() => {
 	);
 });
 
-
-
-
-
-
 export async function getBlock(
 	index: string,
 	controller?: AbortController
@@ -77,20 +72,6 @@ export async function getBlock(
 	return typeof fetchedBlockJson === "object" ? fetchedBlockJson : Promise.reject(fetchedBlockJson);
 }
 
-// export const onGet:RequestHandler<EndpointData> = async ({params, response}) => {
-// 	const blockData = await loadBlock(params.index);
-// 	if (!blockData) {
-// 		response.status = 404;
-// 		return blockData;
-// 	}
-
-// 	response.headers.set('Cache-Control', 'no-cache, no-store, no-fun');
-// 	return blockData;
-// }
-
-// const loadBlock = (blockIndex: string) => {
-
-// }
 let Signature: string;
 
 type Transaction = {

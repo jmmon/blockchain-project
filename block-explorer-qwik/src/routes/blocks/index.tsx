@@ -9,7 +9,7 @@ export default component$(() => {
 		return getBlocks();
 	});
 
-	console.log('render');
+	console.log("render");
 	return (
 		<div>
 			<h1>Get Blocks</h1>
@@ -19,11 +19,9 @@ export default component$(() => {
 				onRejected={(error) => <>Error: {error.message}</>}
 				onResolved={(blocks) => (
 					<ul>
-						{blocks.map((block) => (
+						{blocks.map((block, index) => (
 							<li>
-								<a href={`/blocks/${block.index}`}>
-									Block #{block.index}
-								</a>
+								<a href={`/blocks/${index}`}>Block #{index}</a>
 							</li>
 						))}
 					</ul>
