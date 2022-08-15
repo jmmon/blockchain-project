@@ -1,5 +1,3 @@
-// import fetch from 'node-fetch'
-// import crypto from "node:crypto"
 const fetch = import("node-fetch");
 const crypto = require("crypto");
 const Transaction = require("./Transaction");
@@ -8,12 +6,12 @@ const Block = require("./Block");
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
 
-const sortObjectByKeys = (object) => {
-	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
-	let newObject = {};
-	sortedKeys.forEach((key) => (newObject[key] = object[key]));
-	return newObject;
-};
+// const sortObjectByKeys = (object) => {
+// 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
+// 	let newObject = {};
+// 	sortedKeys.forEach((key) => (newObject[key] = object[key]));
+// 	return newObject;
+// };
 
 class Blockchain {
 	constructor(config = require('./config')) {
@@ -22,11 +20,8 @@ class Blockchain {
 		this.pendingTransactions = [];
 		this.nodes = new Set();
 		this.miningJobs = new Map(); // blockDataHash => blockCandidate
-
 		this.difficulty = this.config.startDifficulty;
-
 		this.cumulativeDifficulty = 0; // initial value
-
 		this.createGenesisBlock(); // create genesis block
 	}
 
@@ -35,7 +30,6 @@ class Blockchain {
 		this.difficulty = this.config.startDifficulty;
 		this.pendingTransactions = [];
 		this.nodes = new Set();
-
 		return true;
 	}
 
@@ -70,8 +64,6 @@ class Blockchain {
 		const remainingTransactions = this.pendingTransactions.filter(
 			(tx) => !block.transactions.includes(tx)
 		);
-
-		// console.log(`Pruning pending transactions...\n--------\nPending Transactions: ${JSON.stringify(this.pendingTransactions)}\n--------\nTransactions in Block: ${JSON.stringify(block.transactions)}\n--------\nRemaining Pending Transactions: ${JSON.stringify(remainingTransactions)}`);
 
 		this.pendingTransactions = [...remainingTransactions];
 	}
@@ -120,7 +112,6 @@ class Blockchain {
 		// console.log('"mined" genesis block candidate:', minedBlockCandidate);
 
 		// then we can build our final block with all the info, and push it to the chain
-
 		const genesisBlock = {
 			...new Block(
 				0,
@@ -191,17 +182,15 @@ class Blockchain {
 		senderPubKey,
 	}) {
 		return SHA256(
-			JSON.stringify(
-				sortObjectByKeys({
-					from,
-					to,
-					value,
-					fee,
-					dateCreated,
-					data,
-					senderPubKey,
-				})
-			)
+			JSON.stringify({
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+			})
 		);
 	}
 
@@ -445,7 +434,7 @@ class Blockchain {
 
 	// static methods (exist on the class itself, not on an instantiation of the class)
 	hash(block) {
-		return SHA256(JSON.stringify(sortObjectByKeys(block)));
+		return SHA256(JSON.stringify(block));
 	}
 
 	getLastBlock() {
