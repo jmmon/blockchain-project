@@ -10,7 +10,7 @@ const crypto = require("crypto");
 const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
 
 // import mineBlock from "./basic example hashing copy/main";
-const mineBlock = require('./basic example hashing copy/main');
+const mineBlock = require('./main');
 
 const myAddress = "testAddress"; // address of my miner
 const paddedAddress = myAddress + "0".repeat(40-myAddress.length);

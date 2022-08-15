@@ -1,0 +1,17 @@
+{
+  "name": "miner-threads",
+  "version": "1.0.0",
+  "description": "",
+  "main": "miner.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node miner.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^3.2.10",
+    "worker-farm": "^1.7.0"
+  }
+}
