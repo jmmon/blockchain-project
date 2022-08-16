@@ -1,6 +1,8 @@
 import { component$, Resource } from '@builder.io/qwik';
 import { DocumentHead, RequestHandler, useEndpoint, useLocation } from '@builder.io/qwik-city';
 
+import Transaction from '../../../components/transaction/transaction';
+
 export default component$(() => {
 	const {params} = useLocation();
 	const resource = useEndpoint<typeof onGet>();
@@ -18,11 +20,12 @@ export default component$(() => {
 					return (
 						<>
 						<h4>{`Hash: ${params.hash}:`}</h4>
-						<ul class="ml-2">{"{"}
+						<Transaction transaction={transaction} />
+						{/* <ul class="ml-2">{"{"}
 							{Object.keys(transaction).map((txKey) => {
 								if (txKey === 'transferSuccessful') {
 									return (<li class="ml-4">{txKey}: {transaction[txKey] ? "true" : "false"},</li>)
-									
+
 								}
 								if (txKey === 'senderSignature') {
 									return (<li class="ml-4">{`${txKey}: [`}
@@ -35,7 +38,7 @@ export default component$(() => {
 								}
 								return (<li class="ml-4">{txKey}: {transaction[txKey]},</li>)
 							})}
-						{"}"}</ul>
+						{"}"}</ul> */}
 						</>
 					);
 				}}
@@ -78,18 +81,18 @@ export async function getTransaction(
 	return responseJson;
 }
 
-let Signature: string;
+// let Signature: string;
 
-type Transaction = {
-	from: string;
-	to: string;
-	value: number;
-	fee: number;
-	dateCreated: string;
-	data: string;
-	senderPubKefy: string;
-	transactionDataHash: string;
-	senderSignature: Array<Signature>;
-	minedInBlockIndex: number;
-	transferSuccessful: boolean;
-};
+// type Transaction = {
+// 	from: string;
+// 	to: string;
+// 	value: number;
+// 	fee: number;
+// 	dateCreated: string;
+// 	data: string;
+// 	senderPubKefy: string;
+// 	transactionDataHash: string;
+// 	senderSignature: Array<Signature>;
+// 	minedInBlockIndex: number;
+// 	transferSuccessful: boolean;
+// };
