@@ -1,24 +1,31 @@
-import { component$, Resource } from '@builder.io/qwik';
-import { DocumentHead, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
+import { component$, Resource, useResource$ } from '@builder.io/qwik';
+import { DocumentHead } from '@builder.io/qwik-city';
+import Transaction from "../../../components/transaction/transaction";
 
 export default component$(() => {
-	const resource = useEndpoint<typeof onGet>();
+	const confirmedTransactionsResource = useResource$(({ track, cleanup }) => {
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
+
+		return getConfirmedTransactions(controller);
+	});
   return (
     <div>
       <h1>Confirmed Transactions</h1>
 			<Resource 
-				resource={resource}
+				resource={confirmedTransactionsResource}
 				onPending={() => <p>Loading...</p>}
 				onResolved={(transactions) => {
-					if (transactions.length == 0) {
-						return <p>No confirmed transactions found.</p>
-					}
+					if (!transactions) return <p>No confirmed transactions found.</p>;
 
+					const totalTransactions = transactions.length;
 					return (
 						<>
-						{transactions.map(transaction => (
-							<p>{transaction}</p>
-						))}
+						{transactions.map((transaction, index) => {
+							console.log({transaction, index});
+							return (
+							<Transaction transaction={transaction} index={index} totalTransactions={totalTransactions} />
+						)})}
 						</>
 					);
 				}}
@@ -31,8 +38,15 @@ export const head: DocumentHead = {
   title: 'Confirmed Transactions',
 };
 
-// onGet more for params?
-// use fetch in "server" code above the return in component function?
-export const onGet: RequestHandler<EndpointData> = async ({response}) => {
-
+export async function getConfirmedTransactions(
+	controller?: AbortController
+): Promise<Object> {
+	console.log("Fetching confirmed transactions...");
+	const response = await fetch(`http://localhost:5555/transactions/confirmed`, {
+		signal: controller?.signal,
+	});
+	const responseJson = await response.json();
+	console.log("json:", responseJson);
+	if (responseJson.errorMsg) return Promise.reject(responseJson);
+	return responseJson;
 }
