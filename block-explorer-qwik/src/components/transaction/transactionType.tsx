@@ -1,6 +1,6 @@
-export type Signature: String;
+export type ISignature: String;
 
-type Transaction = {
+type ITransaction = {
 	from: string;
 	to: string;
 	value: number;
@@ -9,10 +9,10 @@ type Transaction = {
 	data: string;
 	senderPubKefy: string;
 	transactionDataHash: string;
-	senderSignature: Array<Signature>;
+	senderSignature: Array<ISignature>;
 	minedInBlockIndex: number;
 	transferSuccessful: boolean;
 };
 
 
-export default Transaction;
+export default ITransaction;

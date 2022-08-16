@@ -1,5 +1,5 @@
 import { component$ } from '@builder.io/qwik';
-import Transaction from "./transactionTypes.tsx";
+import ITransaction from "./transactionType";
 
 export default function component$({transaction, index, totalTransactions}: Props) {
 	let last = true;
@@ -30,7 +30,7 @@ export default function component$({transaction, index, totalTransactions}: Prop
 }
 
 interface Props {
-	transaction: Transaction;
+	transaction: ITransaction;
 	index?: number;
 	totalTransactions?: number;
 }
