@@ -22,7 +22,7 @@ export default component$(() => {
 			<Resource
 				resource={blockResource}
 				onPending={() => <>Loading...</>}
-				onRejected={(error) => <>Error: {error.message}</>}
+				onRejected={(error) => <>Error: {error.errorMsg}</>}
 				onResolved={(block) => {				
 					return (
 						<ul>
@@ -31,22 +31,34 @@ export default component$(() => {
 								if (key === "transactions") {
 									const transactions = block[key];
 									return (
-											<li class="ml-2">Transactions: [
-												<ul class="ml-2">
-													{transactions.map((transaction, index) => 
-													(
-														<ul class="ml-2">{`${index}: {`}
-															{Object.keys(transaction).map((txKey) =>(<li class="ml-2">{txKey}: {transaction[txKey]}</li>))}
-														{(transactions.length - 1 > index) ? "}," : "}"}</ul>
-														)
-													)}
-												</ul>
-											]</li>	
-										)
-									}
+										<li class="ml-2">Transactions: [
+											<ul class="ml-2">
+												{transactions.map((transaction, index) => 
+												(
+													<ul class="ml-2">{`${index}: {`}
+														{Object.keys(transaction).map((txKey) => {
+															if (txKey === 'senderSignature') {
+																return (<li class="ml-2">{`${txKey}: [`}
+																	<ul class="ml-2">
+																		<li class="ml-2">a: {transaction[txKey][0]},</li>
+																		<li class="ml-2">b: {transaction[txKey][1]},</li>
+																	</ul>
+																{"],"}</li>
+																)
+															}
+															return (<li class="ml-2">{txKey}: {transaction[txKey]},</li>)
+														})}
+													{(transactions.length - 1 > index) ? "}," : "}"}</ul>
+													)
+												)}
+											</ul>
+										]</li>	
+									)
+								}
+
 								return (
 								<li class="ml-2">
-									{key}: {block[key]}
+									{key}: {block[key]},
 								</li>
 							)})}
 							
@@ -62,14 +74,15 @@ export default component$(() => {
 export async function getBlock(
 	index: string,
 	controller?: AbortController
-): Promise<Block> {
+): Promise<Object> {
 	console.log("Fetching block...");
 	const response = await fetch(`http://localhost:5555/blocks/${index}`, {
 		signal: controller?.signal,
 	});
-	const fetchedBlockJson: Block = await response.json();
-	console.log("json:", fetchedBlockJson);
-	return typeof fetchedBlockJson === "object" ? fetchedBlockJson : Promise.reject(fetchedBlockJson);
+	const responseJson = await response.json();
+	console.log("json:", responseJson);
+	if (responseJson.errorMsg) return Promise.reject(responseJson);
+	return responseJson;
 }
 
 let Signature: string;
