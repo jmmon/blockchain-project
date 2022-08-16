@@ -1,5 +1,4 @@
 import { component$ } from '@builder.io/qwik';
-import ITransaction from "./transactionType";
 
 export default function component$({transaction, index, totalTransactions}: Props) {
 	let last = true;

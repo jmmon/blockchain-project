@@ -20,7 +20,3 @@ TODO: Make data cross-link to other routes, i.e.:
 		click each transaction (or transactionDataHash) to go to that transaction lookup page
 	address lookup: 
 		click the addresses (from or to) in the transaction; or clikc the address in the block (the miner address) to pull up the address info
-
-
-TODO: Make transaction (display) a component?
-	Make block (display) a component?

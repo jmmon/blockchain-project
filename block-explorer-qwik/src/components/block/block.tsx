@@ -1,8 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 import Transaction from "../transaction/transaction";
-import ITransaction from "../transaction/transactionType";
 
-export default function component$({block}) {
+export default function component$({block}: Props) {
 	return (<ul>
 		{"{"}
 		{Object.keys(block).map((key) => {
@@ -44,4 +43,9 @@ export default function component$({block}) {
 		
 		{"}"}
 	</ul>)
+}
+
+
+interface Props {
+	block: IBlock;
 }

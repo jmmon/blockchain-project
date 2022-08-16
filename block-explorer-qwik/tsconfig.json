@@ -17,7 +17,8 @@
     "isolatedModules": true,
     "types": ["vite/client"],
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "*": ["types/*.t.ts"]
     }
   },
   "include": ["src"]
