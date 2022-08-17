@@ -14,7 +14,7 @@ const SHA256 = (message) =>
 // };
 
 class Blockchain {
-	constructor(config = require('./config')) {
+	constructor(config = require("./config")) {
 		this.config = config;
 		this.chain = [];
 		this.pendingTransactions = [];
@@ -487,8 +487,11 @@ class Blockchain {
 		transaction,
 		lastBlockIndex = this.getLastBlock().index
 	) {
+		// console.log({transaction});
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
-		if (!transactionBlockIndex) return 0;
+		// console.log({transactionBlockIndex});
+		// console.log({lastBlockIndex});
+		if (typeof transactionBlockIndex !== "number") return 0;
 		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
 
@@ -584,13 +587,16 @@ class Blockchain {
 		//if difficulty should increase but last block took > 1.5x normal block time, do NOT increase difficulty!
 		// (Try to limit block time to 1.5x what it should be - slower adjustment but less block time variability)
 		// up to 3/2 target time, don't increase difficulty.
-		if (previousBlockTime > (targetSpacing * blockTimeDifferenceRatio)) {
+		if (previousBlockTime > targetSpacing * blockTimeDifferenceRatio) {
 			if (newDifficulty > this.difficulty) {
 				newDifficulty = this.difficulty;
 			}
 		}
 		// down to 2/3 target time, don't increase difficulty.
-		if (previousBlockTime > (targetSpacing * (1 / blockTimeDifferenceRatio))) {
+		if (
+			previousBlockTime >
+			targetSpacing * (1 / blockTimeDifferenceRatio)
+		) {
 			if (newDifficulty < this.difficulty) {
 				newDifficulty = this.difficulty;
 			}
@@ -825,11 +831,9 @@ class Blockchain {
 			pendingBalance: 0,
 		};
 
-		const confirmedTransactions =
-			this.getConfirmedTransactions(address);
+		const confirmedTransactions = this.getConfirmedTransactions(address);
 
-		const pendingTransactions =
-			this.getPendingTransactions(address);
+		const pendingTransactions = this.getPendingTransactions(address);
 
 		if (
 			confirmedTransactions.length === 0 &&
@@ -840,58 +844,37 @@ class Blockchain {
 
 		if (confirmedTransactions.length > 0) {
 			balances.confirmedBalance += confirmedTransactions.reduce(
-				(acc, transaction) => {
-					if (
-						transaction.to === address &&
-						transaction.transferSuccessful
-					) {
-						return acc + +transaction.value;
+				(sum, tx) => {
+					if (tx.to === address && tx.transferSuccessful === true) {
+						return sum + +tx.value;
 					}
-					if (transaction.from === address) {
-						return acc - (+transaction.fee (transaction.transferSuccessful) ? +transaction.value : 0);
-
-						// if (transaction.transferSuccessful) {
-						// 	return (
-						// 		acc - (+transaction.value + +transaction.fee)
-						// 	);
-						// } else {
-						// 	return acc - +transaction.fee;
-						// }
+					if (tx.from === address) {
+						return (
+							sum -
+							(+tx.fee + (tx.transferSuccessful === true) ? +tx.value : 0)
+						);
 					}
 				},
 				0
 			);
 
-			balances.safeBalance += confirmedTransactions.reduce(
-				(acc, transaction) => {
-					if (
-						this.getTransactionConfirmations(
-							transaction,
-							chainTipIndex
-						) >= this.config.safeConfirmCount
-					) {
-						if (
-							transaction.to === address &&
-							transaction.transferSuccessful
-						) {
-							return acc + +transaction.value;
-						}
-						if (transaction.from === address) {
-							return acc - (+transaction.fee + (transaction.transferSuccessful) ? transaction.value : 0);
-							// if (transaction.transferSuccessful) {
-							// 	return (
-							// 		acc -
-							// 		(+transaction.value + +transaction.fee)
-							// 	);
-							// } else {
-							// 	return acc - +transaction.fee;
-							// }
-						}
+			balances.safeBalance += confirmedTransactions.reduce((sum, tx) => {
+				if (
+					this.getTransactionConfirmations(tx, chainTipIndex) >=
+					this.config.safeConfirmCount
+				) {
+					if (tx.to === address && tx.transferSuccessful === true) {
+						return sum + +tx.value;
 					}
-					return acc;
-				},
-				0
-			);
+					if (tx.from === address) {
+						return (
+							sum -
+							(+tx.fee + (tx.transferSuccessful === true) ? tx.value : 0)
+						);
+					}
+				}
+				return sum;
+			}, 0);
 		}
 
 		balances.pendingBalance += +balances.confirmedBalance; // pending balance also includes confirmed balance
@@ -899,14 +882,14 @@ class Blockchain {
 		if (pendingTransactions.length > 0) {
 			// testing if this works!
 			const [receivedTotal, sentTotal] = pendingTransactions.reduce(
-				([acc, acc2], transaction) => {
-					if (transaction.to === address) {
-						acc += +transaction.value;
+				([receivedSum, sentSum], tx) => {
+					if (tx.to === address) {
+						receivedSum += +tx.value;
 					}
-					if (transaction.from === address) {
-						acc2 += +transaction.value + transaction.fee;
+					if (tx.from === address) {
+						sentSum += +tx.value + tx.fee;
 					}
-					return [acc, acc2];
+					return [receivedSum, sentSum];
 				},
 				[0, 0]
 			);
@@ -917,9 +900,7 @@ class Blockchain {
 			balances.pendingBalance += receivedTotal - sentTotal;
 		}
 
-		console.log(
-			`balances (v2) for address ${address}:\n${JSON.stringify(balances)}`
-		);
+		console.log(`balances (v2) for address ${address}:\n`, balances);
 
 		return balances;
 	}
@@ -953,7 +934,6 @@ class Blockchain {
 					transactions.push(transaction);
 				}
 			}
-
 		} else {
 			for (const block of this.chain) {
 				transactions = [
@@ -966,7 +946,7 @@ class Blockchain {
 				];
 			}
 		}
-		
+
 		return transactions; // returns empty array if none found
 	}
 
@@ -977,7 +957,6 @@ class Blockchain {
 				transaction.to === address || transaction.from === address
 		);
 	}
-
 
 	// list all accounts that have non-zero CONFIRMED balance (in blocks)
 	// (The all-0's address - genesis address - will have a NEGATIVE balance)
