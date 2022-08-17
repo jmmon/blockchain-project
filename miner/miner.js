@@ -12,8 +12,8 @@ const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('
 const myAddress = "testAddress"; // address of my miner
 const paddedAddress = myAddress + "0".repeat(40-myAddress.length);
 
-const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
-// const nodeUrl = "http://localhost:5555/";
+// const nodeUrl = "https://stormy-everglades-34766.herokuapp.com/";
+const nodeUrl = "http://localhost:5555/";
 const getMiningJobUrl = `mining/get-mining-job/${paddedAddress}`;
 const postMiningJobUrl = `mining/submit-mined-block`;
 
