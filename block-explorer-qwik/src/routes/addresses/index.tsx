@@ -42,7 +42,7 @@ export const onGet: RequestHandler<EndpointData> = async ({response}) => {
     return data.errorMsg;
   }
 
-  response.headers.set('Cache-Control', 'no-cache, no-store, no-fun');
+  response.headers.set('Cache-Control', 'no-cache, no-store');
   return data;
 }
 

@@ -11,7 +11,7 @@ export default component$(() => {
       <h1>Transaction Lookup</h1>
 			<Resource 
 				resource={resource}
-				onPending={() => <p>Loading...</p>}
+				onPending={() => <div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">Loading...</div>}
 				onResolved={(transaction) => {
 					if (!transaction) {
 						return <p>No transaction found.</p>
@@ -46,7 +46,7 @@ export const onGet: RequestHandler<EndpointData> = async ({params, response}) =>
 		return data.errorMsg;
 	}
 
-	response.headers.set('Cache-Control', 'no-cache, no-store, no-fun');
+	response.headers.set('Cache-Control', 'no-cache, no-store');
 	return data;
 }
 

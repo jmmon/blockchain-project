@@ -82,7 +82,7 @@ export const onGet: RequestHandler<EndpointData> = async ({ params, response }) 
   // Found the product data
   // This same data is passed to the head() function
   // and in the component$() it can be access with useEndpoint()
-  response.headers.set('Cache-Control', 'no-cache, no-store, no-fun');
+  response.headers.set('Cache-Control', 'no-cache, no-store');
   return productData;
 };
 
