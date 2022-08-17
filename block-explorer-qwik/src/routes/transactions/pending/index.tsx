@@ -1,5 +1,5 @@
-import { component$, Resource, useResource$ } from '@builder.io/qwik';
-import { DocumentHead } from '@builder.io/qwik-city';
+import { component$, Resource, useResource$ } from "@builder.io/qwik";
+import { DocumentHead } from "@builder.io/qwik-city";
 import Transaction from "../../../components/transaction/transaction";
 
 export default component$(() => {
@@ -9,33 +9,38 @@ export default component$(() => {
 
 		return getPendingTransactions(controller);
 	});
-  return (
-    <div>
-      <h1>Pending Transactions</h1>
-			<Resource 
+	return (
+		<div>
+			<h1>Pending Transactions</h1>
+			<Resource
 				resource={pendingTransactionsResource}
 				onPending={() => <p>Loading...</p>}
 				onResolved={(transactions) => {
-					if (transactions.length === 0) return <p>No pending transactions found.</p>;
+					if (transactions.length === 0)
+						return <p>No pending transactions found.</p>;
 
 					const totalTransactions = transactions.length;
 					return (
 						<>
-						{transactions.map((transaction, index) => {
-							console.log({transaction, index});
-							return (
-							<Transaction transaction={transaction} index={index} totalTransactions={totalTransactions} />
-						)})}
+							{transactions.map((transaction, index) => {
+								return (
+									<Transaction
+										transaction={transaction}
+										index={index}
+										totalTransactions={totalTransactions}
+									/>
+								);
+							})}
 						</>
 					);
 				}}
 			/>
-    </div>
-  );
+		</div>
+	);
 });
 
 export const head: DocumentHead = {
-  title: 'Pending Transactions',
+	title: "Pending Transactions",
 };
 
 export async function getPendingTransactions(

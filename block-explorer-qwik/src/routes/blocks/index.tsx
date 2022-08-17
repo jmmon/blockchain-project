@@ -15,7 +15,7 @@ export default component$(() => {
 			<h1>Get Blocks</h1>
 			<Resource
 				resource={blocksResource}
-				onPending={() => <>Loading...</>}
+				onPending={() => <div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">Loading...</div>}
 				onRejected={(error) => <>Error: {error.message}</>}
 				onResolved={(blocks) => (
 					<ul>

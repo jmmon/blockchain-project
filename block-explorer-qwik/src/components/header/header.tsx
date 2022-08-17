@@ -17,8 +17,8 @@ export default component$(() => {
           <a href="/info" class={{ active: pathname.startsWith('/info') }}>
             Blockchain Info
           </a>
-          <a href="/accounts" class={{ active: pathname.startsWith('/accounts') }}>
-            Accounts
+          <a href="/addresses" class={{ active: pathname.startsWith('/addresses') }}>
+            Addresses
           </a>
           <a href="/transactions" class={{ active: pathname.startsWith('/transactions') }}>
             Transactions

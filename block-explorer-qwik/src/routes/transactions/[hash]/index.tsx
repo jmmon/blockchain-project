@@ -19,26 +19,8 @@ export default component$(() => {
 
 					return (
 						<>
-						<h4>{`Hash: ${params.hash}:`}</h4>
-						<Transaction transaction={transaction} />
-						{/* <ul class="ml-2">{"{"}
-							{Object.keys(transaction).map((txKey) => {
-								if (txKey === 'transferSuccessful') {
-									return (<li class="ml-4">{txKey}: {transaction[txKey] ? "true" : "false"},</li>)
-
-								}
-								if (txKey === 'senderSignature') {
-									return (<li class="ml-4">{`${txKey}: [`}
-										<ul class="ml-4">
-											<li class="ml-4">a: {transaction[txKey][0]},</li>
-											<li class="ml-4">b: {transaction[txKey][1]},</li>
-										</ul>
-									{"],"}</li>
-									)
-								}
-								return (<li class="ml-4">{txKey}: {transaction[txKey]},</li>)
-							})}
-						{"}"}</ul> */}
+							<h4>{`Hash: ${params.hash}:`}</h4>
+							<Transaction transaction={transaction} />
 						</>
 					);
 				}}
@@ -51,6 +33,12 @@ export const head: DocumentHead = {
   title: 'Confirmed Transactions',
 };
 
+// onGet: as page loads, request data along with the page from the server
+// fetch: client fetches data after page loads?
+
+// so fetch is for dynamic input, like user typing in something to a box
+// onGet is for loading content after we already know what we're looking for, so the server can fetch it for us and then send it to us inside the page
+
 export const onGet: RequestHandler<EndpointData> = async ({params, response}) => {
 	const data = await getTransaction(params.hash);
 	if (data.errorMsg) {
@@ -61,8 +49,6 @@ export const onGet: RequestHandler<EndpointData> = async ({params, response}) =>
 	response.headers.set('Cache-Control', 'no-cache, no-store, no-fun');
 	return data;
 }
-
-
 
 export async function getTransaction(
 	hash: string,
@@ -80,19 +66,3 @@ export async function getTransaction(
 	}
 	return responseJson;
 }
-
-// let Signature: string;
-
-// type Transaction = {
-// 	from: string;
-// 	to: string;
-// 	value: number;
-// 	fee: number;
-// 	dateCreated: string;
-// 	data: string;
-// 	senderPubKefy: string;
-// 	transactionDataHash: string;
-// 	senderSignature: Array<Signature>;
-// 	minedInBlockIndex: number;
-// 	transferSuccessful: boolean;
-// };
