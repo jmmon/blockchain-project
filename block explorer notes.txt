@@ -3,13 +3,26 @@ Implement block explorer as web app
 	Optionally, it may hold faucet app functionality inside it
 
 Block explorer functionality:
-	view blocks,
-	view confirmed transactions,
-	view pending transactions,
+	view blocks,		(( DONE ))
+	view confirmed transactions, (( DONE ))
+	view pending transactions, (( DONE ))
 	view accounts & balances,
 	view peers "view peers map",
 	view network difficulty,
 
+some routes to cover: address/:address/balance, address/:address/transactions, /balances (all)
+	:address == :account
+	:address/transactions could be accessible from Transactions page
+
+
+
+blockchain info / balances (all balances)
+OR
+addresses (all balances of all addresses i.e. all balances),
+	blockchain info can link to this page
+
+addresses / [address] (lookup address balance)
+addresses / [address] / transactions
 
 
 
