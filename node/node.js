@@ -3,17 +3,18 @@ const crypto = require("node:crypto");
 const cors = require('cors');
 const Blockchain = require("../blockchain/blockchain");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
-const port = undefined;
-const host = undefined;
 
 const blockchain = new Blockchain();
+const host = blockchain.config.defaultServerHost;
+const port = blockchain.config.defaultServerPort;
 
 const nodeInfo = {
 	nodeId: nodeIdentifier,
-	host: host ?? blockchain.config.defaultServerHost,
-	port: port ?? blockchain.config.defaultServerPort,
-	selfUrl: `http://${this.host}:${this.port}`,
+	host,
+	port,
+	selfUrl: `http://${host}:${port}`,
 };
+console.log(nodeInfo.selfUrl);
 
 console.log({ nodeIdentifier: nodeInfo.nodeId });
 console.log(blockchain);
@@ -24,6 +25,8 @@ app.use(express.json());
 
 app.set("blockchain", blockchain);
 app.set("nodeInfo", nodeInfo);
+
+// console.log(blockchain.addressIsValid("eae972db2776e38a75883aa2c0c3b8cd506b004b"));
 
 /* 
 NODE:

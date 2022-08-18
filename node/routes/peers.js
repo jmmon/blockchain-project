@@ -24,6 +24,8 @@ router.post("/connect", async (req, res) => {
 
 	console.log(`TODO: synchronize chain with peer`);
 // TODO: synchronize:
+// if already connected (409), or if new connection was successful (200):
+//  	perform a chain synchronization!
 // 	if (response.status === 200) {
 // 		console.log('*Peer successfully connected*');
 // 		console.log(`--Attempting synchronization...`);
@@ -46,6 +48,10 @@ router.post("/notify-new-block", (req, res) => {
 	//data == {blocksCount: number, cumulativeDifficulty: number, nodeUrl: nodeUrl}
 
 	//what then???
+	// Validate the new block (transactions, etc)
+	// add the block to our chain
+	// re-sync pending transactions?
+	//
 
 	const response = {
 		message: `Thank you for the notification.`

@@ -172,7 +172,7 @@ class Blockchain {
 		};
 	}
 
-	getTransactionDataHash({
+	hashTransactionData({
 		from,
 		to,
 		value,
@@ -212,7 +212,7 @@ class Blockchain {
 			dateCreated,
 			data,
 			senderPubKey,
-			this.getTransactionDataHash({
+			this.hashTransactionData({
 				from,
 				to,
 				value,
@@ -247,6 +247,13 @@ class Blockchain {
 		return false;
 	}
 
+	addPeer(nodeIdentifier, peerUrl) {
+		this.peers.add({
+			[nodeIdentifier]: peerUrl,
+		});
+		console.log(`--added!`);
+	}
+
 	async registerPeer({ nodeIdentifier, peerUrl }) {
 		// if nodeId is already connected, don't try to connect again
 		if (this.peers.get(nodeIdentifier)) {
@@ -259,6 +266,14 @@ class Blockchain {
 		console.log(`verifying peer's chainID...`);
 		const response = await fetch(`${peerUrl}/info`);
 		const peerInfo = await response.json();
+
+		if (response.statusCode !== 200) {
+			return {
+				status: 404,
+				message: `Network error! Could not get peer's chainId!`,
+			};
+		}
+
 		if (response.statusCode === 200) {
 			const isSameChain =
 				this.config.genesisBlock.chainId === peerInfo["chainId"];
@@ -271,22 +286,15 @@ class Blockchain {
 					peerChainId,
 				};
 			}
-			console.log(`--verified!`);
-		} else {
-			return {
-				status: 404,
-				message: `Network error! Could not get peer's chainId!`,
-			};
 		}
 
-		console.log(`adding node to our list...`);
-		this.peers.add({
-			[nodeIdentifier]: peerUrl,
-		});
-		console.log(`--added!`);
+		console.log(`--verified! (Chain ID matches, adding node to our list)`);
+		
+		this.addPeer(nodeIdentifier, peerUrl);
 
-		//synchronize chain and pending transactions?
-		syncPeerChain(peerInfo, peerUrl);
+
+		//synchronize chain AND pending transactions?
+		const syncResult = syncPeerChain(peerInfo, peerUrl);
 
 		// send request to other node to connect to our node
 		console.log(`asking other node to friend us back...`);
@@ -315,37 +323,49 @@ class Blockchain {
 		).json();
 	}
 
+	// TODO: this will be called when we are validating the chain
+	validateTransactions(block) {
+		// TODO
+		return true;
+	}
+
+	// validating chain when synchronizing with another node:
 	//validate genesis block, should be exactly the same
 	//validate each block from first to last:
-	//validate that all block fields are present && with valid values
-	//validate transactions in the block:
-	//validate transaction fields and values; recalc transactionDataHash; validate signature;
-	//re-execute all transactions?; re-calculate values of minedInBlockIndex and transferSuccessful fields;
-	//recalculate blockDataHash && blockHash
-	//ensure blockHash matches difficulty
-	//validate prevBlockHash === hash of previous block
+	//	validate that all block fields are present && with valid values
+	//	validate transactions in the block:
+	//		validate transaction fields and values; 
+	// 		recalculate transactionDataHash; 
+	//		validate signature;
+	//		re-execute all transactions?; 
+	//		recalculate values of minedInBlockIndex and transferSuccessful fields;
+	//	recalculate blockDataHash && blockHash
+	//	ensure blockHash matches difficulty
+	//	validate prevBlockHash === hash of previous block
 	//recalculate cumulative difficulty of incoming chain
 	//if > this.cumulativeDifficulty:
-	//replace current chain with incoming chain
-	//clear all current mining jobs (they are invalid)
+	//	replace current chain with incoming chain
+	//	clear all current mining jobs (they are invalid)
 
 	//calculate cumulative difficulty: ????
 	//(note: difficulty for difficulty(p) === 16 * difficulty(p-1))
 	//cumulativeDifficulty == how much effort spent to calculate it
 	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
 	//where d0, d1, ... dn == difficulties of the individual blocks
+
+	// takes chain, returns true or false;
 	validateChain(chain) {
-		let lastBlock = chain[0];
+		let previousBlock = chain[0];
 		let currentIndex = 1;
 
 		while (currentIndex < chain.length) {
 			const block = chain[currentIndex];
-			console.log(lastBlock);
+			console.log(previousBlock);
 			console.log(block);
 			console.log("\n--------\n");
 
 			//check hash of previous block
-			if (block["prevBlockHash"] !== this.hash(lastBlock)) {
+			if (block["prevBlockHash"] !== this.hash(previousBlock)) {
 				console.log("Previous hash does not match!");
 				return false;
 			}
@@ -355,44 +375,65 @@ class Blockchain {
 				return false;
 			}
 
-			lastBlock = block;
+			// TODO: validate transactions in this current block
+			if (!this.validateTransactions(block)) {
+				console.log("Invalid transactions found!");
+				return false;
+			}
+
+
+			previousBlock = block;
 			currentIndex++;
 		}
 
 		return true;
 	}
 
+	// synchronize chain AND
+	// TODO: sync pending transactions
 	async syncPeerChain(peerInfo, peerUrl) {
 		console.log(`Attempting sync with new peer...`);
+		const response = await fetch(`${peerUrl}/blocks`);
+		const theirChain = await response.json();
+		let result = {valid: null, error: null};
+
+		// Theirs has more work, so we switch to theirs:
 		if (peerInfo.cumulativeDifficulty > this.cumulativeDifficulty) {
-			//download chain from /blocks
+			// TODO: 
 			//validate chain (blocks, transactions, etc??)
 			//if valid, replace our chain and notify peers about the new chain??
+
+			// Then ours will match theirs, so no need to check the length and validate again (below)
+
+			// return
 		}
+
 
 		const ourChainLength = this.chain.length;
 
-		const response = await fetch(`${peerUrl}/blocks`);
 		if (response.statusCode === 200) {
-			const chain = await response.json();
-			const length = chain.length;
+			const theirChainLength = theirChain.length;
 
-			if (length > ourChainLength) {
-				if (this.validateChain(chain)) {
-					this.chain = chain;
-					return true;
+			if (theirChainLength > ourChainLength) {
+				// theirs is longer, validate and save to our node
+				// 		is this necessary? If their length is longer, their cumulativeDifficulty would be longer so this would catch above instead of down here...
+				if (this.validateChain(theirChain)) {
+					this.chain = theirChain;
+					// TODO: sync pending transactions?
+					result = {valid: true, error: null};
 				} else {
-					console.log(`Error: Peer chain is not valid`);
+					result = {valid: false, error: 'Peer chain is not valid'};
 				}
 			} else {
 				// our chain is longer
-				console.log(`--Our chain is longer`);
+				result = {valid: false, error: 'Our chain is longer'};
 			}
 		} else {
-			console.log(`Error: cannot get peer chain`);
+			result = {valid: false, error: 'Cannot get peer chain'};
 		}
 
-		return false;
+		console.log(result);
+		return result;
 	}
 
 	synchronizePendingTransactions(peerUrl) {
@@ -441,14 +482,7 @@ class Blockchain {
 		return this.chain[this.chain.length - 1];
 	}
 
-	// // increase block nonce until block hash is valid
-	// proofOfWork(block) {
-	// 	while (!this.validProof(block)) {
-	// 		block["nonce"] += 1;
-	// 	}
-	// }
-
-	//check if hash starts with 4 zeros; 4 being the difficulty
+	//check if hash starts with {difficulty} zeros;
 	validProof(block, difficulty = this.difficulty) {
 		return this.validHash(this.hash(block), difficulty);
 	}
@@ -487,10 +521,7 @@ class Blockchain {
 		transaction,
 		lastBlockIndex = this.getLastBlock().index
 	) {
-		// console.log({transaction});
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
-		// console.log({transactionBlockIndex});
-		// console.log({lastBlockIndex});
 		if (typeof transactionBlockIndex !== "number") return 0;
 		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
@@ -786,7 +817,10 @@ class Blockchain {
 	}
 
 	addressIsValid(address) {
+		//check length
 		if (address.length !== 40) return false;
+		// check all 40 chars are hex
+		if (address.match(/[0-9a-fA-F]+/g)[0].length !== 40) return false;
 		// other validations ....?
 		return true;
 	}

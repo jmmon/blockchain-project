@@ -7,8 +7,8 @@ Block explorer functionality:
 	view confirmed transactions, (( DONE ))
 	view pending transactions, (( DONE ))
 	view accounts & balances, (( DONE ))
-	view peers "view peers map",
-	view network difficulty,
+	view peers "view peers map", (( DONE ?????? ))
+	view network difficulty, (( DONE ))
 
 some routes to cover: address/:address/balance, address/:address/transactions, /balances (all) 	(( DONE ))
 	:address == :account
@@ -37,10 +37,11 @@ TODO: Add links where I can: (( DONE ))
 	Block:
 		minedBy: Address: link to the address page
 
+		click each transactionDataHash to go to that transaction lookup page
+
+
+Other links:
+	Block:	
 		(index: could link to the same page... probably not.)
 		
 		(prevBlockHash: link to the block? Look up block by hash?)
-
-TODO: (more links)
-	Block:
-		click each transactionDataHash to go to that transaction lookup page
