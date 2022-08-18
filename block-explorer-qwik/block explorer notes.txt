@@ -26,19 +26,8 @@ addresses / [address] / transactions
 
 
 
-TODO: Make data cross-link to other routes, i.e.:
-	transaction lookup: 
-		click the minedInBlockIndex to go to the blocks/{id} page
-	Block ID lookup: 
-		click each transaction (or transactionDataHash) to go to that transaction lookup page
-	address lookup: 
-		click the addresses (from or to) in the transaction; or clikc the address in the block (the miner address) to pull up the address info
-
-
-
-
-Linking pages:
-TODO: Add links where I can:
+Make data cross-link to other routes:
+TODO: Add links where I can: (( DONE ))
 	Transactions:
 		Addresses: link to address lookup for this address
 			{from, to}
@@ -51,3 +40,7 @@ TODO: Add links where I can:
 		(index: could link to the same page... probably not.)
 		
 		(prevBlockHash: link to the block? Look up block by hash?)
+
+TODO: (more links)
+	Block:
+		click each transactionDataHash to go to that transaction lookup page
