@@ -5,6 +5,15 @@ export default function component$({block}: Props) {
 	return (<ul>
 		{"{"}
 		{Object.keys(block).map((key) => {
+			if (key === 'index') {
+				return (
+					<li class="ml-2">
+						<a href={`#`}>
+							{key}: {block[key]}
+						</a>,
+					</li>
+				);
+			}
 			if (key === 'minedBy') {
 				return (
 					<li class="ml-2">
