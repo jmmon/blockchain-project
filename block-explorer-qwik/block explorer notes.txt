@@ -47,5 +47,7 @@ TODO: Add links where I can:
 
 	Block:
 		minedBy: Address: link to the address page
+
 		(index: could link to the same page... probably not.)
+		
 		(prevBlockHash: link to the block? Look up block by hash?)
