@@ -6,11 +6,11 @@ Block explorer functionality:
 	view blocks,		(( DONE ))
 	view confirmed transactions, (( DONE ))
 	view pending transactions, (( DONE ))
-	view accounts & balances,
+	view accounts & balances, (( DONE ))
 	view peers "view peers map",
 	view network difficulty,
 
-some routes to cover: address/:address/balance, address/:address/transactions, /balances (all)
+some routes to cover: address/:address/balance, address/:address/transactions, /balances (all) 	(( DONE ))
 	:address == :account
 	:address/transactions could be accessible from Transactions page
 
@@ -19,7 +19,7 @@ some routes to cover: address/:address/balance, address/:address/transactions, /
 blockchain info / balances (all balances)
 OR
 addresses (all balances of all addresses i.e. all balances),
-	blockchain info can link to this page
+	blockchain info can link to this page (( DONE ))
 
 addresses / [address] (lookup address balance)
 addresses / [address] / transactions
@@ -33,3 +33,19 @@ TODO: Make data cross-link to other routes, i.e.:
 		click each transaction (or transactionDataHash) to go to that transaction lookup page
 	address lookup: 
 		click the addresses (from or to) in the transaction; or clikc the address in the block (the miner address) to pull up the address info
+
+
+
+
+Linking pages:
+TODO: Add links where I can:
+	Transactions:
+		Addresses: link to address lookup for this address
+			{from, to}
+		block index: link to that block page
+			{minedInBlockIndex}
+
+	Block:
+		minedBy: Address: link to the address page
+		(index: could link to the same page... probably not.)
+		(prevBlockHash: link to the block? Look up block by hash?)
