@@ -8,7 +8,9 @@ export default function component$({block}: Props) {
 			if (key === 'minedBy') {
 				return (
 					<li class="ml-2">
-						{key}: <a href={`/addresses/${block[key]}`}>{block[key]}</a>,
+						<a href={`/addresses/${block[key]}`}>
+							{key}: {block[key]}
+						</a>,
 					</li>
 				);
 			}
