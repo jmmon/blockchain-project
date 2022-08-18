@@ -28,6 +28,7 @@ export default component$(() => {
           );
         }}
       />
+      <a href={`/addresses/${params.address}/transactions`}>View Transactions...</a>
     </div>
   );
 });
