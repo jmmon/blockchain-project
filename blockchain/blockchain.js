@@ -1,7 +1,7 @@
 const fetch = import("node-fetch");
 const crypto = require("crypto");
-const Transaction = require("./Transaction");
-const Block = require("./Block");
+const Transaction = require("./classes/Transaction");
+const Block = require("./classes/Block");
 
 const SHA256 = (message) =>
 	crypto.createHash("sha256").update(message).digest("hex");
@@ -18,7 +18,7 @@ class Blockchain {
 		this.config = config;
 		this.chain = [];
 		this.pendingTransactions = [];
-		this.nodes = new Set();
+		this.peers = new Set();
 		this.miningJobs = new Map(); // blockDataHash => blockCandidate
 		this.difficulty = this.config.startDifficulty;
 		this.cumulativeDifficulty = 0; // initial value
@@ -29,12 +29,12 @@ class Blockchain {
 		this.chain = [this.chain[0]]; // save genesis block
 		this.difficulty = this.config.startDifficulty;
 		this.pendingTransactions = [];
-		this.nodes = new Set();
+		this.peers = new Set();
 		return true;
 	}
 
 	getPeersList() {
-		return Array.from(this.nodes);
+		return Array.from(this.peers);
 	}
 
 	//calculate cumulative difficulty:
@@ -249,7 +249,7 @@ class Blockchain {
 
 	async registerPeer({ nodeIdentifier, peerUrl }) {
 		// if nodeId is already connected, don't try to connect again
-		if (this.nodes.get(nodeIdentifier)) {
+		if (this.peers.get(nodeIdentifier)) {
 			return {
 				status: 409,
 				errorMsg: `Already connected to peer ${peerUrl}`,
@@ -280,7 +280,7 @@ class Blockchain {
 		}
 
 		console.log(`adding node to our list...`);
-		this.nodes.add({
+		this.peers.add({
 			[nodeIdentifier]: peerUrl,
 		});
 		console.log(`--added!`);
