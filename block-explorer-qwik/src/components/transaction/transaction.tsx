@@ -14,6 +14,24 @@ export default function component$({
 		<ul class="ml-2">
 			{`${typeof index === "number" ? `${index}: ` : ""}{`}
 			{Object.keys(transaction).map((txKey) => {
+				if (txKey === "from" || txKey === "to") {
+					return (
+						<li class="ml-4">
+							<a href={`/addresses/${transaction[txKey]}`}>
+								{txKey}: {transaction[txKey]}
+							</a>,
+						</li>
+					);
+				}
+				if (txKey === "minedInBlockIndex") {
+					return (
+						<li class="ml-4">
+							<a href={`/blocks/${transaction[txKey]}`}>
+								{txKey}: {transaction[txKey]}
+							</a>,
+						</li>
+					);
+				}
 				if (txKey === "transferSuccessful") {
 					return (
 						<li class="ml-4">
