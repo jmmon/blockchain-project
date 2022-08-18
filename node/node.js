@@ -1,7 +1,7 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const cors = require('cors');
-const Blockchain = require("./Blockchain/Blockchain.js");
+const Blockchain = require("../blockchain/blockchain");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
 const port = undefined;
 const host = undefined;
@@ -60,11 +60,11 @@ app.get("/info", (req, res) => {
 		nodeId: nodeInfo.nodeId,
 		chainId: blockchain.config.genesisBlock.blockHash,
 		nodeUrl: nodeInfo.selfUrl,
-		peers: blockchain.nodes.size,
+		peers: blockchain.peers.size,
 		currentDifficulty: blockchain.difficulty,
 		blocksCount: blockchain.chain.length,
 		cumulativeDifficulty: blockchain.cumulativeDifficulty,
-		confirmedTransactions: "number of transactions in blocks",
+		confirmedTransactions: blockchain.getConfirmedTransactions().length,
 		pendingTransactions: blockchain.pendingTransactions.length,
 	};
 
