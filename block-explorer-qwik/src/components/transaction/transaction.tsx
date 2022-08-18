@@ -1,10 +1,20 @@
 import { component$ } from "@builder.io/qwik";
+import { useLocation } from "@builder.io/qwik-city";
 
-export default function component$({
-	transaction,
-	index,
-	totalTransactions,
-}: Props) {
+export default component$(
+	({
+		transaction,
+		index,
+		totalTransactions,
+	}: {
+		transaction: ITransaction;
+		index?: number;
+		totalTransactions?: number;
+	}) => {
+	const {pathname} = useLocation();
+
+	const isTransactionsPath = (pathname.substring(1).substring(0, pathname.substring(1).indexOf("/")) === "transactions");
+
 	let last = true;
 	if (totalTransactions) {
 		last = !(index < totalTransactions - 1);
@@ -35,7 +45,11 @@ export default function component$({
 				if (txKey === "transactionDataHash") {
 					return (
 						<li class="ml-4">
-							<a href={`/transactions/${transaction[txKey]}`}>
+							<a href={
+								 isTransactionsPath
+									? '#' 
+									:	`/transactions/${transaction[txKey]}`
+							}>
 								{txKey}: {transaction[txKey]}
 							</a>,
 						</li>
@@ -73,10 +87,5 @@ export default function component$({
 			{`}${last ? "" : ","}`}
 		</ul>
 	);
-}
+});
 
-interface Props {
-	transaction: ITransaction;
-	index?: number;
-	totalTransactions?: number;
-}

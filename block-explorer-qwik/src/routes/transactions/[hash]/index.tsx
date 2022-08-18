@@ -5,6 +5,7 @@ import Transaction from '../../../components/transaction/transaction';
 
 export default component$(() => {
 	const {params} = useLocation();
+	// console.log({href: location.href}); // full url
 	const resource = useEndpoint<typeof onGet>();
   return (
     <div>
