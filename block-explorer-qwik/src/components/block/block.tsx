@@ -5,6 +5,13 @@ export default function component$({block}: Props) {
 	return (<ul>
 		{"{"}
 		{Object.keys(block).map((key) => {
+			if (key === 'minedBy') {
+				return (
+					<li class="ml-2">
+						{key}: <a href={`/addresses/${block[key]}`}>{block[key]}</a>,
+					</li>
+				);
+			}
 			if (key === "transactions") {
 				const transactions = block[key];
 				const totalTransactions = transactions.length;
@@ -14,20 +21,6 @@ export default function component$({block}: Props) {
 							{transactions.map((transaction, index) => 
 							(
 								<Transaction transaction={transaction} index={index} totalTransactions={totalTransactions}/>
-								// <ul class="ml-2">{`${index}: {`}
-								// 	{Object.keys(transaction).map((txKey) => {
-								// 		if (txKey === 'senderSignature') {
-								// 			return (<li class="ml-2">{`${txKey}: [`}
-								// 				<ul class="ml-2">
-								// 					<li class="ml-2">a: {transaction[txKey][0]},</li>
-								// 					<li class="ml-2">b: {transaction[txKey][1]},</li>
-								// 				</ul>
-								// 			{"],"}</li>
-								// 			)
-								// 		}
-								// 		return (<li class="ml-2">{txKey}: {transaction[txKey]},</li>)
-								// 	})}
-								// {(transactions.length - 1 > index) ? "}," : "}"}</ul>
 								)
 							)}
 						</ul>
