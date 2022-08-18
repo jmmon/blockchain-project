@@ -3,10 +3,10 @@ import type { DocumentHead } from "@builder.io/qwik-city";
 
 export default component$(() => {
 	const blocksResource = useResource$(({ track, cleanup }) => {
-		// const controller = new AbortController();
-		// cleanup(() => controller.abort());
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
 
-		return getBlocks();
+		return getBlocks(controller);
 	});
 
 	console.log("render");
