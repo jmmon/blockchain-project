@@ -32,6 +32,15 @@ export default function component$({
 						</li>
 					);
 				}
+				if (txKey === "transactionDataHash") {
+					return (
+						<li class="ml-4">
+							<a href={`/transactions/${transaction[txKey]}`}>
+								{txKey}: {transaction[txKey]}
+							</a>,
+						</li>
+					);
+				}
 				if (txKey === "transferSuccessful") {
 					return (
 						<li class="ml-4">
