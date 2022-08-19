@@ -122,9 +122,8 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		const signature = Buffer.from(
 			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		);
-	
 		const [r, s] = splitSignature(signature);
-	
+
 		response = {data: [r, s], error: null};
 
 	} catch(err) {
@@ -133,7 +132,6 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	} finally {
 		return response;
 	}
-	
 };
 
 const removeSpaces = ({
@@ -246,6 +244,17 @@ const fetchAddressBalance = async (nodeUrl, address) => {
 	return await response.json();
 }
 
+const verifySignature = (txDataHash, publicKey, signature) => {
+	// h == txDataHash
+	// Q == their public key?
+	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, "hex"));
+	const publicKeyArray = Uint8Array.from(Buffer.from(publicKey, "hex"));
+	const signatureArray = Uint8Array.from(Buffer.from(signature.join(""), "hex"));
+	//rejoin our signature (r and s?)
+
+	return ecc.verify(txDataHashArray, publicKeyArray, signatureArray);
+}
+
 
 const walletUtils = {
 	generateWallet,
@@ -258,6 +267,7 @@ const walletUtils = {
 	decryptAndSign,
 	submitTransaction,
 	fetchAddressBalance,
+	verifySignature,
 	CONSTANTS,
 };
 
