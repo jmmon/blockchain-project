@@ -461,14 +461,16 @@ class Blockchain {
 		this.pendingTransactions.push(transaction);
 	}
 
-	// transaction
-	getTransactionByHash(transactionDataHash) {
+	searchPendingTransactionsForTransactionHash(transactionDataHash) {
 		//search pending transactions
 		for (const transaction of this.pendingTransactions) {
 			if (transaction?.transactionDataHash === transactionDataHash) 
 				return transaction;
-			
 		}
+		return false;
+	}
+
+	searchBlocksForTransactionHash(transactionDataHash) {
 		// search blocks (confirmed transactions)
 		for (const block of this.chain) {
 			for (const transaction of block.transactions) {
@@ -476,6 +478,22 @@ class Blockchain {
 					return transaction;
 				}
 			}
+		}
+		return false;
+	}
+
+	// transaction
+	getTransactionByHash(transactionDataHash) {
+		// //search pending transactions
+		const pendingFound = this.searchPendingTransactionsForTransactionHash(transactionDataHash);
+		if (pendingFound !== false) {
+			return pendingFound;
+		}
+
+		// search blocks (confirmed transactions)
+		const confirmedFound = this.searchBlocksForTransactionHash(transactionDataHash);
+		if (confirmedFound !== false) {
+			return confirmedFound;
 		}
 		return false;
 	}
@@ -537,14 +555,20 @@ class Blockchain {
 		return transactions; // returns empty array if none found
 	}
 
-	// transactions
-	getPendingTransactions(address = null) {
-		if (!address) return this.pendingTransactions;
+	getPendingTransactionsByAddress(address) {
 		return this.pendingTransactions.filter(
 			(transaction) =>
 				transaction.to === address || transaction.from === address
 		);
 	}
+
+	// transactions
+	getPendingTransactions(address = null) {
+		if (!address) return this.pendingTransactions;
+		return this.getPendingTransactionsByAddress(address);
+	}
+
+
 
 	/*
 	----------------------------------------------------------------
@@ -1046,7 +1070,6 @@ class Blockchain {
 
 	//return balance of address
 	//	crawl blockchain and build balances of address
-
 	// each successful RECEIVED transaction will ADD value
 	// all SPENT transactions SUBTRACT the transaction fee
 	// each successful SPENT transaction will SUBTRACT value
@@ -1157,8 +1180,6 @@ class Blockchain {
 
 		return balances;
 	}
-
-
 
 	// list all accounts that have non-zero CONFIRMED balance (in blocks)
 	// (The all-0's address - genesis address - will have a NEGATIVE balance)
