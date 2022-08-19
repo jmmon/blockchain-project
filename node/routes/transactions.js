@@ -38,7 +38,7 @@ router.get("/:tranHash", (req, res) => {
 
 
 // done
-router.post("/send", (req, res) => {
+router.post("/send", async (req, res) => {
 	console.log('transaction received...');
 	const blockchain = req.app.get('blockchain');
 	const signedTransaction = req.body;
@@ -49,11 +49,18 @@ router.post("/send", (req, res) => {
 		// validates transaction public key; validates signature
 		// checks sender account balance >= value + fee
 		// propagate transaction to all peer nodes! 
+		// to prevent infinite propagation loop:
+			// check that we don't have the transaction hash inside our pending transactions?
 
 
 	//check for missing data object
 	if (!signedTransaction) {
 		return res.status(400).send(JSON.stringify({errorMsg: "Missing all transaction data"}));
+	}
+	
+	//check for transactionHash in our pending transactions
+	if (blockchain.searchPendingTransactionsForTransactionHash(signedTransaction.transactionDataHash) !== false) {
+		return res.status(400).send(JSON.stringify({errorMsg: "Transaction already included in pending transactions"}));
 	}
 
 	//check for missing fields
@@ -124,7 +131,18 @@ router.post("/send", (req, res) => {
 
 	// need to propagate the transaction to other nodes!
 	// TODO
-	// Go through peers and send post requests to alert them of the new transaction (so they can add it to their pending transactions?)
+	// Go through peers and send post requests to send transaction to the nodes
+	const peers = blockchain.getPeersList();
+	peers.forEach((peer) => {
+		// send post request with transaction
+		// peer == {nodeIdentifier: peerUrl};
+		// TODO: change peers to an object, instead of a set/array of objects?
+		const peerUrl = Object.values(peer)[0];
+		// don't really need to await the responses, but will for testing purposes:
+		const response = await fetch(peerUrl, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(signedTransaction)});
+		const json = await response.json();
+		console.log(`Node ${Object.keys(peer)[0]} (${peerUrl}) response:\n----`, {json});
+	});
 
 
 	return res.status(200).send(JSON.stringify(newTransaction.transactionDataHash));
