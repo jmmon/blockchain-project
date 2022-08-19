@@ -59,6 +59,7 @@ router.post("/send", async (req, res) => {
 	}
 	
 	//check for transactionHash in our pending transactions
+	// should also check confirmed transactions??
 	if (blockchain.searchPendingTransactionsForTransactionHash(signedTransaction.transactionDataHash) !== false) {
 		return res.status(400).send(JSON.stringify({errorMsg: "Transaction already included in pending transactions"}));
 	}
@@ -130,7 +131,6 @@ router.post("/send", async (req, res) => {
 	blockchain.addPendingTransaction(newTransaction);
 
 	// need to propagate the transaction to other nodes!
-	// TODO
 	// Go through peers and send post requests to send transaction to the nodes
 	const peers = blockchain.getPeersList();
 	peers.forEach((peer) => {
