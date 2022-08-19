@@ -1,3 +1,17 @@
+const {	
+	generateWallet,
+	encrypt,
+	decrypt,
+	deriveKeysFromMnemonic,
+	signTransaction,
+	hashTransaction,
+	getAddressFromCompressedPubKey,
+	decryptAndSign,
+	submitTransaction,
+	fetchAddressBalance,
+	verifySignature,
+	CONSTANTS,
+} = import('../walletUtils/index.js');
 const fetch = import("node-fetch");
 const crypto = require("crypto");
 const Transaction = require("./classes/Transaction");
@@ -12,6 +26,7 @@ const SHA256 = (message) =>
 // 	sortedKeys.forEach((key) => (newObject[key] = object[key]));
 // 	return newObject;
 // };
+
 
 class Blockchain {
 	constructor(config = require("./config")) {
@@ -232,9 +247,9 @@ class Blockchain {
 	findTransactionByHash(transactionDataHash) {
 		//search pending transactions
 		for (const transaction of this.pendingTransactions) {
-			if (transaction?.transactionDataHash === transactionDataHash) {
+			if (transaction?.transactionDataHash === transactionDataHash) 
 				return transaction;
-			}
+			
 		}
 		// search blocks (confirmed transactions)
 		for (const block of this.chain) {
@@ -323,9 +338,85 @@ class Blockchain {
 		).json();
 	}
 
-	// TODO: this will be called when we are validating the chain
-	validateTransactions(block) {
+	validateFields(transaction) {
+		const requiredFields = ["from", "to", "value", "fee", "dateCreated", "data", "senderPubKey", "transactionDataHash", "senderSignature"];
+		let missing = [];
+		const incomingDataKeys = Object.keys(transaction);
+		for (const field of requiredFields) {
+			if (!incomingDataKeys.includes(field)) {
+				missing.push(field);
+			}
+		}
+		if (missing.length > 0) {
+			return {valid: false, missing}
+
+		}
+		return {valid: true, missing: null};
+	}
+
+	// TODO: this will be called when we are validating the (incoming peer) chain
+	validateBlockTransactions(block) {
 		// TODO
+	//	validate transactions in the block:
+	//		validate transaction fields and values;
+	// 		recalculate transactionDataHash; 
+	//		validate signature;
+	//		re-execute all transactions?; 
+	//		recalculate values of minedInBlockIndex and transferSuccessful fields;
+		const transactions = block.transactions;
+
+		transactions.forEach(transaction => {
+			const {
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+				transactionDataHash,
+				senderSignature,
+				minedInBlockIndex,
+				transferSuccessful,
+			} = transaction;
+			// validate fields/values
+				// check to be sure we have all fields
+				// check that the value of each field is correct
+			
+
+			// recalculate transactionDataHash
+				// take appropriate fields, hash it, and check that the hashes match
+			const newHash = this.hashTransactionData({
+				from,
+				to,
+				value,
+				fee,
+				dateCreated,
+				data,
+				senderPubKey,
+			});
+			if (transactionDataHash !== newHash) {
+				console.log('Transaction Data Hash validation failed:\nOriginal:', transactionDataHash, "\nOurs:", newHash);
+				return false;
+			}
+			
+			// validate signature
+				// ... check the signature was written by the sender public key? 
+			if (!verifySignature(transactionDataHash, senderPubKey, senderSignature)) {
+				return false;
+			}
+
+			// re-execute all transactions
+				// making sure that the inputs and outputs and fees add up?
+			
+
+
+			// re-calculate values of minedInBlockIndex && transferSuccessful
+				// minedInBlockIndex: check that the block index is correct? That this block has this transaction?
+				// transferSuccessful: make sure the transaction is included in a block ?
+			
+			// if any invalid, return false (with info about why??)
+		})
 		return true;
 	}
 
@@ -334,7 +425,7 @@ class Blockchain {
 	//validate each block from first to last:
 	//	validate that all block fields are present && with valid values
 	//	validate transactions in the block:
-	//		validate transaction fields and values; 
+	//		validate transaction fields and values;
 	// 		recalculate transactionDataHash; 
 	//		validate signature;
 	//		re-execute all transactions?; 
@@ -376,7 +467,7 @@ class Blockchain {
 			}
 
 			// TODO: validate transactions in this current block
-			if (!this.validateTransactions(block)) {
+			if (!this.validateBlockTransactions(block)) {
 				console.log("Invalid transactions found!");
 				return false;
 			}
@@ -511,9 +602,6 @@ class Blockchain {
 
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
 		const hash = SHA256(blockDataHash + "|" + timestamp + "|" + nonce);
-
-		// console.log("Validating mined block hash:", { hash: hash === blockHash, difficulty: this.validHash(hash, difficulty) });
-
 		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
@@ -761,11 +849,6 @@ class Blockchain {
 		);
 	}
 
-	// getBlockTime(block) {
-	// 	const blockIndex = block.index;
-	// 	return this.getBlockTimeByIndex(blockIndex);
-	// }
-
 	// step 1: find block candidate by its blockDataHash
 	// step 2: verify hash and difficulty
 	// step 3: if valid, add the new info to the block
@@ -816,11 +899,20 @@ class Blockchain {
 		};
 	}
 
-	addressIsValid(address) {
+	validateAddress(address) {
 		//check length
 		if (address.length !== 40) return false;
 		// check all 40 chars are hex
 		if (address.match(/[0-9a-fA-F]+/g)[0].length !== 40) return false;
+		// other validations ....?
+		return true;
+	}
+
+	validatePublicKey(pubKey) {
+		//check length
+		if (pubKey.length !== 65) return false;
+		// check all chars are hex
+		if (pubKey.match(/[0-9a-fA-F]+/g)[0].length !== 65) return false;
 		// other validations ....?
 		return true;
 	}
