@@ -25,7 +25,7 @@ router.get("/:tranHash", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {tranHash: transactionDataHash} = req.params;
 
-	const foundTransaction = blockchain.findTransactionByHash(transactionDataHash);
+	const foundTransaction = blockchain.getTransactionByHash(transactionDataHash);
 
 	if (foundTransaction) {
 		return res.status(200).send(JSON.stringify(foundTransaction));
@@ -114,7 +114,7 @@ router.post("/send", (req, res) => {
 
 	//check pendingTransactions for transaction with matching transactionDataHash (duplicate)
 	const newTransaction = blockchain.createTransaction(signedTransaction);
-	if (blockchain.findTransactionByHash(newTransaction.transactionDataHash)) {
+	if (blockchain.getTransactionByHash(newTransaction.transactionDataHash)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Invalid transaction: transaction is a duplicate!`}));
 	}
 
