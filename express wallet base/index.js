@@ -5,7 +5,6 @@ const session = require("express-session");
 const favicon = require("serve-favicon");
 const ejs = require("ejs");
 const URL = require("url").URL;
-// const cors = require("cors");
 
 const app = express();
 const PORT = 3003;
@@ -15,7 +14,6 @@ app.use(
 		maxAge: 0,
 	})
 );
-// app.use(cors());
 
 app.use(
 	session({
@@ -44,7 +42,7 @@ app.set("layout", "layouts/layout");
 // 	next();
 // })
 
-	/* testing target wallet
+/* testing target wallet
 	Your mnemonic is : prosper during cross void flower oyster unveil mercy multiply effort person illegal
 Generated Private Key fe203b722fbf8eac6d7281453e09d130573c774991189f35eb4b102f8af941f2
 Extracted Public Key 145fc6f57e917473c55c17c625c92f3cd811c6b9393501e30c01bde00a9ec6ef0
@@ -71,12 +69,10 @@ const authChecker = (req, res, next) => {
 			fetchAddressBalance,
 		},
 	} = await import("../walletUtils/index.js");
-	const { default: fetch } = await import("node-fetch");
+	// const { default: fetch } = await import("node-fetch");
 
 	app.get("/", async (req, res) => {
 		const active = "index";
-		
-
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
@@ -92,12 +88,40 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	//  Create endpoint
+	//  Create
 	app.get("/create", (req, res) => {
 		const active = "create";
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
+		});
+	});
+
+	app.get("/recover", (req, res) => {
+		const active = "recover";
+		drawView(res, active, {
+			wallet: req.session.wallet,
+			active,
+		});
+	});
+
+	app.get("/balance", authChecker, (req, res) => {
+		const active = "balance";
+		const wallet = req.session.wallet;
+		console.log(req.session.wallet);
+		drawView(res, active, {
+			wallet,
+			active,
+		});
+	});
+
+	app.get("/send", authChecker, (req, res) => {
+		const active = "send";
+		drawView(res, active, {
+			wallet: req.session.wallet,
+			active,
+			transactionInfo: req.session.transactionInfo,
+			signedTransaction: req.session.signedTransaction,
 		});
 	});
 
@@ -154,14 +178,6 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.get("/recover", (req, res) => {
-		const active = "recover";
-		drawView(res, active, {
-			wallet: req.session.wallet,
-			active,
-		});
-	});
-
 	//recover wallet
 	app.post("/recover", async (req, res) => {
 		const active = "recover";
@@ -171,7 +187,13 @@ const authChecker = (req, res, next) => {
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
-		redrawForInvalidPasswords(password, repeatPassword, res, active, mnemonic);
+		redrawForInvalidPasswords(
+			password,
+			repeatPassword,
+			res,
+			active,
+			mnemonic
+		);
 
 		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
 			mnemonic
@@ -218,16 +240,6 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.get("/balance", authChecker, (req, res) => {
-		const active = "balance";
-		const wallet = req.session.wallet;
-		console.log(req.session.wallet);
-		drawView(res, active, {
-			wallet,
-			active,
-		});
-	});
-
 	app.post("/balance", async (req, res) => {
 		const active = "balance";
 		const password = req.body.password;
@@ -243,9 +255,12 @@ const authChecker = (req, res, next) => {
 		}
 
 		// decrypt wallet and add to session
-		const encrypted = {IV: req.session.wallet.IV, encrypted: req.session.wallet.encryptedMnemonic}
-		const {data, error} = decrypt(encrypted, password);
-		console.log('balance decrypted wallet:', data);
+		const encrypted = {
+			IV: req.session.wallet.IV,
+			encrypted: req.session.wallet.encryptedMnemonic,
+		};
+		const { data, error } = decrypt(encrypted, password);
+		console.log("balance decrypted wallet:", data);
 		if (error) {
 			drawView(res, active, {
 				wallet: req.session.wallet,
@@ -255,12 +270,14 @@ const authChecker = (req, res, next) => {
 			return;
 		}
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(data);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
+			data
+		);
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
 		const balances = await fetchAddressBalance(nodeUrl, address);
-		console.log("fetched data json:", {balances});
+		console.log("fetched data json:", { balances });
 
 		drawView(res, active, {
 			wallet: req.session.wallet,
@@ -269,29 +286,20 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.get("/send", authChecker, (req, res) => {
-		const active = "send";
-		drawView(res, active, {
-			wallet: req.session.wallet,
-			active,
-			transactionInfo: req.session.transactionInfo,
-			signedTransaction: req.session.signedTransaction,
-		});
-	});
-
 	// have send view handle signing and sending:
 	// if we have signed transaction, we attempt the send;
 	// otherwise we sign transaction and reload the send view with the signed data
+
 	app.post("/send", async (req, res) => {
 		const active = "send";
 		const wallet = req.session.wallet;
 		const nodeUrl = req.body.nodeUrl;
-		
+
 		if (!req.session.signedTransaction) {
 			// Sign the transaction data
 			// save it to session
 			// redraw this page with signed transaction
-			
+
 			const recipient = req.body.recipient;
 			const amount = req.body.amount;
 			const password = req.body.password;
@@ -317,8 +325,13 @@ const authChecker = (req, res, next) => {
 			}
 
 			// decrypt and sign errors
-			const {data, error} = await decryptAndSign(wallet, recipient, amount, password);
-			console.log("decryptAndSign:", {data, error});
+			const { data, error } = await decryptAndSign(
+				wallet,
+				recipient,
+				amount,
+				password
+			);
+			console.log("decryptAndSign:", { data, error });
 			if (error) {
 				drawView(res, active, {
 					wallet,
@@ -326,16 +339,16 @@ const authChecker = (req, res, next) => {
 					error: error,
 				});
 				return;
-			} 
+			}
 
 			// fetch balance to see if the transaction will work
 			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
-			console.log("fetched data json:", {balances});
+			console.log("fetched data json:", { balances });
 			if (balances.confirmedBalance < amount) {
 				drawView(res, active, {
 					wallet,
 					active,
-					error: 'Your account does not have enough funds!',
+					error: "Your account does not have enough funds!",
 				});
 				return;
 			}
@@ -345,7 +358,7 @@ const authChecker = (req, res, next) => {
 				signedTransaction: data,
 				nodeUrl,
 			};
-			
+
 			// success
 			req.session.transactionInfo = transactionInfo;
 			req.session.signedTransaction = data;
@@ -357,7 +370,6 @@ const authChecker = (req, res, next) => {
 					signedTransaction: data,
 				});
 			});
-
 		} else {
 			// Send the transaction, redraw with success message
 			const signedTransaction = req.session.signedTransaction;
@@ -377,7 +389,10 @@ const authChecker = (req, res, next) => {
 			}
 
 			//submit transaction error
-			const {data, error} = await submitTransaction(nodeUrl, signedTransaction);
+			const { data, error } = await submitTransaction(
+				nodeUrl,
+				signedTransaction
+			);
 			req.session.signedTransaction = undefined;
 			if (error) {
 				drawView(res, active, {
@@ -402,7 +417,7 @@ const authChecker = (req, res, next) => {
 		}
 	});
 
-	// Preset helper functions ===
+	// Helper functions 
 
 	const redrawForInvalidPasswords = (
 		password,

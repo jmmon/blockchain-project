@@ -10,3 +10,114 @@ Not calculating correctly after coin is submitted into transaction...
 
 Wallet: Recover:
 	Should check the mnemonic to be sure it is a list of words, 12-24 multiples of 3
+
+
+
+
+
+
+October 8th:
+	Peer Connections/Syncing:
+
+		Transactions: when sending transaction, 
+			the node should validate, add to "pending transactions", and then send the transaction to all peer nodes through the REST API
+
+		Mining: When miner submits POW hash, 
+			the node should find the block candidate, verify the hash + its difficulty, builds the next block, then
+				if the block is still not mined, the chain is extended (other miners can be faster and expire the block)
+					then all peers are notified about the new mined block (through rest API)
+
+		Peers:
+			Each node is connected to a few peers, not to all peers! (maybe need a limit? first 10 peers found? or random nodes making up some percent of the total found peers?)
+
+			peers described as map(nodeId => url)
+
+			Connecting a peer: always keep the connections bi-directional i.e. 
+				if node is already connected, return "409 conflict"
+				if chain ID doesn't match, return "400 Bad Request"
+				else, return "200 OK" i.e. "Connected to peer {url}"
+
+			To avoid double-connecting,
+			  first do /get and check the nodeID, and never connect to same nodeId twice
+
+
+			Notifying Peers:
+				A peer should notify all connected peers when:
+					- new block is mined
+					- new valid block is received from some peer (received block has been validated)
+					- A better chain was found from a peer (and validated)
+
+				When a change in the chain occurs (if the chain cumulative difficulty is increased):
+					- the node should send a notification to all connected peers
+
+					The notified node should then 
+						- check if the new block creates a better chain (cumulative difficulty increases) 
+						- and then accept the new chain:
+							
+							The chain is downloaded from nodeUrl/blocks using an additional HTTP Request (could be sent over a web socket)
+			
+			Extra peer functionality:
+				Delete lost peers:
+					If a peer is contacted and does not respond, delete it from the pees list
+					if /info does not return correct peerId (or does not respond), delete it
+					may run this check once per minute or when you send a notification about a new block
+
+			Testing Peers:
+				Run 4 nodes: 5555-5558
+				Connect them in two separate networks (5555+5556, 5557+5558)
+				Mine in the first node, and in the last node
+				connect the two separate networks ?? (just add peer?)
+					Check how the higher difficulty chain wins the consensus and the other nodes lose their chain
+
+			Testing Faucet + Explorer:
+				Run + Test the Faucet
+					make sure it works;
+					try to be greedy, it should reject you
+				Block explorer:
+					Explore blocks, mined transactions, pending transactions, accounts & balances, peers (view peers / connect to different peers)
+				Node + other components:
+					Unit tests + integration tests + system tests (extra ??)
+
+		Synchronizing:
+			After connection, try to synchronize the chain (if peer has a better chain) && synchronize the pending transactions
+			
+			So (if their chain is better) validate, then synchronize (start with just synchronize and add validation next)
+
+			To Synchronize Chain:
+				get /info, check cumulative difficulty,
+				if better chain, download it from get /blocks,
+				validate the chain (blocks, transactions),
+					(if valid) replace current chain with it
+				notify peers about the new chain thru rest API ?
+
+			To Synchronize Pending Transactions:
+				download /transactions/pending and append missing ones so long as their hash is not found in the chain nor in pending transactions
+
+			To Validate Chain:
+				Genesis block should be ===
+				Validate each  block: 
+					Walk the chain from genesis block
+						validate all block fields are present
+						validate all block fields have values
+
+						validate transactions in the block:
+							validate fields
+							validate values
+							recalculate transactionDataHash
+							validate signature
+
+						re-execute all transactions
+						re-calculate minedInBlockIndex && transferSuccessful fields
+						
+					 re-calculate blockDataHash && blockHash
+					 validate blockHash matches blockDifficulty
+					 validate prevBlockHash == hash of previous block
+				re-calculate the cumulative difficulty of the new chain
+				if cumulativeDifficulty > current, 
+					replace current with new chain
+					clear all current mining jobs
+
+
+
+					
+
