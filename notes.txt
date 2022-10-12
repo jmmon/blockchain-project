@@ -103,8 +103,13 @@ October 8th:
 						validate transactions in the block:
 							validate fields
 							validate values
-							recalculate transactionDataHash
+							recalculate transactionDataHash (throw away duplicate transactions)
+							validate public key
 							validate signature
+							check sender account balance >= value + fee
+							check value >= 0 && fee > minimumFee
+							(add it to pending transactions)
+							(send to all peer nodes)
 
 						re-execute all transactions
 						re-calculate minedInBlockIndex && transferSuccessful fields

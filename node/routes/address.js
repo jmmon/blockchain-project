@@ -24,7 +24,7 @@ router.get("/:address/balance", (req, res) => {
 		return;
 	}
 
-	res.status(200).send(JSON.stringify(blockchain.getBalancesOfAddress(address)));
+	res.status(200).send(JSON.stringify(blockchain.balancesOfAddress(address)));
 });
 
 

@@ -1,7 +1,9 @@
 const walletUtils = import("../../walletUtils/index.js");
 const { response } = require("express");
 const express = require("express");
+const { txBaseFields } = require( "../../blockchain/src/constants.js" );
 const router = express.Router();
+
 
 // works:
 //return pending transactions, (in mempool)
@@ -58,6 +60,21 @@ router.post("/send", async (req, res) => {
 	const signedTransaction = req.body;
 	console.log({ signedTransaction });
 
+	// Validate transaction:
+	// const {valid, errors} = validateTransaction(signedTransaction);
+	/* 
+		// check keys, values, check hash, check signature, more? check that the values add up like they should? Could check balances of addresses and make sure the last block balance + the new tx == the new block balance??
+	*/
+
+	// Add to pending transactions
+	// blockchain.pendingTransactions.add(signedTransaction)
+
+	// Send tx to peer nodes thru REST API (/transactions/send ?)
+// blockchain.propagateTransaction(signedTransaction);
+	// const promises = [];
+		// peers.forEach((peer) => promises.push(await fetch(`${peerUrl}/transactions/send`)))
+
+
 	//TODO: validate transaction data!!
 	// validates transaction public key; validates signature
 	// checks sender account balance >= value + fee
@@ -89,8 +106,8 @@ router.post("/send", async (req, res) => {
 			);
 	}
 
-	//check for missing fields
-	const result = blockchain.validateFields(signedTransaction);
+	//validate fields exist
+	const result = blockchain.validateFields(Object.keys(signedTransaction), txBaseFields);
 	if (result.valid !== true) {
 		return res
 			.status(400)
@@ -162,7 +179,7 @@ router.post("/send", async (req, res) => {
 
 	// sender account balance >= value + fee
 	// (NOT allowing sending of pending funds)
-	const balancesOfSender = blockchain.getBalancesOfAddress(
+	const balancesOfSender = blockchain.balancesOfAddress(
 		signedTransaction.from
 	);
 	if (
@@ -233,7 +250,7 @@ router.post("/send", async (req, res) => {
 
 	// need to propagate the transaction to other nodes!
 	// Go through peers and send post requests to send transaction to the nodes
-	const peers = blockchain.getPeersList();
+	const peers = blockchain.peers();
 	let responseList = [];
 	peers.forEach(async (peer) => {
 		// send post request with transaction

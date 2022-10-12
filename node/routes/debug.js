@@ -13,7 +13,7 @@ router.get("/", (req, res) => {
 		host: nodeInfo.host,
 		port: nodeInfo.port,
 		selfUrl: nodeInfo.selfUrl,
-		peers: blockchain.getPeersList(),
+		peers: blockchain.peers(),
 		chain: blockchain.chain,
 		chainId: blockchain.config.genesisBlock.blockHash,
 	};
@@ -28,7 +28,7 @@ router.get("/", (req, res) => {
 	// 	'...addr 4...': 0,
 	// };
 
-	const confirmedBalances = blockchain.getAllConfirmedAccountBalances();
+	const confirmedBalances = blockchain.allConfirmedAccountBalances();
 
 	const debugInfo = {
 		node,

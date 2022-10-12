@@ -1,8 +1,11 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const cors = require('cors');
-const Blockchain = require("../blockchain/blockchain");
 const nodeIdentifier = crypto.randomUUID().replaceAll("-", "");
+;(async function () {
+
+// const Blockchain = await import("../blockchain/src/blockchain.js");
+const Blockchain = require("../blockchain/src/index.js");
 
 const blockchain = new Blockchain();
 const host = blockchain.config.defaultServerHost;
@@ -78,8 +81,8 @@ app.get("/info", (req, res) => {
 // return ALL balances in the network
 //non-zero + confirmed (in blocks)
 app.get("/balances", (req, res) => {
-	const allBalances = blockchain.getAllConfirmedAccountBalances();
-	const balances = blockchain.filterOutNonZeroBalances(allBalances);
+	const allBalances = blockchain.allConfirmedAccountBalances();
+	const balances = blockchain.filterNonZeroBalances(allBalances);
 	console.log({allBalances, balances});
 	return res.status(200).send(JSON.stringify(balances));
 });
@@ -87,3 +90,5 @@ app.get("/balances", (req, res) => {
 app.listen(nodeInfo.port, () => {
 	console.log(`node listening on port ${nodeInfo.port}`);
 });
+
+})()
