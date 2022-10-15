@@ -1,3 +1,17 @@
+const {
+	generateWallet,
+	encrypt,
+	decrypt,
+	deriveKeysFromMnemonic,
+	signTransaction,
+	hashTransaction,
+	getAddressFromCompressedPubKey,
+	decryptAndSign,
+	submitTransaction,
+	fetchAddressBalance,
+	verifySignature,
+	CONSTANTS,
+} = import('../../walletUtils/index.js');
 // export interface ITransaction {
 // 		from: string;
 // 		to: string;
@@ -35,8 +49,10 @@ class Transaction {
 		dateCreated,
 		data,
 		senderPubKey,
-		transactionDataHash,
-		senderSignature
+		transactionDataHash = undefined,
+		senderSignature,
+		minedInBlockIndex = undefined,
+		transferSuccessful = undefined,
 		// from: string,
 		// to: string,
 		// value: number,
@@ -60,11 +76,8 @@ class Transaction {
 		this.senderPubKey = senderPubKey;
 		this.transactionDataHash = transactionDataHash;
 		this.senderSignature = senderSignature;
-		this.minedInBlockIndex = undefined;
-		this.transferSuccessful = undefined;
-
-		// this.minedInBlockIndex = minedInBlockIndex;
-		// this.transferSuccessful = transferSuccessful;
+		this.minedInBlockIndex = minedInBlockIndex;
+		this.transferSuccessful = transferSuccessful;
 	}
 
 	// What is a transaction? WWhat can a transaction do?
@@ -76,6 +89,18 @@ class Transaction {
 				Validate recalculated txDataHash,
 				validate signature
 	*/
+	// hashData() {
+	// 	this.transactionDataHash = hashTransaction({
+	// 		from: this.from,
+	// 		to: this.to,
+	// 		value: this.value,
+	// 		fee: this.fee,
+	// 		dateCreated: this.dateCreated,
+	// 		data: this.data,
+	// 		senderPubKey: this.senderPubKey,
+	// 	});
+	// 	return this.transactionDataHash;
+	// }
 }
 
 module.exports = Transaction;

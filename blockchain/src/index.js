@@ -1,14 +1,24 @@
-const fetch = import("node-fetch");
-const crypto = require("crypto");
+const fetch = import('node-fetch');
+const crypto = require('crypto');
 const {
 	CONFIG,
 	txBaseFields,
 	txAllFields,
 	blockBaseFields,
-	blockRequiredValues,
-} = require("./constants");
-const Transaction = require("./Transaction");
-const Block = require("./Block");
+	hexPattern,
+	// blockRequiredValues,
+} = require('./constants');
+const Transaction = require('./Transaction');
+const Block = require('./Block');
+const {
+	typeCheck,
+	invalidStringGen,
+	upperFirstLetter,
+	lengthCheck,
+	patternCheck,
+	valueCheck,
+	addFoundErrors,
+} = require('./valueChecks');
 const {
 	generateWallet,
 	encrypt,
@@ -22,10 +32,10 @@ const {
 	fetchAddressBalance,
 	verifySignature,
 	CONSTANTS,
-} = import("../../walletUtils/index.js");
+} = import('../../walletUtils/index.js');
 
 const SHA256 = (message) =>
-	crypto.createHash("sha256").update(message).digest("hex");
+	crypto.createHash('sha256').update(message).digest('hex');
 
 // const sortObjectByKeys = (object) => {
 // 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
@@ -112,12 +122,12 @@ class Blockchain {
 
 	// utils
 	validHash(hash, difficulty = this.config.startDifficulty || 1) {
-		return hash.slice(0, difficulty) === "0".repeat(difficulty);
+		return hash.slice(0, difficulty) === '0'.repeat(difficulty);
 	}
 
 	// blocks, utils
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
-		const hash = SHA256(blockDataHash + "|" + timestamp + "|" + nonce);
+		const hash = SHA256(blockDataHash + '|' + timestamp + '|' + nonce);
 		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
@@ -277,23 +287,148 @@ class Blockchain {
 
 	// validation, utils
 	validateAddress(address) {
-		//check length
-		const hexPattern = /^(0[xX])?[a-fA-F0-9]+$/g;
-		if (address.length !== 40) return false;
-		// check all 40 chars are hex
-		if (hexPattern.test(address)) return false;
-		// other validations ....?
-		return true;
+		const label = 'Address';
+		const typeResult = typeCheck({ label, value: address, type: 'string' });
+		const patternResult = patternCheck({
+			label,
+			value: address,
+			pattern: hexPattern,
+			expected: 'to be valid hex string',
+			actual: `not valid hex string`,
+		});
+		const lengthResult = lengthCheck({
+			label,
+			value: address,
+			expected: 40,
+			type: '===',
+		});
+
+		const missing = [typeResult, patternResult, lengthResult].filter(
+			(result) => result !== false
+		);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
 	}
 
 	// validation
 	validatePublicKey(pubKey) {
-		//check length
-		if (pubKey.length !== 65) return false;
-		// check all chars are hex
-		if (pubKey.match(/[0-9a-fA-F]+/g)[0].length !== 65) return false;
-		// other validations ....?
-		return true;
+		const label = 'SenderPubKey';
+		const results = [
+			typeCheck({ label, value: pubKey, type: 'string' }),
+			lengthCheck({
+				label,
+				value: pubKey,
+				expected: 65,
+				type: '===',
+			}),
+			patternCheck({
+				label,
+				value: pubKey,
+				pattern: hexPattern,
+				expected: 'to be hex string',
+				actual: 'is not hex string',
+			}),
+		];
+
+		const missing = results.filter((result) => result !== false);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
+	}
+
+	validateValue(value) {
+		let label = 'Value';
+		const results = [
+			typeCheck({
+				label,
+				value: value,
+				type: 'number',
+			}),
+			valueCheck({
+				label,
+				value: value,
+				expected: 0,
+				type: '>=',
+			}),
+		];
+		const missing = results.filter((result) => result !== false);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
+	}
+
+	validateFee(fee) {
+		let label = 'Fee';
+		const results = [
+			typeCheck({
+				label,
+				value: fee,
+				type: 'number',
+			}),
+			valueCheck({
+				label,
+				value: fee,
+				expected: this.config.minTransactionFee,
+				type: '>=',
+			}),
+		];
+		const missing = results.filter((result) => result !== false);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
+	}
+
+	validateData(data) {
+		const label = 'Data';
+		const results = [
+			typeCheck({
+				label,
+				value: data,
+				type: 'string',
+			}),
+		];
+		const missing = results.filter((result) => result !== false);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
+	}
+
+	validateDateCreated(dateCreated, prevDateCreated, currentTime) {
+		const label = 'DateCreated';
+		const results = [
+			typeCheck({
+				label,
+				value: dateCreated,
+				type: 'number',
+			}),
+
+			// should be before right now
+			dateCreated > currentTime
+				? invalidStringGen({
+						label,
+						expected: `transaction to be created before current time`,
+						actual: `transaction created ${
+							dateCreated - currentTime
+						}ms after current time`,
+				  })
+				: false,
+
+			// should be after previous transaction
+			prevDateCreated && dateCreated <= prevDateCreated
+				? invalidStringGen({
+						label,
+						expected: `prevTransaction to be created before block`,
+						actual: `transaction created ${
+							prevDateCreated - dateCreated
+						}ms before prevTransaction`,
+				  })
+				: false,
+		];
+		const missing = results.filter((result) => result !== false);
+		const valid = missing.length === 0;
+		if (valid) return { valid, missing: null };
+		return { valid, missing };
 	}
 
 	/*
@@ -328,7 +463,7 @@ class Blockchain {
 			index: 0,
 			transactions: [faucetFundingTransaction],
 			difficulty: 0,
-			prevBlockHash: "1",
+			prevBlockHash: '1',
 			minedBy: this.config.nullAddress,
 		};
 		const blockDataHash = SHA256(JSON.stringify(genesisBlockData));
@@ -351,7 +486,7 @@ class Blockchain {
 				0,
 				[faucetFundingTransaction],
 				0,
-				"1",
+				'1',
 				this.config.nullAddress,
 				blockDataHash
 			),
@@ -381,7 +516,7 @@ class Blockchain {
 		return this.createCoinbaseTransaction({
 			to: this.config.faucetAddress,
 			value: this.config.faucetGenerateValue,
-			data: "genesis tx",
+			data: 'genesis tx',
 		});
 	}
 
@@ -392,7 +527,7 @@ class Blockchain {
 		value = this.config.blockReward + 350,
 		fee = 0,
 		dateCreated = new Date().toISOString(),
-		data = "coinbase tx",
+		data = 'coinbase tx',
 		senderPubKey = this.config.nullPublicKey,
 		// transactionDataHash: get this inside our function
 		senderSignature = this.config.nullSignature,
@@ -400,7 +535,7 @@ class Blockchain {
 		transferSuccessful = true,
 	}) {
 		return {
-			...this.createTransaction({
+			...this.createHashedTransaction({
 				from,
 				to,
 				value,
@@ -438,7 +573,7 @@ class Blockchain {
 		);
 	}
 
-	createTransaction({
+	createHashedTransaction({
 		from,
 		to,
 		value,
@@ -521,7 +656,7 @@ class Blockchain {
 		lastBlockIndex = this.getLastBlock().index
 	) {
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
-		if (typeof transactionBlockIndex !== "number") return 0;
+		if (typeof transactionBlockIndex !== 'number') return 0;
 		return lastBlockIndex - transactionBlockIndex + 1; // if indexes are the same we have 1 confirmation
 	}
 
@@ -585,9 +720,9 @@ class Blockchain {
 	async requestPeer(peerUrl) {
 		const response = await (
 			await fetch(`${peerUrl}/peers/connect`, {
-				method: "POST",
+				method: 'POST',
 				body: JSON.stringify({ peerUrl }),
-				headers: { "Content-Type": "application/json" },
+				headers: { 'Content-Type': 'application/json' },
 			})
 		).json();
 		console.log(`RequestPeer(${peerUrl}) => ${response}`);
@@ -618,7 +753,7 @@ class Blockchain {
 
 		// Verify same chainId
 		const isSameChain =
-			this.config.genesisBlock.chainId === peerInfo["chainId"];
+			this.config.genesisBlock.chainId === peerInfo['chainId'];
 
 		if (!isSameChain) {
 			return {
@@ -659,7 +794,7 @@ class Blockchain {
 		const response = await fetch(`${peerUrl}/blocks`);
 		const theirChain = await response.json();
 		if (!response.statusCode === 200)
-			return { valid: false, error: "Cannot get peer chain" };
+			return { valid: false, error: 'Cannot get peer chain' };
 
 		let result = { valid: null, error: null };
 
@@ -673,22 +808,7 @@ class Blockchain {
 
 		// TODO:
 		// sync pending transactions (only if chain was valid??)
-
-		// if (theirChainLength > ourChainLength) {
-		// 	// theirs is longer, validate and save to our node
-		// 	// 		is this necessary? If their length is longer, their cumulativeDifficulty would be longer so this would catch above instead of down here...
-		// 	if (this.validateChain(theirChain)) {
-		// 		this.chain = theirChain;
-		// 		// TODO: sync pending transactions?
-		// 		result = { valid: true, error: null };
-		// 	} else {
-		// 		result = { valid: false, error: "Peer chain is not valid" };
-		// 	}
-		// } else {
-		// 	// our chain is longer
-		// 	result = { valid: false, error: "Our chain is longer" };
-		// }
-
+		this.syncPendingTransactions(peerUrl);
 		// console.log(result);
 		// return result;
 	}
@@ -724,9 +844,10 @@ class Blockchain {
 		while (currentIndex < chain.length) {
 			const block = chain[currentIndex];
 			console.log({ currentBlock: block });
-			console.log("\n--------\n");
+			console.log('\n--------\n');
 
-			this.validateBlock(block, previousBlock);
+			const result = this.validateBlock(block, previousBlock);
+			if (!result.valid) return false;
 
 			previousBlock = block;
 			currentIndex++;
@@ -755,22 +876,18 @@ class Blockchain {
 		if (!fieldsResult.valid) {
 			console.log(
 				`Block fields are not valid, missing: [${fieldsResult.missing.join(
-					", "
+					', '
 				)}]`
 			);
 			validationErrors.blockFields.missing = fieldsResult.missing;
 		}
 
-		// TODO:
 		// validate block values
-		const valuesResult = validateBlockValues(
-			block,
-			previousBlock
-		);
+		const valuesResult = validateBlockValues(block, previousBlock);
 		if (!valuesResult.valid) {
 			console.log(
 				`Block values are not valid, errors: [${valuesResult.errors.join(
-					", "
+					', '
 				)}]`
 			);
 			validationErrors.blockValues.missing = valuesResult.errors;
@@ -789,22 +906,22 @@ class Blockchain {
 		// cumulate difficulty
 
 		//check hash of previous block
-		if (block["prevBlockHash"] !== this.hash(previousBlock)) {
-			console.log("Previous hash does not match!");
+		if (block['prevBlockHash'] !== this.hash(previousBlock)) {
+			console.log('Previous hash does not match!');
 			return false;
 		}
 
 		if (!this.validProof(block)) {
-			console.log("Block PoW is Invalid!");
+			console.log('Block PoW is Invalid!');
 			return false;
 		}
 
 		// TODO: validate transactions in this current block
 		if (!this.validateBlockTransactions(block)) {
-			console.log("Invalid transactions found!");
+			console.log('Invalid transactions found!');
 			return false;
 		}
-		return true;
+		return { valid: true, block };
 	}
 
 	// validation, utils
@@ -823,248 +940,289 @@ class Blockchain {
 
 	validateBlockValues(block, prevBlock) {
 		// go thru each entry and make sure the value fits the "requirements"
-		console.log('--validateBlockValues:', {block, prevBlock});
-		const invalidStringGen = ({ label, expected, actual }) =>
-			`${label} invalid. Expected ${expected} / Actually ${actual}`;
-		const upperFirstLetter = (string) => string.substring(0,1).toUpperCase() + string.substring(1);
-
-		const typeCheck = ({ block, field, type }) => {
-			const label = upperFirstLetter(field);
-			const actualType = typeof block[field];
-			if (actualType !== type) {
-				missing.push(
-					invalidStringGen({
-						label,
-						expected: type,
-						actual: actualType,
-					})
-				);
-			}
-		};
-
-		const hexPattern = /^(0[xX])?[a-fA-F0-9]+$/g;
-
-		const patternCheck = ({ block, field, pattern, expected, actual }) => {
-			const label = upperFirstLetter(field);
-			if (!pattern.test(block[field])) {
-				missing.push(
-					invalidStringGen({
-						label,
-						expected,
-						actual,
-					})
-				);
-			}
-		};
-
-		const lengthCheck = ({ block, field, expected, type }) => {
-			const label = upperFirstLetter(field);
-			const failingCondition =
-				type === "==="
-					? block[field].length !== expected
-					: type === "!=="
-					? block[field].length === expected
-					: type === ">="
-					? block[field].length < expected
-					: type === "<="
-					? block[field].length > expected
-					: type === ">"
-					? block[field].length <= expected
-					: type === "<"
-					? block[field].length >= expected
-					: true; // fallback to force adding an error if no match
-
-			if (failingCondition) {
-				missing.push(
-					invalidStringGen({
-						label,
-						expected: `length ${type} ${expected}`,
-						actual: `length === ${block[field].length}`,
-					})
-				);
-			}
-		};
+		console.log('--validateBlockValues:', { block, prevBlock });
 
 		let missing = [];
-		let field = "";
+		let field = '';
+		let label = '';
+		let currentValue;
 
-		// index: should increase by 1; should be a number
-		field = "index";
-		typeCheck({ block, field, type: "number" });
-
-		if (block.index !== prevBlock.index + 1) {
-			missing.push(
-				invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: prevBlock.index + 1,
-					actual: block.index,
-				})
-			);
-		}
+		field = 'index';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'number' }),
+		});
+		addFoundErrors({
+			missing,
+			error: valueCheck({
+				label,
+				value: currentValue,
+				expected: prevBlock[field] + 1,
+				type: '===',
+			}),
+		});
 
 		// transactions: should be array, should have length >= 1
-		field = "transactions";
-		typeCheck({ block, field, type: "array" });
-		lengthCheck({ block, field, expected: 1, type: ">=" });
+		field = 'transactions';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'array' }),
+		});
+		addFoundErrors({
+			missing,
+			error: lengthCheck({
+				label,
+				value: currentValue,
+				expected: 1,
+				type: '>=',
+			}),
+		});
 
 		// difficulty: should be a number
-		field = "difficulty"
-		typeCheck({ block, field, type: "number" });
+		field = 'difficulty';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'number' }),
+		});
 
 		// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash (will do more validation later)
-		field = "prevBlockHash";
-		typeCheck({ block, field, type: "string" });
-
-		if (block.prevBlockHash !== prevBlock.blockHash) {
-			missing.push(
-				invalidStringGen({
+		field = 'prevBlockHash';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'string' }),
+		});
+		if (currentValue !== prevBlock.blockHash) {
+			addFoundErrors({
+				missing,
+				error: invalidStringGen({
 					label: upperFirstLetter(field),
 					expected: "value to match previous block's blockHash",
-					actual: `is ${block.prevBlockHash} instead of ${prevBlock.blockHash}`,
-				})
-			);
+					actual: `is ${currentValue} instead of ${prevBlock.blockHash}`,
+				}),
+			});
 		}
-
 		if (block.index === 1) {
 			// special case, special messages on these two
-			if (block.prevBlockHash !== "1") {
-				missing.push(
-					invalidStringGen({
+			if (currentValue !== '1') {
+				addFoundErrors({
+					missing,
+					error: invalidStringGen({
 						label: upperFirstLetter(field),
 						expected: "index 1 prevBlockHash to be '1'",
-						actual: `index 1 prevBlockHash is ${block.prevBlockHash}`,
-					})
-				);
+						actual: `index 1 prevBlockHash is ${currentValue}`,
+					}),
+				});
 			}
-
-			if (block.prevBlockHash.length !== 1) {
-				missing.push(
-					invalidStringGen({
+			if (currentValue.length !== 1) {
+				addFoundErrors({
+					missing,
+					error: invalidStringGen({
 						label: upperFirstLetter(field),
-						expected: "index 1 prevBlockHash.length to be 1",
-						actual: `index 1 prevBlockHash.length === ${block.prevBlockHash.length}`,
-					})
-				);
+						expected: 'index 1 prevBlockHash.length to be 1',
+						actual: `index 1 prevBlockHash.length === ${currentValue.length}`,
+					}),
+				});
 			}
 		} else {
 			// only hex characters
-			patternCheck({
-				block,
-				field,
-				pattern: hexPattern,
-				expected: "to be valid hex string",
-				actual: "not valid hex string",
+			addFoundErrors({
+				missing,
+				error: patternCheck({
+					label,
+					value: currentValue,
+					pattern: hexPattern,
+					expected: 'to be valid hex string',
+					actual: 'not valid hex string',
+				}),
 			});
 
 			// 64 length
-			lengthCheck({ block, field, expected: 64, type: "===" });
+			addFoundErrors({
+				missing,
+				error: lengthCheck({
+					label,
+					value: currentValue,
+					expected: 64,
+					type: '===',
+				}),
+			});
 		}
-		
+
 		// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
-		field = "minedBy";
-		typeCheck({block, field, type: "string:"});
-		patternCheck({block, field, pattern: hexPattern, expected: "to be valid hex string", actual: `not valid hex string`});
-		lengthCheck({block, field, expected: 40, type: "==="});
+		field = 'minedBy';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'string:' }),
+		});
+		addFoundErrors({
+			missing,
+			error: patternCheck({
+				label,
+				value: currentValue,
+				pattern: hexPattern,
+				expected: 'to be valid hex string',
+				actual: `not valid hex string`,
+			}),
+		});
+		addFoundErrors({
+			missing,
+			error: lengthCheck({
+				label,
+				value: currentValue,
+				expected: 40,
+				type: '===',
+			}),
+		});
 
 		// blockDataHash: should be string, only have certain characters, 40 characters?, (Will recalculate later)
-		field = "blockDataHash";
-		typeCheck({block, field, type: "string"});
-		patternCheck({block, field, pattern: hexPattern, expected: "to be valid hex string", actual: `not valid hex string`});
-		lengthCheck({block, field, expected: 64, type: "==="});
+		field = 'blockDataHash';
+		currentValue = block[field];
+		label = upperFirstLetter(field);
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'string' }),
+		});
+		addFoundErrors({
+			missing,
+			error: patternCheck({
+				label,
+				value: currentValue,
+				pattern: hexPattern,
+				expected: 'to be valid hex string',
+				actual: `not valid hex string`,
+			}),
+		});
+		addFoundErrors({
+			missing,
+			error: lengthCheck({
+				label,
+				value: currentValue,
+				expected: 64,
+				type: '===',
+			}),
+		});
 
 		// nonce: should be a number, (later, will validate should give us the correct difficulty)
-		field = "nonce";
-		typeCheck({block, field, type: "number"});
+		field = 'nonce';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'number' }),
+		});
 
 		// dateCreated: should be a number?? should be after the previous block's dateCreated, should be before today??
-		field = "dateCreated";
-		typeCheck({block, field, type: "number"});
-		if (block[field] <= prevBlock[field]) {
-			missing.push(invalidStringGen({
-				label: upperFirstLetter(field),
-				expected: `prevBlock to be created before block`,
-				actual: `block created ${prevBlock[field] - block[field]}ms before prevBlock`
-			}))
+		field = 'dateCreated';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'number' }),
+		});
+		if (currentValue <= prevBlock[field]) {
+			addFoundErrors({
+				missing,
+				error: invalidStringGen({
+					label: upperFirstLetter(field),
+					expected: `prevBlock to be created before block`,
+					actual: `block created ${
+						prevBlock[field] - currentValue
+					}ms before prevBlock`,
+				}),
+			});
 		}
 		const currentTime = Date.now();
-		if (block[field] > currentTime) {
-			missing.push(invalidStringGen({
-				label: upperFirstLetter(field),
-				expected: `block to be created before current time`,
-				actual: `block created ${block[field] - currentTime}ms after current time`
-			}))
+		if (currentValue > currentTime) {
+			addFoundErrors({
+				missing,
+				error: invalidStringGen({
+					label: upperFirstLetter(field),
+					expected: `block to be created before current time`,
+					actual: `block created ${
+						currentValue - currentTime
+					}ms after current time`,
+				}),
+			});
 		}
 
 		// blockHash: should be a string, only certain characters, 40 characters? (recalc later)
-		field = "blockHash";
-		typeCheck({block, field, type: "string"});
-		patternCheck({block, field, pattern: hexPattern, expected: "to be valid hex string", actual: `not valid hex string`});
-		lengthCheck({block, field, expected: 64, type: "==="});
+		field = 'blockHash';
+		label = upperFirstLetter(field);
+		currentValue = block[field];
+		addFoundErrors({
+			missing,
+			error: typeCheck({ label, value: currentValue, type: 'string' }),
+		});
+		addFoundErrors({
+			missing,
+			error: patternCheck({
+				label,
+				value: currentValue,
+				pattern: hexPattern,
+				expected: 'to be valid hex string',
+				actual: `not valid hex string`,
+			}),
+		});
+		addFoundErrors({
+			missing,
+			error: lengthCheck({
+				label,
+				value: currentValue,
+				expected: 64,
+				type: '===',
+			}),
+		});
 
+		// finally, return the results!
 		if (missing.length > 0) return { valid: false, missing };
 		return { valid: true, missing: null };
-	}
+	} // validateBlockValues
 
-	// TODO: this will be called when we are validating the (incoming peer) chain
 	// validation, utils
 	validateBlockTransactions(block) {
-		// TODO
-		//	validate transactions in the block:
-		//		validate transaction fields and values;
-		// 		recalculate transactionDataHash;
-		//		validate signature;
-		//		re-execute all transactions?;
-		//		recalculate values of minedInBlockIndex and transferSuccessful fields;
 		const transactions = block.transactions;
 
-		transactions.forEach((transaction) => {
-			const {
-				from,
-				to,
-				value,
-				fee,
-				dateCreated,
-				data,
-				senderPubKey,
-				transactionDataHash,
-				senderSignature,
-			} = transaction;
-			// validate fields/values
-			// check to be sure we have all fields
-			// check that the value of each field is correct
+		let i = 0;
+		let valid = true;
+		while (valid) {
+			const transaction = transactions[i];
 
-			// recalculate transactionDataHash
-			// take appropriate fields, hash it, and check that the hashes match
-			const newHash = this.hashTransactionData({
-				from,
-				to,
-				value,
-				fee,
-				dateCreated,
-				data,
-				senderPubKey,
-			});
-			if (transactionDataHash !== newHash) {
-				console.log(
-					"Transaction Data Hash validation failed:\nOriginal:",
-					transactionDataHash,
-					"\nOurs:",
-					newHash
-				);
-				return false;
+			// validating transaction fields
+			const fieldsResult = validateFields(
+				Object.keys(transaction),
+				txAllFields
+			);
+
+			if (!fieldsResult.valid) {
+				valid = false;
 			}
 
-			// validate signature
-			// ... check the signature was written by the sender public key?
-			if (
-				!verifySignature(
-					transactionDataHash,
-					senderPubKey,
-					senderSignature
-				)
-			) {
-				return false;
+			// validating transaction values, recalc txDataHash, validate signature
+			const valuesResult = validateTxValues(block, transaction);
+
+			if (!valuesResult.valid) {
+				valid = false;
 			}
+
+			const result = reexecuteTransaction(transaction);
+
+			if (!result.valid) {
+				valid = false;
+			}
+
+			// TODO:
+			//		re-execute all transactions?;
+			//		recalculate values of minedInBlockIndex and transferSuccessful fields;
 
 			// re-execute all transactions
 			// making sure that the inputs and outputs and fees add up?
@@ -1074,43 +1232,153 @@ class Blockchain {
 			// transferSuccessful: make sure the transaction is included in a block ?
 
 			// if any invalid, return false (with info about why??)
+
+			i++;
+		}
+
+		return true;
+	} // validateBlockTransactions
+
+	basicTxValidation(transaction, date_transactions) {
+		let valid = true;
+		let errors = [];
+
+		// to:
+		let toAddrResult = this.validateAddress(transaction.to);
+		if (!toAddrResult.valid) {
+			toAddrResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// from:
+		let fromAddrResult = this.validateAddress(transaction.from);
+		if (!fromAddrResult.valid) {
+			fromAddrResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// value: number, >=0
+		const valueResult = this.validateValue(transaction.value);
+		if (!valueResult.valid) {
+			valueResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// fee: number, >minFee
+		const feeResult = this.validateFee(transaction.fee);
+		if (!feeResult.valid) {
+			feeResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
+		const currentTime = Date.now();
+		const prevDateCreated =
+			date_transactions[date_transactions.indexOf(transaction) - 1]
+				.dateCreated || undefined;
+		const dateCreatedResult = this.validateDateCreated(
+			transaction.dateCreated,
+			prevDateCreated,
+			currentTime
+		);
+		if (!dateCreatedResult.valid) {
+			dateCreatedResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// data: string,
+		const dataResult = this.validateData(transaction.data);
+		if (!dataResult.valid) {
+			dataResult.missing.forEach((err) => errors.push(err));
+		}
+
+		// senderPubKey: string, hex, 65chars?
+		const pubKeyResult = this.validatePublicKey(transaction.senderPubKey);
+		if (!pubKeyResult.valid) {
+			pubKeyResult.missing.forEach((err) => errors.push(err));
+		}
+		return { valid, errors };
+	}
+
+	// validates {from, to, value, fee, dateCreated, data, senderPubKey} and does {revalidateTransactionDataHash, and verify&validateSignature}
+	validateTxValues(block, transaction) {
+		console.log('-- validateTxValues', { block, transaction });
+
+		let errors = [];
+		let field = '';
+		let label = '';
+		let currentValue;
+
+		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
+		const basicResults = this.basicTxValidation(
+			transaction,
+			block.transactions
+		);
+		if (!basicResults.valid) {
+			basicResults.errors.forEach((err) => errors.push(err));
+		}
+
+		// Step 2:
+		// recalculate transactionDataHash
+		field = 'transactionDataHash';
+		label = upperFirstLetter(field);
+		currentValue = transaction[field];
+		const {
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
+			transactionDataHash,
+			senderSignature,
+		} = transaction;
+		const newHash = this.hashTransactionData({
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
 		});
-		return true;
-	}
+		addFoundErrors({
+			missing,
+			error: valueCheck({
+				label,
+				value: currentValue,
+				expected: blockchain.hashTransaction(transaction),
+				type: '===',
+			}),
+		});
 
-	validateTransaction(transaction) {
-		/* Validate: (if invalid, return false and/or error)
-				Fields,
-				Values,
-				Recalculated transactionDataHash,
-				Signature
-		*/
+		// validate signature
+		field = 'senderSignature';
+		label = upperFirstLetter(field);
+		currentValue = transaction[field];
+		const sigValid = verifySignature(
+			transactionDataHash,
+			senderPubKey,
+			senderSignature
+		);
+		if (!sigValid) {
+			addFoundErrors({
+				missing,
+				error: invalidStringGen({
+					label: upperFirstLetter(field),
+					expected: `transaction signature to be valid`,
+					actual: `transaction signature is invalid`,
+				}),
+			});
+		}
 
-		// validate fields
-		const requiredFields = [
-			"from",
-			"to",
-			"value",
-			"fee",
-			"dateCreated",
-			"data",
-			"senderPubKey",
-			"transactionDataHash",
-			"senderSignature",
-			"minedInBlockIndex",
-			"transferSuccessful",
-		];
-		const fields = Object.keys(transaction);
-		const fieldsResponse = validateFields(fields, requiredFields);
+		if (missing.length > 0) return { valid: false, missing };
+		return { valid: true, missing: null };
+	} // validateBlockValues
 
-		//validate values
-
-		//validate recalculated txDataHash,
-
-		//validate tx signature
-
-		return true;
-	}
+	reexecuteTransaction(transaction) {}
+	// what does it mean to re-execute transactions?
+	// Need to track balances; need to re-buid some functionality to allow that probably
+	// OR, could do a swapidoodle and save the current chain and pendingTransactions in a backup, then:
+	// (if genesis is same) reset the chain and read the incoming chain's transactions as processes and execute them all.
+	// Then in the end, I should be on the updated chain. And then reconcile the pendingTransactions by:
+	// take old pending transactions, drop (filter out) ones that are in the new chain, and keep any others that might exist (and propagate them?)
 
 	/*
 	----------------------------------------------------------------
@@ -1121,12 +1389,12 @@ class Blockchain {
 	// mining
 	mineBlock(block, nonce = 0) {
 		let timestamp = new Date().toISOString();
-		let hash = SHA256(block.blockDataHash + "|" + timestamp + "|" + nonce);
+		let hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
 
 		while (!this.validHash(hash, block.difficulty)) {
 			timestamp = new Date().toISOString();
 			nonce += 1;
-			hash = SHA256(block.blockDataHash + "|" + timestamp + "|" + nonce);
+			hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
 		}
 
 		return {
@@ -1232,7 +1500,7 @@ class Blockchain {
 		const foundBlock = this.miningJobs.get(blockDataHash) ?? null;
 
 		if (!foundBlock) {
-			return { status: 404, message: "Mining job missing!" };
+			return { status: 404, message: 'Mining job missing!' };
 		}
 
 		const isValid = this.validateBlockHash(
@@ -1244,7 +1512,7 @@ class Blockchain {
 		);
 
 		if (!isValid) {
-			return { status: 400, message: "Block hash is not valid!" };
+			return { status: 400, message: 'Block hash is not valid!' };
 		}
 
 		const completeBlock = { ...foundBlock, nonce, dateCreated, blockHash };
@@ -1277,7 +1545,7 @@ class Blockchain {
 	// all SPENT transactions SUBTRACT the transaction fee
 	// each successful SPENT transaction will SUBTRACT value
 
-	// return {0, 0, 0} for non-active addresses (addresses with no transactions) ?? address must be valid but still does not appear??
+	// return {0, 0, 0} for non-active addresses (addresses with no transactions)
 	// return {status: 404, errorMsg: "Invalid address"} for invalid addresses
 
 	//"safe" transactions == ones with >=6 confirmations
@@ -1404,37 +1672,37 @@ class Blockchain {
 
 	// balances, addresses
 	allConfirmedAccountBalances() {
-		console.log("---Getting all confirmed account balances...");
+		console.log('---Getting all confirmed account balances...');
 		let balances = {};
 		for (const block of this.chain) {
-			console.log("scanning block", block.index);
+			console.log('scanning block', block.index);
 			for (const transaction of block.transactions) {
 				// console.log('found transaction', transaction.transactionDataHash);
 				const { from, to, value, fee } = transaction;
 				//handle {to: address}
 				if (to in balances) {
 					console.log(
-						"adding to existing entry for received transaction"
+						'adding to existing entry for received transaction'
 					);
 					balances[to] += value;
 				} else {
-					console.log("creating new entry for received transaction");
+					console.log('creating new entry for received transaction');
 					balances[to] = value;
 				}
 
 				//handle {from: address}
 				if (from in balances) {
 					console.log(
-						"adding to existing entry for sent transaction"
+						'adding to existing entry for sent transaction'
 					);
 					balances[from] -= fee + value;
 				} else {
-					console.log("creating new entry for sent transaction");
+					console.log('creating new entry for sent transaction');
 					balances[from] = 0 - (fee + value);
 				}
 			}
 		}
-		console.log("---done collecting balances");
+		console.log('---done collecting balances');
 		return balances;
 	}
 

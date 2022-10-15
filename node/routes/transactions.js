@@ -1,14 +1,15 @@
-const walletUtils = import("../../walletUtils/index.js");
-const { response } = require("express");
-const express = require("express");
-const { txBaseFields } = require( "../../blockchain/src/constants.js" );
+const walletUtils = import('../../walletUtils/index.js');
+const { response } = require('express');
+const express = require('express');
+const { txBaseFields } = require('../../blockchain/src/constants.js');
+const Transaction = require( '../../blockchain/src/Transaction.js' );
+const { valueCheck } = require('../../blockchain/src/valueChecks.js');
 const router = express.Router();
-
 
 // works:
 //return pending transactions, (in mempool)
-router.get("/pending", (req, res) => {
-	const blockchain = req.app.get("blockchain");
+router.get('/pending', (req, res) => {
+	const blockchain = req.app.get('blockchain');
 	return res
 		.status(200)
 		.send(JSON.stringify(blockchain.getPendingTransactions()));
@@ -17,16 +18,16 @@ router.get("/pending", (req, res) => {
 // works:
 //display all transactions in blocks
 //	crawl blocks and build list to return
-router.get("/confirmed", (req, res) => {
-	const blockchain = req.app.get("blockchain");
+router.get('/confirmed', (req, res) => {
+	const blockchain = req.app.get('blockchain');
 	return res
 		.status(200)
 		.send(JSON.stringify(blockchain.getConfirmedTransactions()));
 });
 
 // works ??
-router.get("/:tranHash", (req, res) => {
-	const blockchain = req.app.get("blockchain");
+router.get('/:tranHash', (req, res) => {
+	const blockchain = req.app.get('blockchain');
 	const { tranHash: transactionDataHash } = req.params;
 
 	const foundTransaction =
@@ -37,7 +38,7 @@ router.get("/:tranHash", (req, res) => {
 	} else {
 		return res
 			.status(400)
-			.send(JSON.stringify({ errorMsg: "Transaction not found" }));
+			.send(JSON.stringify({ errorMsg: 'Transaction not found' }));
 	}
 });
 
@@ -54,165 +55,39 @@ Peer Connections / Syncing:
 			Propagate transaction to all peer nodes thru REST API (transactions/send I guess)
 */
 
-router.post("/send", async (req, res) => {
-	console.log("transaction received...");
-	const blockchain = req.app.get("blockchain");
-	const signedTransaction = req.body;
-	console.log({ signedTransaction });
-
-	// Validate transaction:
-	// const {valid, errors} = validateTransaction(signedTransaction);
-	/* 
-		// check keys, values, check hash, check signature, more? check that the values add up like they should? Could check balances of addresses and make sure the last block balance + the new tx == the new block balance??
-	*/
-
+	// Validate transaction
 	// Add to pending transactions
-	// blockchain.pendingTransactions.add(signedTransaction)
-
 	// Send tx to peer nodes thru REST API (/transactions/send ?)
-// blockchain.propagateTransaction(signedTransaction);
-	// const promises = [];
-		// peers.forEach((peer) => promises.push(await fetch(`${peerUrl}/transactions/send`)))
-
-
-	//TODO: validate transaction data!!
-	// validates transaction public key; validates signature
-	// checks sender account balance >= value + fee
-	// propagate transaction to all peer nodes!
-	// to prevent infinite propagation loop:
-	// check that we don't have the transaction hash inside our pending transactions?
+router.post('/send', async (req, res) => {
+	console.log('transaction received...');
+	const blockchain = req.app.get('blockchain');
 
 	//check for missing data object
-	if (!signedTransaction) {
-		return res
-			.status(400)
-			.send(JSON.stringify({ errorMsg: "Missing all transaction data" }));
+	if (Object.values(req.body).length < 8) {
+		return res.status(400).send(
+			JSON.stringify({
+				errorMsg:'Missing transaction data!',
+			})
+		);
 	}
 
-	//check for transactionHash in our pending transactions
-	// should also check confirmed transactions??
-	if (
-		!!blockchain.searchPendingTransactionsForTransactionHash(
-			signedTransaction.transactionDataHash
-		)
-	) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg:
-						"Transaction already included in pending transactions",
-				})
-			);
-	}
+    const signedTransaction = req.body;
 
-	//validate fields exist
-	const result = blockchain.validateFields(Object.keys(signedTransaction), txBaseFields);
-	if (result.valid !== true) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: missing fields '${result.missing.join(
-						", "
-					)}'`,
-				})
-			);
-	}
+	// const {to, from, value, fee, dateCreated, data, senderPubKey, senderSignature} = req.body;
+	// const signedTransaction = new Transaction(from, to, value, fee, dateCreated, data, senderPubKey, undefined, senderSignature);
 
-	//check for invalid values :
-	// value >= 0
-	if (signedTransaction.value < 0) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'value' must be at least 0`,
-				})
-			);
-	}
-	// fee >= minimum
-	if (signedTransaction.fee < blockchain.config.minTransactionFee) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'fee' must be at least ${blockchain.config.minTransactionFee}`,
-				})
-			);
-	}
-	// created date is BEFORE now
-	const currentTime = Date.now();
-	if (Date.parse(signedTransaction.dateCreated) > currentTime) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'dateCreated' cannot be created in the future! Transaction created: ${
-						signedTransaction.dateCreated
-					}; Current dateTime: ${currentTime.toISOString()}`,
-				})
-			);
-	}
+	console.log({ signedTransaction });
 
-	// valid to address
-	if (!blockchain.validateAddress(signedTransaction.to)) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'to' address is invalid!`,
-				})
-			);
-	}
-
-	// valid from address
-	if (!blockchain.validateAddress(signedTransaction.from)) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'from' address is invalid!`,
-				})
-			);
-	}
-
-	// sender account balance >= value + fee
-	// (NOT allowing sending of pending funds)
-	const balancesOfSender = blockchain.balancesOfAddress(
-		signedTransaction.from
-	);
-	if (
-		balancesOfSender.confirmedBalance <
-		signedTransaction.value + signedTransaction.fee
-	) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: 'from' address does not have enough funds!`,
-				})
-			);
-	}
-
-	//validate transaction public key ??
-	if (!blockchain.validatePublicKey(signedTransaction.senderPubKey)) {
-		return res
-			.status(400)
-			.send(JSON.stringify({ errorMsg: `Public Key is invalid!` }));
-	}
-	// could validate the FROM address is derived from the public key
+	// validate the FROM address is derived from the public key
 	const hexAddress = walletUtils.getAddressFromCompressedPubKey(
 		signedTransaction.senderPubKey
 	);
 	if (signedTransaction.from !== hexAddress) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `FROM address is not derived from sender's public key!`,
-				})
-			);
+		return res.status(400).send(
+			JSON.stringify({
+				errorMsg: `FROM address is not derived from sender's public key!`,
+			})
+		);
 	}
 
 	//validate signature is from public key
@@ -223,70 +98,100 @@ router.post("/send", async (req, res) => {
 			signedTransaction.senderSignature
 		)
 	) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Transaction signature is invalid!`,
-				})
-			);
+		return res.status(400).send(
+			JSON.stringify({
+				errorMsg: `Transaction signature is invalid!`,
+			})
+		);
 	}
 
-	//check pendingTransactions for transaction with matching transactionDataHash (duplicate)
-	const newTransaction = blockchain.createTransaction(signedTransaction);
-	if (blockchain.getTransactionByHash(newTransaction.transactionDataHash)) {
-		return res
-			.status(400)
-			.send(
-				JSON.stringify({
-					errorMsg: `Invalid transaction: transaction is a duplicate!`,
-				})
-			);
+	// Validation
+	let errors = [];
+
+
+	// check for all fields
+	const result = blockchain.validateFields(
+		Object.keys(signedTransaction),
+		txBaseFields
+	);
+	if (result.valid !== true) {
+		result.missing.forEach((errMsg) => errors.push(errMsg));
 	}
 
+	//check for invalid values :
+
+	// handles {to, from, value, fee, dateCreated, data, senderPubKey}
+	const basicResults = blockchain.basicTxValidation(signedTransaction, blockchain.pendingTransactions);
+	if (!basicResults.valid) {
+		basicResults.errors.forEach((err) => errors.push(err));
+	}
+
+	// check balance of sender
+
+	// sender account balance >= value + fee
+	// (NOT allowing sending of pending funds)
+	const balancesOfSender = blockchain.balancesOfAddress(
+		signedTransaction.from
+	);
+	const spendingBalance = blockchain.config.SPEND_UNCONFIRMED_FUNDS
+		? balancesOfSender.pendingBalance
+		: balancesOfSender.confirmedBalance;
+	if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
+		errors.push( `Invalid transaction: 'from' address does not have enough funds!`);
+	}
+
+
+	// create new transaction
+	const newTransaction = blockchain.createHashedTransaction(signedTransaction);
+	const hash = newTransaction.transactionDataHash;
+	// const hash = signedTransaction.hashData();
+
+	// check blockchain AND pending transactions for this transactionHash
+	const foundTransaction =
+		blockchain.getTransactionByHash(hash);
+	if (!foundTransaction) {
+		errors.push( `Duplicate transaction data hash!`);
+	}
+
+	// if errors, return the errors
+	if (errors.length > 0) {
+		return res
+			.status(400)
+			.send(JSON.stringify({ errorMsg: errors.join('\n ') }));
+	}
+
+	// do the thing!
+	// add transaction to pending, send the response
 	blockchain.addPendingTransaction(newTransaction);
-
 	res.status(200).send(JSON.stringify(newTransaction.transactionDataHash));
 
 	// need to propagate the transaction to other nodes!
 	// Go through peers and send post requests to send transaction to the nodes
+	const sender = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 	const peers = blockchain.peers();
-	let responseList = [];
-	peers.forEach(async (peer) => {
-		// send post request with transaction
-		// peer == {nodeIdentifier: peerUrl};
-		// TODO: change peers to an object, instead of a set/array of objects?
-		const peerUrl = Object.values(peer)[0];
-		// don't really need to await the responses, but will for testing purposes:
-		responseList.push(
-			new Promise(async () => {
-				let response = await (
-					await fetch(`${peerUrl}/transactions/send`, {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(signedTransaction),
-					})
-				).json();
-				return {
-					response,
-					peerUrl,
-					peerId: Object.keys(peer)[0],
-				};
-			})
-		);
-		// const jsonResponse = await (await fetch(`${peerUrl}/transactions/send`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(signedTransaction)})).json()
-		// console.log(`Node ${Object.keys(peer)[0]} (${peerUrl}) response:\n----`, {jsonResponse});
-	});
 
-	Promise.all(responseList).then((resolves) =>
-		resolves.forEach((res) =>
+	console.log('sender from req.socket.remoteAddress:', sender)
+
+	Promise.all(
+		peers.forEach(async (peerId, peerUrl) => {
+			if (peerUrl.includes(sender)) {
+				console.log(`--Skipping peer`, { sender, peerId, peerUrl });
+				return;
+			}
+
+			let response = await (
+				await fetch(`${peerUrl}/transactions/send`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(signedTransaction),
+				})
+			).json();
+
 			console.log(
-				`Node ${res.peerId} (${res.peerUrl}) response:\n----${res.response}`
-			)
-		)
+				`Node ${peerId} (${peerUrl}) response:\n----${response}`
+			);
+		})
 	);
-
-	// return res.status(200).send(JSON.stringify(newTransaction.transactionDataHash));
 });
 
 module.exports = router;
