@@ -19,20 +19,7 @@ const {
 	valueCheck,
 	addFoundErrors,
 } = require('./valueChecks');
-const {
-	generateWallet,
-	encrypt,
-	decrypt,
-	deriveKeysFromMnemonic,
-	signTransaction,
-	hashTransaction,
-	getAddressFromCompressedPubKey,
-	decryptAndSign,
-	submitTransaction,
-	fetchAddressBalance,
-	verifySignature,
-	CONSTANTS,
-} = import('../../walletUtils/index.js');
+const { default: walletUtils } = require( '../../walletUtils/index.js' );
 
 const SHA256 = (message) =>
 	crypto.createHash('sha256').update(message).digest('hex');
@@ -478,7 +465,9 @@ class Blockchain {
 		};
 
 		// next should "mine" the genesis block (hash it)
-		const minedBlockCandidate = this.mineBlock(genesisBlockCandidate);
+		const minedBlockCandidate = this.mineGenesisBlock(
+			genesisBlockCandidate
+		);
 
 		// then we can build our final block with all the info, and push it to the chain
 		const genesisBlock = {
@@ -1352,7 +1341,7 @@ class Blockchain {
 		field = 'senderSignature';
 		label = upperFirstLetter(field);
 		currentValue = transaction[field];
-		const sigValid = verifySignature(
+		const sigValid = walletUtils.verifySignature(
 			transactionDataHash,
 			senderPubKey,
 			senderSignature
@@ -1385,6 +1374,24 @@ class Blockchain {
 		MINING
 	----------------------------------------------------------------
 	*/
+
+	mineGenesisBlock(block) {
+		let nonce = 0;
+		const timestamp = CONFIG.CHAIN_BIRTHDAY;
+		let hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+
+		while (!this.validHash(hash, block.difficulty)) {
+			nonce += 1;
+			hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+		}
+
+		return {
+			blockDataHash: block.blockDataHash,
+			dateCreated: timestamp,
+			nonce: nonce,
+			blockHash: hash,
+		};
+	}
 
 	// mining
 	mineBlock(block, nonce = 0) {
@@ -1716,7 +1723,107 @@ class Blockchain {
 		}
 		return prunedBalances;
 	}
+
+	validateAndSendTransaction(signedTransaction) {
+		// run validation and sending, but keep peer propagation separate
+
+		// Validation
+		let errors = [];
+
+		// validate the FROM address is derived from the public key
+		const hexAddress = walletUtils.getAddressFromCompressedPubKey(
+			signedTransaction.senderPubKey
+		);
+		if (signedTransaction.from !== hexAddress) {
+			errors.push(
+				`FROM address is not derived from sender's public key!`
+			);
+		}
+
+		//validate signature is from public key
+		if (
+			!walletUtils.verifySignature(
+				signedTransaction.transactionDataHash,
+				signedTransaction.senderPubKey,
+				signedTransaction.senderSignature
+			)
+		) {
+			errors.push(`Transaction signature is invalid!`);
+		}
+
+		// check for all fields
+		const result = this.validateFields(
+			Object.keys(signedTransaction),
+			txBaseFields
+		);
+		if (result.valid !== true) {
+			result.missing.forEach((errMsg) => errors.push(errMsg));
+		}
+
+		//check for invalid values :
+
+		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
+		const basicResults = this.basicTxValidation(
+			signedTransaction,
+			this.pendingTransactions
+		);
+		if (!basicResults.valid) {
+			basicResults.errors.forEach((err) => errors.push(err));
+		}
+
+		// check balance of sender
+
+		// sender account balance >= value + fee
+		// (NOT allowing sending of pending funds)
+		const balancesOfSender = this.balancesOfAddress(
+			signedTransaction.from
+		);
+		const spendingBalance = this.config.SPEND_UNCONFIRMED_FUNDS
+			? balancesOfSender.pendingBalance
+			: balancesOfSender.confirmedBalance;
+		if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
+			errors.push(
+				`Invalid transaction: 'from' address does not have enough funds!`
+			);
+		}
+
+		// create new transaction
+		const newTransaction =
+			this.createHashedTransaction(signedTransaction);
+		const hash = newTransaction.transactionDataHash;
+		// const hash = signedTransaction.hashData();
+
+		// check blockchain AND pending transactions for this transactionHash
+		const foundTransaction = this.getTransactionByHash(hash);
+		if (!foundTransaction) {
+			errors.push(`Duplicate transaction data hash!`);
+		}
+
+		// if errors, return the errors
+		if (errors.length > 0) {
+			return { valid: false, errors };
+		}
+
+		// do the thing!
+		// add transaction to pending, send the response
+		this.addPendingTransaction(newTransaction);
+
+		return { valid: true, errors: null };
+	}
 }
 
-module.exports = Blockchain;
+const executeChain = (chain) => {
+	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
+	instance.createGenesisBlock();
+	for (let i = 1; i < chain.length; i++) {
+		const { transactions: incomingTransactions } = chain[i];
+		for (let k = 0; k < incomingTransactions.length; k++) {
+			// first need to do validation!!!! as /transactions/send
+
+			instance.addPendingTransaction(incomingTransactions[k]);
+		}
+	}
+};
+
+module.exports = { Blockchain, executeChain };
 // export default Blockchain;

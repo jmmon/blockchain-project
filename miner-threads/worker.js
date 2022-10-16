@@ -1,8 +1,5 @@
 const {workerData, parentPort, getEnvironmentData} = require('node:worker_threads');
-
-//do hashes loop
-const crypto = require("crypto");
-const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
+const {sha256HashTransaction} = import('../walletUtils/index');
 
 const validProof = (hash, difficulty) => {
 	return hash.slice(0, difficulty) === "0".repeat(difficulty);
@@ -33,7 +30,7 @@ while (continueLoop) {
 
 	const dateCreated = new Date().toISOString();
 	const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
-	const blockHash = SHA256(dataToHash);
+	const blockHash = sha256HashTransaction(dataToHash);
 	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
 	
 	if (validProof(blockHash, difficulty)) {

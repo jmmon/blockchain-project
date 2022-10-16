@@ -167,7 +167,7 @@ const removeSpaces = ({
 }
 
 
-const hashTransaction = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
+const sha256HashTransaction = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
 
 
 const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => {
@@ -198,7 +198,7 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 		data: "",
 		senderPubKey: publicKey,
 	};
-	const txDataHashBuffer = hashTransaction(txData);
+	const txDataHashBuffer = sha256HashTransaction(txData);
 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
@@ -262,7 +262,7 @@ const walletUtils = {
 	decrypt,
 	deriveKeysFromMnemonic,
 	signTransaction,
-	hashTransaction,
+	sha256HashTransaction,
 	getAddressFromCompressedPubKey,
 	decryptAndSign,
 	submitTransaction,

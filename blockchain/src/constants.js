@@ -49,6 +49,7 @@ const CONFIG = {
 	safeConfirmCount: 6,
 	genesisBlock: undefined,
 	SPEND_UNCONFIRMED_FUNDS: false,
+	CHAIN_BIRTHDAY: new Date(2021, 9, 15).toISOString(),
 };
 
 const txBaseFields = [
