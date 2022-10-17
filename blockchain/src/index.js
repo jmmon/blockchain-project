@@ -1,3 +1,5 @@
+const {default: walletUtils} = import('../../walletUtils/index.js');
+
 const fetch = import('node-fetch');
 const {
 	CONFIG,
@@ -18,8 +20,10 @@ const {
 	valueCheck,
 	addFoundErrors,
 } = require('./valueChecks');
-// const walletUtils = import('../../walletUtils/index.js');
-const {default: walletUtils} = require('../../walletUtils/index');
+
+const crypto = require("crypto");
+const SHA256 = (message) =>
+	crypto.createHash("sha256").update(JSON.stringify(message)).digest("hex");
 
 class Blockchain {
 	constructor(config = CONFIG) {
@@ -58,7 +62,7 @@ class Blockchain {
 
 		console.log(
 			`--Cumulative Difficulty: ${JSON.stringify({
-				lastBlockDifficulty,
+				finalBlockDifficulty,
 				addedDifficulty,
 				cumulativeDifficulty: this.cumulativeDifficulty,
 			})}`
@@ -83,7 +87,7 @@ class Blockchain {
 	//check if hash starts with {difficulty} zeros;
 	// utils
 	isValidProof(block, difficulty = this.difficulty) {
-		return this.isValidBlockHash(walletUtils.sha256Hash(block), difficulty);
+		return this.isValidBlockHash(SHA256(block), difficulty);
 	}
 
 	// blocks, utils
@@ -94,7 +98,7 @@ class Blockchain {
 		difficulty,
 		blockHash
 	) {
-		const hash = walletUtils.sha256Hash(
+		const hash = SHA256(
 			blockDataHash + '|' + dateCreated + '|' + nonce
 		);
 		return this.isValidBlockHash(hash, difficulty) && hash === blockHash;
@@ -436,7 +440,7 @@ class Blockchain {
 			prevBlockHash: '1',
 			minedBy: this.config.nullAddress,
 		};
-		const blockDataHash = walletUtils.sha256Hash(
+		const blockDataHash = SHA256(
 			JSON.stringify(genesisBlockData)
 		);
 
@@ -537,7 +541,7 @@ class Blockchain {
 		data,
 		senderPubKey,
 	}) {
-		return walletUtils.sha256Hash({
+		return SHA256({
 			from,
 			to,
 			value,
@@ -1448,7 +1452,7 @@ class Blockchain {
 		let timestamp = genesis
 			? CONFIG.CHAIN_BIRTHDAY
 			: new Date().toISOString();
-		let hash = walletUtils.sha256Hash(
+		let hash = SHA256(
 			block.blockDataHash + '|' + timestamp + '|' + nonce
 		);
 
@@ -1457,7 +1461,7 @@ class Blockchain {
 				? CONFIG.CHAIN_BIRTHDAY
 				: new Date().toISOString();
 			nonce += 1;
-			hash = walletUtils.sha256Hash(
+			hash = SHA256(
 				block.blockDataHash + '|' + timestamp + '|' + nonce
 			);
 		}
@@ -1512,9 +1516,9 @@ class Blockchain {
 		];
 
 		// STEP 3: build our data needed for blockDataHash;
-		const prevBlockHash = walletUtils.sha256Hash(this.getLastBlock());
+		const prevBlockHash = SHA256(this.getLastBlock());
 
-		const blockDataHash = walletUtils.sha256Hash({
+		const blockDataHash = SHA256({
 			index,
 			allTransactions,
 			difficulty,
@@ -1853,7 +1857,7 @@ function executeIncomingChain(chain) {
 				minedInBlockIndex: blockIndex,
 			}));
 
-			const blockDataHash = walletUtils.sha256Hash({
+			const blockDataHash = SHA256({
 				index: blockIndex,
 				transactions: allTransactions,
 				difficulty: thisBlock.difficulty,

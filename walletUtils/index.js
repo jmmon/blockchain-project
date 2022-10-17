@@ -128,10 +128,11 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	}
 };
 
-const sha256Hash = (obj) =>
-	Buffer.from(
+const sha256Hash = (obj) =>{
+	return Buffer.from(
 		crypto.createHash('sha256').update(JSON.stringify(obj)).digest()
 	);
+}
 
 // for transactions: removes "data" field if empty, or escapes spaces inside. Next, goes JSON and removes all non-escaped spaces from the JSON.
 const removeSpaces = (obj) => {
