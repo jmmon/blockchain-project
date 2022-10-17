@@ -48,7 +48,7 @@ const mineBlock = (block) => {
 		process.stdout.write('Mining ' +  nonce + " : " + maxZeroesFound + " | " + zeroesAtStartString + " .".repeat(dotsNumber) + " .\033[0G");
 		//end logging
 
-		if (validProof(blockHash, block.difficulty)) {
+		if (isValidProof(blockHash, block.difficulty)) {
 			process.stdout.write('\n');
 			return {
 				blockDataHash: block.blockDataHash,

@@ -1,73 +1,72 @@
-import BIP32Factory from "bip32";
-import * as ecc from "tiny-secp256k1";
+import BIP32Factory from 'bip32';
+import * as ecc from 'tiny-secp256k1';
 const bip32 = BIP32Factory.default(ecc);
-import * as bip39 from "bip39";
-import crypto from "crypto";
+import * as bip39 from 'bip39';
+import crypto from 'crypto';
 import fetch from 'node-fetch';
 
-const purpose = "44";
-const coinType = "7789";
+const purpose = '44';
+const coinType = '7789';
 const CONSTANTS = {
 	defaultFee: 10,
 };
 
 const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	`m/${purpose}'/${coinType}'/${account}'${
-		change ? `/${change}${index ? `/${index}` : ""}` : ""
+		change ? `/${change}${index ? `/${index}` : ''}` : ''
 	}`;
 
 // convert our 03... or 02... address into address with ...1 or ...0 (appended to end):
-const getCompressedPublicKey = async (compactPubKey) => compactPubKey
-		.slice(2)
-		.concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
+const compressThisPubKey = async (compactPubKey) =>
+	compactPubKey.slice(2).concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 
 // used to derive our address from our compressed public key
-const getAddressFromCompressedPubKey = (compressedPubKey) => crypto.createHash("ripemd160").update(compressedPubKey).digest('hex');
+const getAddressFromCompressedPubKey = (compressedPubKey) =>
+	crypto.createHash('ripemd160').update(compressedPubKey).digest('hex');
 
 const padBuffer = (string, bytes = 32) =>
 	Buffer.concat([Buffer.from(string)], bytes);
 
 const encrypt = (toEncrypt, passphrase) => {
 	const IV = crypto.randomBytes(16);
-	let response = {data: null, error: null};
+	let response = { data: null, error: null };
 	try {
 		passphrase = padBuffer(passphrase);
 		console.log('encrypting:', { toEncrypt, paddedPassphrase: passphrase });
-		let cipher = crypto.createCipheriv("aes-256-cbc", passphrase, IV);
-		let encrypted = cipher.update(toEncrypt, "utf8", "hex");
-		encrypted += cipher.final("hex");
+		let cipher = crypto.createCipheriv('aes-256-cbc', passphrase, IV);
+		let encrypted = cipher.update(toEncrypt, 'utf8', 'hex');
+		encrypted += cipher.final('hex');
 
-		response = {data: {IV, encrypted}, error: null};
-
-	} catch(err) {
-		response = {data: null, error: err};
-
+		response = { data: { IV, encrypted }, error: null };
+	} catch (err) {
+		response = { data: null, error: err };
 	} finally {
 		return response;
 	}
 };
 
-const decrypt = ({IV, encrypted}, passphrase) => {
-	let response = {data: null, error: null};
+const decrypt = ({ IV, encrypted }, passphrase) => {
+	let response = { data: null, error: null };
 	try {
 		passphrase = padBuffer(passphrase);
-		console.log('decrypting:', { IV, encrypted, paddedPassphrase: passphrase });
+		console.log('decrypting:', {
+			IV,
+			encrypted,
+			paddedPassphrase: passphrase,
+		});
 		IV = Buffer.from(IV);
-		console.log({IV});
-		let decipher = crypto.createDecipheriv("aes-256-cbc", passphrase, IV);
-		let decrypted = decipher.update(encrypted, "hex", "utf8");
-		decrypted += decipher.final("utf8");
+		console.log({ IV });
+		let decipher = crypto.createDecipheriv('aes-256-cbc', passphrase, IV);
+		let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+		decrypted += decipher.final('utf8');
 
-		response = {data: decrypted, error: null};
-
-	} catch(err) {
-		response = {data: null, error: err};
-
+		response = { data: decrypted, error: null };
+	} catch (err) {
+		response = { data: null, error: err };
 	} finally {
 		return response;
 	}
 };
-
 
 const deriveKeysFromMnemonic = async (mnemonic) => {
 	const masterSeed = bip39.mnemonicToSeedSync(mnemonic);
@@ -75,23 +74,21 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 
 	// only generating the first account, (not change,) first address
 	const path = generatePathFromObject({
-		account: "0",
-		change: "0",
-		index: "0",
+		account: '0',
+		change: '0',
+		index: '0',
 	});
 
 	const account0change0index0 = masterNode.derivePath(path);
-	const hexPrivateKey = account0change0index0.privateKey.toString("hex");
-	const hexPublicKeyCompact = account0change0index0.publicKey.toString("hex");
+	const hexPrivateKey = account0change0index0.privateKey.toString('hex');
+	const hexPublicKeyCompact = account0change0index0.publicKey.toString('hex');
 
-	const hexPublicKeyCompressed = await getCompressedPublicKey(
+	const hexPublicKeyCompressed = await compressThisPubKey(
 		hexPublicKeyCompact
 	);
 
-	const hexAddress = getAddressFromCompressedPubKey(
-		hexPublicKeyCompressed
-	);
-	
+	const hexAddress = getAddressFromCompressedPubKey(hexPublicKeyCompressed);
+
 	return {
 		privateKey: hexPrivateKey,
 		publicKey: hexPublicKeyCompressed,
@@ -107,78 +104,79 @@ const generateWallet = async () => {
 	};
 };
 
-
 const signTransaction = (privateKey, txDataHashBuffer) => {
-	let response = {data: null, error: null};
+	let response = { data: null, error: null };
 	try {
 		const splitSignature = (signature) => {
 			return [
-				signature.toString("hex").slice(0, 64),
-				signature.toString("hex").slice(64),
+				signature.toString('hex').slice(0, 64),
+				signature.toString('hex').slice(64),
 			];
 		};
-	
-		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, "hex"));
+
+		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
 		const signature = Buffer.from(
 			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		);
 		const [r, s] = splitSignature(signature);
 
-		response = {data: [r, s], error: null};
-
-	} catch(err) {
-		response = {data: null, error: err};
-
+		response = { data: [r, s], error: null };
+	} catch (err) {
+		response = { data: null, error: err };
 	} finally {
 		return response;
 	}
 };
 
-const removeSpaces = ({
-	from,
-	to,
-	value,
-	fee,
-	dateCreated,
-	data,
-	senderPubKey,
-}) => {
-	// escape data field spaces
-	data = data.replaceAll(/\s/gm, "\ ");
-
-	// rebuild to make sure order stays the same
-	const txDataJson = JSON.stringify({
-		from,
-		to,
-		value,
-		fee,
-		dateCreated,
-		data,
-		senderPubKey,
-	});
-
-	// replace non-escaped spaces
-	const escapedTxData = txDataJson.replace(
-		/(?<!\\)\s/gm,
-		""
+const sha256Hash = (obj) =>
+	Buffer.from(
+		crypto.createHash('sha256').update(JSON.stringify(obj)).digest()
 	);
 
-	return escapedTxData;
-}
+// for transactions: removes "data" field if empty, or escapes spaces inside. Next, goes JSON and removes all non-escaped spaces from the JSON.
+const removeSpaces = (obj) => {
+	if (!obj.data) {
+		// if data is '' or null / undefined
+		const newObj = {};
+		Object.keys(obj)
+			.filter((key) => key !== 'data')
+			.forEach((key) => (newObj[key] = obj[key]));
+		obj = newObj;
+	} else {
+		// escape spaces in data field
+		obj.data = obj.data.replaceAll(/\s/gm, '\ ');
+	}
+	// rebuild to make sure order stays the same
+	const objJson= JSON.stringify(obj);
 
+	// replace non-escaped spaces
+	const escapedObjJson = objJson.replace(/(?<!\\)\s/gm, '');
 
-const sha256Hash = (tx) => Buffer.from(crypto.createHash("sha256").update(removeSpaces(tx)).digest());
+	return escapedObjJson;
+};
 
+const trimAndSha256Hash = (obj) => sha256Hash(removeSpaces(obj));
 
-const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => {
+const decryptAndSign = async (
+	walletOrKeys,
+	recipient,
+	value,
+	password = ''
+) => {
 	let keys;
 	if (walletOrKeys.encryptedMnemonic) {
 		// decrypt wallet for signing
-		
-		const encrypted = {IV: walletOrKeys.IV, encrypted: walletOrKeys.encryptedMnemonic};
+
+		const encrypted = {
+			IV: walletOrKeys.IV,
+			encrypted: walletOrKeys.encryptedMnemonic,
+		};
 		const response = decrypt(encrypted, password);
 		if (response.error) {
-			return {data: null, error: "Error decrypting wallet! Try a different password?"};
+			return {
+				data: null,
+				error: 'Error decrypting wallet! Try a different password?',
+			};
 		}
 
 		// derive our keys
@@ -188,43 +186,43 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 	}
 
 	// prepare and hash our transaction data
-	const {privateKey, publicKey, address} = keys;
+	const { privateKey, publicKey, address } = keys;
 	let txData = {
 		from: address,
 		to: recipient,
 		value,
 		fee: CONSTANTS.defaultFee,
 		dateCreated: new Date().toISOString(),
-		data: "",
+		data: '',
 		senderPubKey: publicKey,
 	};
-	const txDataHashBuffer = sha256Hash(txData);
+	const txDataHashBuffer = trimAndSha256Hash(txData);
 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
 	if (signResponse.error) {
-		return {data: null, error: "Error signing transaction!"};
+		return { data: null, error: 'Error signing transaction!' };
 	}
 
 	// add our hash and signature fields
-	txData["transactionDataHash"] = txDataHashBuffer.toString("hex");
-	txData["senderSignature"] = signResponse.data;
+	txData['transactionDataHash'] = txDataHashBuffer.toString('hex');
+	txData['senderSignature'] = signResponse.data;
 
-	return {data: txData, error: null};
-}
+	return { data: txData, error: null };
+};
 
 const submitTransaction = async (nodeUrl, signedTransaction) => {
 	// post to node to submit signed transaction
 	const response = await fetch(`${nodeUrl}/transactions/send`, {
-		method: "POST",
+		method: 'POST',
 		body: JSON.stringify(signedTransaction),
-		headers: { "Content-Type": "application/json" },
+		headers: { 'Content-Type': 'application/json' },
 	});
 	console.log({ submitTransactionResponse: response });
 
 	// save our sent transaction for displaying
 	if (response.status === 200) {
-		return {data: signedTransaction, error: null};
+		return { data: signedTransaction, error: null };
 	}
 
 	console.log(`error submitting transaction`);
@@ -232,29 +230,30 @@ const submitTransaction = async (nodeUrl, signedTransaction) => {
 
 	// data / validation error
 	if (response.status === 400) {
-		return {data: null, error: json.errorMsg};
+		return { data: null, error: json.errorMsg };
 	}
 
 	// 404, etc
-	return {data: null, error: "Error connecting to node"};
-}
+	return { data: null, error: 'Error connecting to node' };
+};
 
 const fetchAddressBalance = async (nodeUrl, address) => {
 	const response = await fetch(`${nodeUrl}/address/${address}/balance`);
 	return await response.json();
-}
+};
 
 const verifySignature = (txDataHash, publicKey, signature) => {
 	// h == txDataHash
 	// Q == their public key?
-	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, "hex"));
-	const publicKeyArray = Uint8Array.from(Buffer.from(publicKey, "hex"));
-	const signatureArray = Uint8Array.from(Buffer.from(signature.join(""), "hex"));
+	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, 'hex'));
+	const publicKeyArray = Uint8Array.from(Buffer.from(publicKey, 'hex'));
+	const signatureArray = Uint8Array.from(
+		Buffer.from(signature.join(''), 'hex')
+	);
 	//rejoin our signature (r and s?)
 
 	return ecc.verify(txDataHashArray, publicKeyArray, signatureArray);
-}
-
+};
 
 const walletUtils = {
 	generateWallet,
@@ -262,6 +261,7 @@ const walletUtils = {
 	decrypt,
 	deriveKeysFromMnemonic,
 	signTransaction,
+	trimAndSha256Hash,
 	sha256Hash,
 	getAddressFromCompressedPubKey,
 	decryptAndSign,
@@ -272,3 +272,11 @@ const walletUtils = {
 };
 
 export default walletUtils;
+
+// const isValidProof = (hash, difficulty) => {
+// 	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
+// };
+
+// export const hashUtils = {
+// 	isValidProof,
+// };

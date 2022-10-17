@@ -5,7 +5,7 @@ const {
 } = require('node:worker_threads');
 const { sha256Hash } = import('../walletUtils/index');
 
-const validProof = (hash, difficulty) => {
+const isValidProof = (hash, difficulty) => {
 	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
 };
 
@@ -15,16 +15,16 @@ const {
 	index: blockIndex,
 } = getEnvironmentData('newJob');
 
-process.stdout.write('(' + workerIndex + ') ');
-
 let nonce = 0;
+
+process.stdout.write('(' + workerIndex + ') ');
 
 while (true) {
 	const dateCreated = new Date().toISOString();
 	const blockHash = sha256Hash(`${blockDataHash}|${dateCreated}|${nonce}`);
 	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
 
-	if (validProof(blockHash, difficulty)) {
+	if (isValidProof(blockHash, difficulty)) {
 		const workerInfo = {
 			workerIndex,
 			pid: process.pid,

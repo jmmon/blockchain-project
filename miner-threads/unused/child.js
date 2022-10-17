@@ -24,7 +24,7 @@ module.exports = function (input, callback) {
 		const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
 		const blockHash = sha256Hash(dataToHash);
 
-		if (validProof(blockHash, difficulty)) {
+		if (isValidProof(blockHash, difficulty)) {
 			console.log(`***Success: Worker ${i} process ${process.pid}`);
 			callback(null, {
 				dateCreated,

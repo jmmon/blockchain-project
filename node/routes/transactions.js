@@ -74,8 +74,12 @@ router.post('/send', async (req, res) => {
 	const signedTransaction = req.body;
 	console.log({ signedTransaction });
 
-	const { valid, errors, transaction: validatedTransaction} = blockchain.validateNewTransaction(signedTransaction);
-	
+	const {
+		valid,
+		errors,
+		transaction: validatedTransaction,
+	} = blockchain.validateNewTransaction(signedTransaction);
+
 	if (!valid) {
 		return res
 			.status(400)
@@ -83,52 +87,70 @@ router.post('/send', async (req, res) => {
 	}
 	// add transaction to pending, send the response
 	this.addPendingTransaction(validatedTransaction);
-	res.status(200).send(JSON.stringify(validatedTransaction.transactionDataHash));
+	res.status(200).send(
+		JSON.stringify(validatedTransaction.transactionDataHash)
+	);
 
 	// BELOW is peer syncing
 
 	// need to propagate the transaction to other nodes!
 	// Go through peers and send post requests to send transaction to the nodes
 	const sender = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-	const peers = blockchain.peers();
+	const peers = blockchain.peers;
 
 	console.log('transaction received from sender IP address:', sender);
 
+	if (peers.size === 0) return;
+
 	Promise.all(
-		peers.forEach(async (peerId, peerUrl) => {
+		peers.entries().map(([peerId, peerUrl]) => {
 			if (peerUrl.includes(sender)) {
 				console.log(`--Skipping peer`, { sender, peerId, peerUrl });
 				return;
 			}
-
-			console.log(
-				`-- sending to: Node ${peerId} (${peerUrl})`
-			);
-			
-			const response = await (
-				await fetch(`${peerUrl}/transactions/send`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(signedTransaction),
-				})
-			).json();
-
-			console.log(
-				`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`
-			);
-
-// version 2:
-			// await (
-			// 	await fetch(`${peerUrl}/transactions/send`, {
-			// 		method: 'POST',
-			// 		headers: { 'Content-Type': 'application/json' },
-			// 		body: JSON.stringify(signedTransaction),
-			// 	})
-			// ).json().then(response => console.log(`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`));
+			console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+			return fetch(`${peerUrl}/transactions/send`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(signedTransaction),
+			})
+				.then((res) => res.json())
+				.then((res) =>
+					console.log(
+						`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
+					)
+				).catch((err) => console.log(`Error propagating transactions to Node ${peerid} (${peerUrl}): ${err.message}`));
 		})
+		// peers.forEach(async (peerId, peerUrl) => {
+		// 	if (peerUrl.includes(sender)) {
+		// 		console.log(`--Skipping peer`, { sender, peerId, peerUrl });
+		// 		return;
+		// 	}
+
+		// 	console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+
+		// 	const response = await (
+		// 		await fetch(`${peerUrl}/transactions/send`, {
+		// 			method: 'POST',
+		// 			headers: { 'Content-Type': 'application/json' },
+		// 			body: JSON.stringify(signedTransaction),
+		// 		})
+		// 	).json();
+
+		// 	console.log(
+		// 		`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`
+		// 	);
+
+		// 	// version 2:
+		// 	// await (
+		// 	// 	await fetch(`${peerUrl}/transactions/send`, {
+		// 	// 		method: 'POST',
+		// 	// 		headers: { 'Content-Type': 'application/json' },
+		// 	// 		body: JSON.stringify(signedTransaction),
+		// 	// 	})
+		// 	// ).json().then(response => console.log(`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`));
+		// })
 	);
 });
-
-
 
 module.exports = router;

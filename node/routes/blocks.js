@@ -1,13 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-// works:
 router.get("/", (req, res) => {
 	const blockchain = req.app.get("blockchain");
 	res.status(200).send(JSON.stringify(blockchain.chain));
 });
 
-// works:
 router.get("/:id", (req, res) => {
 	const blockchain = req.app.get("blockchain");
 	if (req.params.id < 0 || req.params.id > blockchain.chain.length - 1) {

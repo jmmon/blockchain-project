@@ -18,7 +18,8 @@ const {
 	valueCheck,
 	addFoundErrors,
 } = require('./valueChecks');
-const { default: walletUtils } = require('../../walletUtils/index.js');
+// const walletUtils = import('../../walletUtils/index.js');
+const {default: walletUtils} = require('../../walletUtils/index');
 
 class Blockchain {
 	constructor(config = CONFIG) {
@@ -51,8 +52,7 @@ class Blockchain {
 	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
 	//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
-		const finalBlockDifficulty =
-			this.chain[this.chain.length - 1]?.difficulty;
+		const finalBlockDifficulty = this.getLastBlock()?.difficulty;
 		const addedDifficulty = this.cumulateDifficulty(finalBlockDifficulty);
 		this.cumulativeDifficulty += addedDifficulty;
 
@@ -70,42 +70,34 @@ class Blockchain {
 		return 16 ** difficulty;
 	}
 
-	// transactions, utils
-	clearIncludedPendingTransactions(block) {
-		const remainingTransactions = this.pendingTransactions.filter(
-			(tx) => !block.transactions.includes(tx)
-		);
-
-		this.pendingTransactions = [...remainingTransactions];
-	}
-
-	// block, utils
-	hash(block) {
-		return walletUtils.sha256Hash(JSON.stringify(block));
-	}
-
 	// block, utils
 	getLastBlock() {
 		return this.chain[this.chain.length - 1];
 	}
 
-	//check if hash starts with {difficulty} zeros;
 	// utils
-	validProof(block, difficulty = this.difficulty) {
-		return this.validHash(this.hash(block), difficulty);
+	isValidBlockHash(_hash, difficulty = this.config.startDifficulty || 1) {
+		return _hash.slice(0, difficulty) === '0'.repeat(difficulty);
 	}
 
+	//check if hash starts with {difficulty} zeros;
 	// utils
-	validHash(hash, difficulty = this.config.startDifficulty || 1) {
-		return hash.slice(0, difficulty) === '0'.repeat(difficulty);
+	isValidProof(block, difficulty = this.difficulty) {
+		return this.isValidBlockHash(walletUtils.sha256Hash(block), difficulty);
 	}
 
 	// blocks, utils
-	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
+	validateBlockHash(
+		blockDataHash,
+		dateCreated,
+		nonce,
+		difficulty,
+		blockHash
+	) {
 		const hash = walletUtils.sha256Hash(
-			blockDataHash + '|' + timestamp + '|' + nonce
+			blockDataHash + '|' + dateCreated + '|' + nonce
 		);
-		return this.validHash(hash, difficulty) && hash === blockHash;
+		return this.isValidBlockHash(hash, difficulty) && hash === blockHash;
 	}
 
 	// difficulty adjustment
@@ -263,8 +255,7 @@ class Blockchain {
 	*/
 
 	// validation, utils
-	validateAddress(address) {
-		const label = 'Address';
+	validateAddress(address, label) {
 		const typeResult = typeCheck({ label, value: address, type: 'string' });
 		const patternResult = patternCheck({
 			label,
@@ -430,6 +421,8 @@ class Blockchain {
 			newDifficulty > this.config.difficultyLimit
 				? this.config.difficultyLimit
 				: newDifficulty;
+		
+		this.notifyPeers(block);
 	}
 
 	// blocks
@@ -476,7 +469,6 @@ class Blockchain {
 			blockHash: minedBlockCandidate.blockHash,
 		};
 		// Add valid block
-
 
 		this.chain.push(genesisBlock);
 
@@ -545,17 +537,15 @@ class Blockchain {
 		data,
 		senderPubKey,
 	}) {
-		return walletUtils.sha256Hash(
-			JSON.stringify({
-				from,
-				to,
-				value,
-				fee,
-				dateCreated,
-				data,
-				senderPubKey,
-			})
-		);
+		return walletUtils.sha256Hash({
+			from,
+			to,
+			value,
+			fee,
+			dateCreated,
+			data,
+			senderPubKey,
+		});
 	}
 
 	createHashedTransaction({
@@ -772,49 +762,186 @@ class Blockchain {
 	----------------------------------------------------------------
 	*/
 
-	// peers, sync
-	// Their chain is better, we need to download and validate their chain
-	async syncPeer(peerInfo, peerUrl) {
-		console.log(`Syncing with better chain from peer`);
-		const response = await fetch(`${peerUrl}/blocks`);
-		const theirChain = await response.json();
-		if (!response.statusCode === 200)
-			return { valid: false, error: 'Cannot get peer chain' };
-		
-		// execute the whole chain in a new blockchain
-		const {valid, cumulativeDifficulty} = executeIncomingChain(theirChain);
-		if (!valid) {
-			return false;
-		}
+	async attemptSyncPeer(peerInfo, peerUrl) {
+		try {
+			const [theirChain, theirPending] = await Promise.all([
+				fetch(`${peerUrl}/blocks`),
+				fetch(`${peerUrl}/transactions/pending`),
+			]).then(([chainR, pendingR]) => {
+				// if we can't get chain, we're done.
+				// if we can't get pendingTransasctions, no problem!
+				if (chainR.statusCode !== 200) {
+					throw new Error('Cannot get peer chain');
+				}
+				return [chainR.json(), pendingR.json() ?? null];
+			});
 
-		if (cumulativeDifficulty > this.cumulativeDifficulty) {
+			console.log(
+				`Fetched chain: ${theirChain
+					.map((block) => block.blockHash)
+					.join(', ')} \nFetched pending: ${
+					theirPending
+						.map((txn) => txn.transactionDataHash)
+						.join(', ') ?? 'null'
+				}`
+			);
+			// Should have theirChain and theirPending || null
+
+			// execute the whole chain in a new blockchain
+			const { valid, cumulativeDifficulty } =
+				executeIncomingChain(theirChain);
+
+			if (!valid) {
+				return { valid: false, error: `Their chain isn't valid!` };
+			}
+			if (cumulativeDifficulty <= this.cumulativeDifficulty) {
+				return {
+					valid: false,
+					error: `The valid chain isn't better than ours!`,
+				};
+			}
+
+			// CHAIN IS VALID AND BETTER:
+
 			// replace chain,
 			this.chain = theirChain;
 
 			// clear mining jobs (they are invalid)
 			this.clearMiningJobs();
-		
-			// pendingTransactions: keep those that are not in the blocks and propagate them
-			//and collect those that are in the peer's pendingTransactions
+
+			this.notifyPeers(this.getLastBlock());
+
+			// SYNC PENDING TRANSACTIONS:
+
+			// Clean up current pendingTransactions:
+			// Add those that are in the peer's pendingTransactions
+			const uniqueTransactions = new Set([
+				...this.pendingTransactions,
+				...theirPending,
+			]);
+			// Keep those that are not in the chain
+			this.pendingTransactions = this.keepMissingTransactions(
+				Array.from(uniqueTransactions)
+			);
+		} catch (err) {
+			return { valid: false, error: err.message };
 		}
-
-
-		// TODO:
-		// validate downloaded peer chain (blocks, transactions, etc)
-		this.validateChain(theirChain);
-		// if valid, replace current chain, and notify all peers of the new chain
-
-		// TODO:
-		// sync pending transactions (only if chain was valid??)
-		this.syncPendingTransactions(peerUrl);
-		// console.log(result);
-		// return result;
 	}
 
-	// peers, transactions
-	synchronizePendingTransactions(peerUrl) {
-		//fetch /transactions/pending and append missing transactions
-		// be sure to check for duplicated hashes!
+	// should be run any time the chain changes (when a block is mined)
+	notifyPeers(block) {
+		// notify peers of new chain! (how?)
+		this.peers.forEach(([peerInfo, peerUrl]) => {
+			fetch(`${peerUrl}/peers/notify-new-block`, {
+				method: 'POST',
+				body: JSON.stringify({ block }),
+				headers: { 'Content-Type': 'application/json' },
+			});
+		});
+	}
+	// peers, sync
+	// Their chain is better, we need to download and validate their chain
+	// async syncPeer(peerInfo, peerUrl) {
+	// 	console.log(`Syncing with better chain from peer`);
+	// 	const response = await fetch(`${peerUrl}/blocks`);
+	// 	if (!response.statusCode === 200)
+	// 		return { valid: false, error: 'Cannot get peer chain' };
+
+	// 	const theirChain = await response.json();
+
+	// 	// execute the whole chain in a new blockchain
+	// 	const { valid, cumulativeDifficulty } =
+	// 		executeIncomingChain(theirChain);
+
+	// 	if (!valid) {
+	// 		return { valid: false, error: `Their chain isn't valid!` };
+	// 	}
+	// 	if (cumulativeDifficulty <= this.cumulativeDifficulty) {
+	// 		return {
+	// 			valid: false,
+	// 			error: `The valid chain isn't better than ours!`,
+	// 		};
+	// 	}
+
+	// 	// CHAIN IS VALID AND BETTER:
+
+	// 	// replace chain,
+	// 	this.chain = theirChain;
+
+	// 	// clear mining jobs (they are invalid)
+	// 	this.clearMiningJobs();
+
+	// 	// notify peers of new chain! (how?)
+
+	// 	// SYNC PENDING TRANSACTIONS:
+
+	// 	// Clean up current pendingTransactions:
+	// 	// Keep those that are not in the chain
+	// 	this.pendingTransactions = this.keepMissingPendingTransactions();
+
+	// 	// Add those that are in the peer's pendingTransactions
+	// 	this.syncPendingTransactions(peerUrl);
+
+	// 	// Propagate all pendingTransactions
+	// }
+
+	// cleanPendingTransactionsFromChain() {
+	// 	const keptPendingTxns = this.pendingTransactions.filter(txn => )
+
+	// 	this.pendingtrans
+	// }
+
+	keepMissingTransactions(list) {
+		console.log('keepMissingTransactions:');
+		// filter out those that are in the chain
+
+		// go through each block,
+		//		go through each transaction
+		//			If transactionDataHash is included in pendingTransactions,
+		//				add it to an array
+		// Later, filter out all pendingTransactions that are in the array
+		//				OR: splice it out of the pendingTransactions right here!
+
+		const keepTheseDataHashes = list.map((txn) => txn.transactionDataHash);
+		const originalPendingCount = keepTheseDataHashes.length;
+
+		console.log(
+			`- Initial pending txns: ${originalPendingCount}\n${keepTheseDataHashes.join(
+				', '
+			)}`
+		);
+
+		for (const block of this.chain) {
+			for (const transaction of block.transactions) {
+				const thisDataHash = transaction.transactionDataHash;
+
+				// look up index in our pendingTransactions
+				const indexInPending =
+					keepTheseDataHashes.indexOf(thisDataHash);
+
+				// Remove ones that were found
+				if (indexInPending !== -1) {
+					keepTheseDataHashes.splice(indexInPending, 1);
+					console.log(
+						`--- Removing ${thisDataHash} (Found in block index ${block.index})`
+					);
+				}
+			}
+		}
+
+		// remove ones that we don't want to keep
+		const remainingPendingTxns = list.filter(
+			(txn) => !keepTheseDataHashes.includes(txn.transactionDataHash)
+		);
+		const remainingPendingCount = remainingPendingTxns.length;
+		console.log(
+			`- Done removing\nRemaining pending txns: ${remainingPendingCount} (Removed ${
+				originalPendingCount - remainingPendingCount
+			} transactions)\n${remainingPendingTxns.join(', ')}`
+		);
+
+		// returns array of transactions from pending that were not included in blocks
+		return remainingPendingTxns;
 	}
 
 	/*
@@ -822,49 +949,6 @@ class Blockchain {
 		VALIDATION FOR PEER SYNC	
 	----------------------------------------------------------------
 	*/
-
-	// takes chain, returns true or false;
-	// chain, validation
-	validateChain(chain) {
-		// Ensure same genesis block
-		if (chain[0] !== this.chain[0]) {
-			console.log(
-				`Genesis blocks don't match!\nOurs ${this.chain[0]}\nTheirs: ${chain[0]}`
-			);
-			return false;
-		}
-
-		// Loop through chain and validate each block:
-		let previousBlock = chain[0];
-		console.log({ genesis: previousBlock });
-		let currentIndex = 1;
-
-		while (currentIndex < chain.length) {
-			const block = chain[currentIndex];
-			console.log({ currentBlock: block });
-			console.log('\n--------\n');
-
-			const result = this.validateBlock(block, previousBlock);
-			if (!result.valid) return false;
-
-			// validate transactions in the block:
-			// 	validate fields, values, recalculate txDataHash, validate signature, re-execute transactions, re-create minedInBlockIndex & transferSuccessful
-			this.validateBlockTransactions(block);
-
-			previousBlock = block;
-			currentIndex++;
-		}
-
-		// TODO:
-		/* 
-			If chain has all been executed and validated,
-				if new chain's cumulativeDifficulty > our cumulativeDifficulty
-					replace ours with the new chain
-					clear all mining jobs (because they are invalid)
-		*/
-
-		return true;
-	}
 
 	validateBlock(block, previousBlock) {
 		let errors = [];
@@ -895,6 +979,83 @@ class Blockchain {
 		}
 
 		return { valid, errors: null, block };
+	}
+
+	validateNewTransaction(signedTransaction) {
+		let errors = [];
+
+		// validate the FROM address is derived from the public key
+		const hexAddress = walletUtils.addressFromCompressedPubKey(
+			signedTransaction.senderPubKey
+		);
+		if (signedTransaction.from !== hexAddress) {
+			errors.push(
+				`FROM address is not derived from sender's public key!`
+			);
+		}
+
+		//validate signature is from public key
+		if (
+			!walletUtils.verifySignature(
+				signedTransaction.transactionDataHash,
+				signedTransaction.senderPubKey,
+				signedTransaction.senderSignature
+			)
+		) {
+			errors.push(`Transaction signature is invalid!`);
+		}
+
+		// check for all fields
+		const result = this.validateFields(
+			Object.keys(signedTransaction),
+			txBaseFields
+		);
+		if (result.valid !== true) {
+			result.missing.forEach((errMsg) => errors.push(errMsg));
+		}
+
+		//check for invalid values :
+
+		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
+		const basicResults = this.basicTxValidation(
+			signedTransaction,
+			this.pendingTransactions
+		);
+		if (!basicResults.valid) {
+			basicResults.errors.forEach((err) => errors.push(err));
+		}
+
+		// check balance of sender
+
+		// sender account balance >= value + fee
+		// (NOT allowing sending of pending funds)
+		const balancesOfSender = this.balancesOfAddress(signedTransaction.from);
+		const spendingBalance = this.config.SPEND_UNCONFIRMED_FUNDS
+			? balancesOfSender.pendingBalance
+			: balancesOfSender.confirmedBalance;
+		if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
+			errors.push(
+				`Invalid transaction: 'from' address does not have enough funds!`
+			);
+		}
+
+		// create new transaction
+		const newTransaction = this.createHashedTransaction(signedTransaction);
+
+		// check blockchain AND pending transactions for this transactionHash
+		const foundTransaction = this.getTransactionByHash(
+			newTransaction.transactionDataHash
+		);
+		if (!foundTransaction) {
+			errors.push(`Duplicate transaction data hash!`);
+		}
+
+		// if errors, return the errors
+		if (errors.length > 0) {
+			return { valid: false, errors, transaction: null };
+		}
+
+		return { valid: true, errors: null, transaction: newTransaction };
 	}
 
 	// validation, utils
@@ -964,7 +1125,7 @@ class Blockchain {
 			error: typeCheck({ label, value: currentValue, type: 'number' }),
 		});
 
-		// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash (will do more validation later)
+		// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash
 		field = 'prevBlockHash';
 		label = upperFirstLetter(field);
 		currentValue = block[field];
@@ -1030,32 +1191,10 @@ class Blockchain {
 		}
 
 		// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
-		field = 'minedBy';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'string:' }),
-		});
-		addFoundErrors({
-			missing,
-			error: patternCheck({
-				label,
-				value: currentValue,
-				pattern: hexPattern,
-				expected: 'to be valid hex string',
-				actual: `not valid hex string`,
-			}),
-		});
-		addFoundErrors({
-			missing,
-			error: lengthCheck({
-				label,
-				value: currentValue,
-				expected: 40,
-				type: '===',
-			}),
-		});
+		let minedByAddrResult = this.validateAddress(block.minedBy, 'MinedBy');
+		if (!minedByAddrResult.valid) {
+			minedByAddrResult.missing.forEach((err) => missing.push(err));
+		}
 
 		// blockDataHash: should be string, only have certain characters, 40 characters?, (Will recalculate later)
 		field = 'blockDataHash';
@@ -1128,7 +1267,7 @@ class Blockchain {
 			});
 		}
 
-		// blockHash: should be a string, only certain characters, 40 characters? (recalc later)
+		// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
 		field = 'blockHash';
 		label = upperFirstLetter(field);
 		currentValue = block[field];
@@ -1161,69 +1300,18 @@ class Blockchain {
 		return { valid: true, missing: null };
 	} // validateBlockValues
 
-	// validation, utils
-	validateBlockTransactions(block) {
-		const transactions = block.transactions;
-
-		let i = 0;
-		let valid = true;
-		while (valid) {
-			const transaction = transactions[i];
-
-			// validating transaction fields
-			const fieldsResult = validateFields(
-				Object.keys(transaction),
-				txAllFields
-			);
-
-			if (!fieldsResult.valid) {
-				valid = false;
-			}
-
-			// validating transaction values, recalc txDataHash, validate signature
-			const valuesResult = validateTxValues(block, transaction);
-
-			if (!valuesResult.valid) {
-				valid = false;
-			}
-
-			const result = reexecuteTransaction(transaction);
-
-			if (!result.valid) {
-				valid = false;
-			}
-
-			// TODO:
-			//		re-execute all transactions?;
-			//		recalculate values of minedInBlockIndex and transferSuccessful fields;
-
-			// re-execute all transactions
-			// making sure that the inputs and outputs and fees add up?
-
-			// re-calculate values of minedInBlockIndex && transferSuccessful
-			// minedInBlockIndex: check that the block index is correct? That this block has this transaction?
-			// transferSuccessful: make sure the transaction is included in a block ?
-
-			// if any invalid, return false (with info about why??)
-
-			i++;
-		}
-
-		return true;
-	} // validateBlockTransactions
-
 	basicTxValidation(transaction, date_transactions) {
 		let valid = true;
 		let errors = [];
 
 		// to:
-		let toAddrResult = this.validateAddress(transaction.to);
+		let toAddrResult = this.validateAddress(transaction.to, 'To');
 		if (!toAddrResult.valid) {
 			toAddrResult.missing.forEach((err) => errors.push(err));
 		}
 
 		// from:
-		let fromAddrResult = this.validateAddress(transaction.from);
+		let fromAddrResult = this.validateAddress(transaction.from, 'From');
 		if (!fromAddrResult.valid) {
 			fromAddrResult.missing.forEach((err) => errors.push(err));
 		}
@@ -1316,7 +1404,7 @@ class Blockchain {
 			error: valueCheck({
 				label,
 				value: currentValue,
-				expected: blockchain.hashTransaction(transaction),
+				expected: newHash,
 				type: '===',
 			}),
 		});
@@ -1326,7 +1414,7 @@ class Blockchain {
 		label = upperFirstLetter(field);
 		currentValue = transaction[field];
 		const sigValid = walletUtils.verifySignature(
-			transactionDataHash,
+			newHash,
 			senderPubKey,
 			senderSignature
 		);
@@ -1343,15 +1431,7 @@ class Blockchain {
 
 		if (missing.length > 0) return { valid: false, missing };
 		return { valid: true, missing: null };
-	} // validateBlockValues
-
-	reexecuteTransaction(transaction) {}
-	// what does it mean to re-execute transactions?
-	// Need to track balances; need to re-buid some functionality to allow that probably
-	// OR, could do a swapidoodle and save the current chain and pendingTransactions in a backup, then:
-	// (if genesis is same) reset the chain and read the incoming chain's transactions as processes and execute them all.
-	// Then in the end, I should be on the updated chain. And then reconcile the pendingTransactions by:
-	// take old pending transactions, drop (filter out) ones that are in the new chain, and keep any others that might exist (and propagate them?)
+	} // validateTxValues
 
 	/*
 	----------------------------------------------------------------
@@ -1360,36 +1440,22 @@ class Blockchain {
 	*/
 
 	mineGenesisBlock(block) {
-		let nonce = 0;
-		const timestamp = CONFIG.CHAIN_BIRTHDAY;
-		let hash = walletUtils.sha256Hash(
-			block.blockDataHash + '|' + timestamp + '|' + nonce
-		);
-
-		while (!this.validHash(hash, block.difficulty)) {
-			nonce += 1;
-			hash = walletUtils.sha256Hash(
-				block.blockDataHash + '|' + timestamp + '|' + nonce
-			);
-		}
-
-		return {
-			blockDataHash: block.blockDataHash,
-			dateCreated: timestamp,
-			nonce: nonce,
-			blockHash: hash,
-		};
+		return this.mineBlock(block, 0, true);
 	}
 
 	// mining
-	mineBlock(block, nonce = 0) {
-		let timestamp = new Date().toISOString();
+	mineBlock(block, nonce = 0, genesis = false) {
+		let timestamp = genesis
+			? CONFIG.CHAIN_BIRTHDAY
+			: new Date().toISOString();
 		let hash = walletUtils.sha256Hash(
 			block.blockDataHash + '|' + timestamp + '|' + nonce
 		);
 
-		while (!this.validHash(hash, block.difficulty)) {
-			timestamp = new Date().toISOString();
+		while (!this.isValidBlockHash(hash, block.difficulty)) {
+			timestamp = genesis
+				? CONFIG.CHAIN_BIRTHDAY
+				: new Date().toISOString();
 			nonce += 1;
 			hash = walletUtils.sha256Hash(
 				block.blockDataHash + '|' + timestamp + '|' + nonce
@@ -1446,17 +1512,15 @@ class Blockchain {
 		];
 
 		// STEP 3: build our data needed for blockDataHash;
-		const prevBlockHash = this.hash(this.chain[this.chain.length - 1]);
+		const prevBlockHash = walletUtils.sha256Hash(this.getLastBlock());
 
-		const blockDataHash = walletUtils.sha256Hash(
-			JSON.stringify({
-				index,
-				allTransactions,
-				difficulty,
-				prevBlockHash,
-				minedBy: minerAddress,
-			})
-		);
+		const blockDataHash = walletUtils.sha256Hash({
+			index,
+			allTransactions,
+			difficulty,
+			prevBlockHash,
+			minedBy: minerAddress,
+		});
 
 		// STEP 4: save the block candidate;
 		this.saveMiningJob(
@@ -1491,7 +1555,7 @@ class Blockchain {
 	submitMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
 		if (this.miningJobs.size === 0) {
 			return {
-				status: 404,
+				status: 400,
 				message: "No mining jobs! Node must've reset",
 			};
 		}
@@ -1499,13 +1563,13 @@ class Blockchain {
 		const foundBlock = this.miningJobs.get(blockDataHash) ?? null;
 
 		if (!foundBlock) {
-			return { status: 404, message: 'Mining job missing!' };
+			return { status: 400, message: 'Mining job missing!' };
 		}
 
 		const isValid = this.validateBlockHash(
+			blockDataHash,
 			dateCreated,
 			nonce,
-			blockDataHash,
 			foundBlock.difficulty,
 			blockHash
 		);
@@ -1520,14 +1584,14 @@ class Blockchain {
 			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
-				status: 404,
+				status: 400,
 			};
 		}
 
 		this.addValidBlock(completeBlock);
 
 		return {
-			message: `Block accepted, reward paid: 500350 microcoins`,
+			message: `Block accepted, reward paid: ${foundBlock.transactions[0].value + foundBlock.transactions[0].fee} microcoins`,
 			status: 200,
 		};
 	}
@@ -1715,83 +1779,6 @@ class Blockchain {
 		}
 		return prunedBalances;
 	}
-
-	validateNewTransaction(signedTransaction) {
-		let errors = [];
-
-		// validate the FROM address is derived from the public key
-		const hexAddress = walletUtils.getAddressFromCompressedPubKey(
-			signedTransaction.senderPubKey
-		);
-		if (signedTransaction.from !== hexAddress) {
-			errors.push(
-				`FROM address is not derived from sender's public key!`
-			);
-		}
-
-		//validate signature is from public key
-		if (
-			!walletUtils.verifySignature(
-				signedTransaction.transactionDataHash,
-				signedTransaction.senderPubKey,
-				signedTransaction.senderSignature
-			)
-		) {
-			errors.push(`Transaction signature is invalid!`);
-		}
-
-		// check for all fields
-		const result = this.validateFields(
-			Object.keys(signedTransaction),
-			txBaseFields
-		);
-		if (result.valid !== true) {
-			result.missing.forEach((errMsg) => errors.push(errMsg));
-		}
-
-		//check for invalid values :
-
-		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
-		const basicResults = this.basicTxValidation(
-			signedTransaction,
-			this.pendingTransactions
-		);
-		if (!basicResults.valid) {
-			basicResults.errors.forEach((err) => errors.push(err));
-		}
-
-		// check balance of sender
-
-		// sender account balance >= value + fee
-		// (NOT allowing sending of pending funds)
-		const balancesOfSender = this.balancesOfAddress(signedTransaction.from);
-		const spendingBalance = this.config.SPEND_UNCONFIRMED_FUNDS
-			? balancesOfSender.pendingBalance
-			: balancesOfSender.confirmedBalance;
-		if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
-			errors.push(
-				`Invalid transaction: 'from' address does not have enough funds!`
-			);
-		}
-
-		// create new transaction
-		const newTransaction = this.createHashedTransaction(signedTransaction);
-
-		// check blockchain AND pending transactions for this transactionHash
-		const foundTransaction = this.getTransactionByHash(
-			newTransaction.transactionDataHash
-		);
-		if (!foundTransaction) {
-			errors.push(`Duplicate transaction data hash!`);
-		}
-
-		// if errors, return the errors
-		if (errors.length > 0) {
-			return { valid: false, errors, transaction: null };
-		}
-
-		return { valid: true, errors: null, transaction: newTransaction };
-	}
 }
 
 // Executing incoming chain Steps:
@@ -1803,7 +1790,7 @@ class Blockchain {
 // After validating an entire block && transactions,
 // 1. "Mine the block" or fake-mine the block. Need to basically calculate and check the hashes to make sure the nonce results in the difficulty.
 
-const executeIncomingChain = (chain) => {
+function executeIncomingChain(chain) {
 	// create new chain
 	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
 	// generate (same as original chain) genesis block
@@ -1860,39 +1847,39 @@ const executeIncomingChain = (chain) => {
 			// );
 
 			// includes miner reward tx
-			const allTransactions = this.pendingTransactions.map(
-				(txData) => ({
-					...txData,
-					transferSuccessful: true,
-					minedInBlockIndex: blockIndex,
-				})
+			const allTransactions = this.pendingTransactions.map((txData) => ({
+				...txData,
+				transferSuccessful: true,
+				minedInBlockIndex: blockIndex,
+			}));
+
+			const blockDataHash = walletUtils.sha256Hash({
+				index: blockIndex,
+				transactions: allTransactions,
+				difficulty: thisBlock.difficulty,
+				prevBlockHash: thisBlock.prevBlockHash,
+				minedBy: thisBlock.transactions[0].minedBy,
+			});
+
+			const blockHash = sha256Hash(
+				`${blockDataHash}|${thisBlock.dateCreated}|${thisBlock.nonce}`
 			);
 
-
-			const blockDataHash = walletUtils.sha256Hash(
-				JSON.stringify({
-					index: blockIndex,
-					transactions: allTransactions,
-					difficulty: thisBlock.difficulty,
-					prevBlockHash: thisBlock.prevBlockHash,
-					minedBy: thisBlock.transactions[0].minedBy,
-				})
+			const blockIsValid = this.isValidBlockHash(
+				blockHash,
+				thisBlock.difficulty
 			);
-
-			const blockHash = sha256Hash(`${blockDataHash}|${thisBlock.dateCreated}|${thisBlock.nonce}`);
-
-			const blockIsValid = this.validHash(blockHash, thisBlock.difficulty);
 
 			if (!blockIsValid) {
 				throw new Error(`Calculated blockHash is not valid!`);
 			}
 
 			// All valid? Ready to roll forward!
-		this.clearIncludedPendingTransactions(thisBlock);
+			this.clearIncludedPendingTransactions(thisBlock);
 
-		this.chain.push(thisBlock);
+			this.chain.push(thisBlock);
 
-		this.cumulateDifficultyFromLastBlock();	
+			this.cumulateDifficultyFromLastBlock();
 
 			// if all valid, remove pendingTransactions
 
@@ -1904,13 +1891,12 @@ const executeIncomingChain = (chain) => {
 		// Time to compare cumulative difficulties!
 
 		// Do I return the difficulty?
-		return { valid: true, cumulativeDifficulty: this.cumulativeDifficulty};
-
+		return { valid: true, cumulativeDifficulty: this.cumulativeDifficulty };
 	} catch (error) {
 		// if something fails during the chain execution, return false
-		return { valid: false, cumulativeDifficulty: null};
+		return { valid: false, cumulativeDifficulty: null };
 	}
-};
+}
 
 module.exports = { Blockchain, executeIncomingChain };
 // export default Blockchain;
