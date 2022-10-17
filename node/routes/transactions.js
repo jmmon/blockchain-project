@@ -3,7 +3,7 @@ const { response } = require('express');
 const express = require('express');
 const { txBaseFields } = require('../../blockchain/src/constants.js');
 const Transaction = require('../../blockchain/src/Transaction.js');
-const { valueCheck } = require('../../blockchain/src/valueChecks.js');
+const { valueCheck } = require('../../blockchain/src/validation.js');
 const router = express.Router();
 
 // works:

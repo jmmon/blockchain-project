@@ -1,4 +1,5 @@
-const walletUtils = import('../../walletUtils/index.js');
+const { trimAndSha256Hash } = require( './hashing.js' );
+
 // export interface ITransaction {
 // 		from: string;
 // 		to: string;
@@ -89,7 +90,7 @@ class Transaction {
 	}
 
 	hashData() {
-		return walletUtils.trimAndSha256Hash(this.dataForHashing());
+		this.transactionDataHash = trimAndSha256Hash(this.dataForHashing());
 	}
 
 

@@ -1,4 +1,4 @@
-const {default: walletUtils} = import('../../walletUtils/index.js');
+const { default: walletUtils } = import('../../walletUtils/index.js');
 
 const fetch = import('node-fetch');
 const {
@@ -19,11 +19,11 @@ const {
 	patternCheck,
 	valueCheck,
 	addFoundErrors,
-} = require('./valueChecks');
-
-const crypto = require("crypto");
-const SHA256 = (message) =>
-	crypto.createHash("sha256").update(JSON.stringify(message)).digest("hex");
+	validateFields,
+	validateAddress,
+	basicTxValidation,
+} = require('./validation');
+const { SHA256, trimAndSha256Hash, isValidProof } = require('./hashing');
 
 class Blockchain {
 	constructor(config = CONFIG) {
@@ -56,7 +56,7 @@ class Blockchain {
 	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
 	//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
-		const finalBlockDifficulty = this.getLastBlock()?.difficulty;
+		const finalBlockDifficulty = this.lastBlock()?.difficulty;
 		const addedDifficulty = this.cumulateDifficulty(finalBlockDifficulty);
 		this.cumulativeDifficulty += addedDifficulty;
 
@@ -75,19 +75,8 @@ class Blockchain {
 	}
 
 	// block, utils
-	getLastBlock() {
+	lastBlock() {
 		return this.chain[this.chain.length - 1];
-	}
-
-	// utils
-	isValidBlockHash(_hash, difficulty = this.config.startDifficulty || 1) {
-		return _hash.slice(0, difficulty) === '0'.repeat(difficulty);
-	}
-
-	//check if hash starts with {difficulty} zeros;
-	// utils
-	isValidProof(block, difficulty = this.difficulty) {
-		return this.isValidBlockHash(SHA256(block), difficulty);
 	}
 
 	// blocks, utils
@@ -98,16 +87,15 @@ class Blockchain {
 		difficulty,
 		blockHash
 	) {
-		const hash = SHA256(
-			blockDataHash + '|' + dateCreated + '|' + nonce
-		);
-		return this.isValidBlockHash(hash, difficulty) && hash === blockHash;
+		const hash = SHA256(blockDataHash + '|' + dateCreated + '|' + nonce);
+		return isValidProof(hash, difficulty) && hash === blockHash;
+		// return this.isValidBlockHash(hash, difficulty) && hash === blockHash;
 	}
 
 	// difficulty adjustment
 	//done, testing
 	// blocks, difficulty, utils
-	darkGravityWave(newestBlockIndex = this.getLastBlock().index) {
+	darkGravityWave(newestBlockIndex = this.lastBlock().index) {
 		const targetSpacing = this.config.targetBlockTimeSeconds;
 		const pastBlocks = this.config.difficultyOverPastBlocks; //max blocks to count
 		const minimumDifficulty = 1;
@@ -254,157 +242,6 @@ class Blockchain {
 
 	/*
 	----------------------------------------------------------------
-		VALIDATION
-	----------------------------------------------------------------
-	*/
-
-	// validation, utils
-	validateAddress(address, label) {
-		const typeResult = typeCheck({ label, value: address, type: 'string' });
-		const patternResult = patternCheck({
-			label,
-			value: address,
-			pattern: hexPattern,
-			expected: 'to be valid hex string',
-			actual: `not valid hex string`,
-		});
-		const lengthResult = lengthCheck({
-			label,
-			value: address,
-			expected: 40,
-			type: '===',
-		});
-
-		const missing = [typeResult, patternResult, lengthResult].filter(
-			(result) => result !== false
-		);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	// validation
-	validatePublicKey(pubKey) {
-		const label = 'SenderPubKey';
-		const results = [
-			typeCheck({ label, value: pubKey, type: 'string' }),
-			lengthCheck({
-				label,
-				value: pubKey,
-				expected: 65,
-				type: '===',
-			}),
-			patternCheck({
-				label,
-				value: pubKey,
-				pattern: hexPattern,
-				expected: 'to be hex string',
-				actual: 'is not hex string',
-			}),
-		];
-
-		const missing = results.filter((result) => result !== false);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	validateValue(value) {
-		let label = 'Value';
-		const results = [
-			typeCheck({
-				label,
-				value: value,
-				type: 'number',
-			}),
-			valueCheck({
-				label,
-				value: value,
-				expected: 0,
-				type: '>=',
-			}),
-		];
-		const missing = results.filter((result) => result !== false);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	validateFee(fee) {
-		let label = 'Fee';
-		const results = [
-			typeCheck({
-				label,
-				value: fee,
-				type: 'number',
-			}),
-			valueCheck({
-				label,
-				value: fee,
-				expected: this.config.minTransactionFee,
-				type: '>=',
-			}),
-		];
-		const missing = results.filter((result) => result !== false);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	validateData(data) {
-		const label = 'Data';
-		const results = [
-			typeCheck({
-				label,
-				value: data,
-				type: 'string',
-			}),
-		];
-		const missing = results.filter((result) => result !== false);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	validateDateCreated(dateCreated, prevDateCreated, currentTime) {
-		const label = 'DateCreated';
-		const results = [
-			typeCheck({
-				label,
-				value: dateCreated,
-				type: 'number',
-			}),
-
-			// should be before right now
-			dateCreated > currentTime
-				? invalidStringGen({
-						label,
-						expected: `transaction to be created before current time`,
-						actual: `transaction created ${
-							dateCreated - currentTime
-						}ms after current time`,
-				  })
-				: false,
-
-			// should be after previous transaction
-			prevDateCreated && dateCreated <= prevDateCreated
-				? invalidStringGen({
-						label,
-						expected: `prevTransaction to be created before block`,
-						actual: `transaction created ${
-							prevDateCreated - dateCreated
-						}ms before prevTransaction`,
-				  })
-				: false,
-		];
-		const missing = results.filter((result) => result !== false);
-		const valid = missing.length === 0;
-		if (valid) return { valid, missing: null };
-		return { valid, missing };
-	}
-
-	/*
-	----------------------------------------------------------------
 		BLOCKS
 	----------------------------------------------------------------
 	*/
@@ -425,7 +262,7 @@ class Blockchain {
 			newDifficulty > this.config.difficultyLimit
 				? this.config.difficultyLimit
 				: newDifficulty;
-		
+
 		this.notifyPeers(block);
 	}
 
@@ -440,9 +277,7 @@ class Blockchain {
 			prevBlockHash: '1',
 			minedBy: this.config.nullAddress,
 		};
-		const blockDataHash = SHA256(
-			JSON.stringify(genesisBlockData)
-		);
+		const blockDataHash = SHA256(JSON.stringify(genesisBlockData));
 
 		const genesisBlockCandidate = {
 			index: genesisBlockData.index,
@@ -570,7 +405,8 @@ class Blockchain {
 			dateCreated,
 			data,
 			senderPubKey,
-			this.hashTransactionData({
+			// this.hashTransactionData({
+			trimAndSha256Hash({
 				from,
 				to,
 				value,
@@ -632,7 +468,7 @@ class Blockchain {
 	// transactions
 	transactionConfirmations(
 		transaction,
-		lastBlockIndex = this.getLastBlock().index
+		lastBlockIndex = this.lastBlock().index
 	) {
 		const transactionBlockIndex = transaction?.minedInBlockIndex;
 		if (typeof transactionBlockIndex !== 'number') return 0;
@@ -813,7 +649,7 @@ class Blockchain {
 			// clear mining jobs (they are invalid)
 			this.clearMiningJobs();
 
-			this.notifyPeers(this.getLastBlock());
+			this.notifyPeers(this.lastBlock());
 
 			// SYNC PENDING TRANSACTIONS:
 
@@ -971,7 +807,7 @@ class Blockchain {
 		}
 
 		// validate block values
-		const valuesResult = validateBlockValues(block, previousBlock);
+		const valuesResult = this.validateBlockValues(block, previousBlock);
 		if (!valuesResult.valid) {
 			console.log(`Block values are not valid!`);
 			valuesResult.missing.forEach((err) => errors.push(err));
@@ -1010,7 +846,7 @@ class Blockchain {
 		}
 
 		// check for all fields
-		const result = this.validateFields(
+		const result = validateFields(
 			Object.keys(signedTransaction),
 			txBaseFields
 		);
@@ -1021,7 +857,7 @@ class Blockchain {
 		//check for invalid values :
 
 		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
-		const basicResults = this.basicTxValidation(
+		const basicResults = basicTxValidation(
 			signedTransaction,
 			this.pendingTransactions
 		);
@@ -1060,20 +896,6 @@ class Blockchain {
 		}
 
 		return { valid: true, errors: null, transaction: newTransaction };
-	}
-
-	// validation, utils
-	// returns {valid: boolean; missing: array | null}
-	validateFields(fields, requiredFields) {
-		let missing = [];
-		for (const field of requiredFields) {
-			if (!fields.includes(field)) {
-				missing.push(field);
-			}
-		}
-		return missing.length > 0
-			? { valid: false, missing }
-			: { valid: true, missing: null };
 	}
 
 	validateBlockValues(block, prevBlock) {
@@ -1195,7 +1017,7 @@ class Blockchain {
 		}
 
 		// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
-		let minedByAddrResult = this.validateAddress(block.minedBy, 'MinedBy');
+		let minedByAddrResult = validateAddress(block.minedBy, 'MinedBy');
 		if (!minedByAddrResult.valid) {
 			minedByAddrResult.missing.forEach((err) => missing.push(err));
 		}
@@ -1304,62 +1126,6 @@ class Blockchain {
 		return { valid: true, missing: null };
 	} // validateBlockValues
 
-	basicTxValidation(transaction, date_transactions) {
-		let valid = true;
-		let errors = [];
-
-		// to:
-		let toAddrResult = this.validateAddress(transaction.to, 'To');
-		if (!toAddrResult.valid) {
-			toAddrResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// from:
-		let fromAddrResult = this.validateAddress(transaction.from, 'From');
-		if (!fromAddrResult.valid) {
-			fromAddrResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// value: number, >=0
-		const valueResult = this.validateValue(transaction.value);
-		if (!valueResult.valid) {
-			valueResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// fee: number, >minFee
-		const feeResult = this.validateFee(transaction.fee);
-		if (!feeResult.valid) {
-			feeResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
-		const currentTime = Date.now();
-		const prevDateCreated =
-			date_transactions[date_transactions.indexOf(transaction) - 1]
-				.dateCreated || undefined;
-		const dateCreatedResult = this.validateDateCreated(
-			transaction.dateCreated,
-			prevDateCreated,
-			currentTime
-		);
-		if (!dateCreatedResult.valid) {
-			dateCreatedResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// data: string,
-		const dataResult = this.validateData(transaction.data);
-		if (!dataResult.valid) {
-			dataResult.missing.forEach((err) => errors.push(err));
-		}
-
-		// senderPubKey: string, hex, 65chars?
-		const pubKeyResult = this.validatePublicKey(transaction.senderPubKey);
-		if (!pubKeyResult.valid) {
-			pubKeyResult.missing.forEach((err) => errors.push(err));
-		}
-		return { valid, errors };
-	}
-
 	// validates {from, to, value, fee, dateCreated, data, senderPubKey} and does {revalidateTransactionDataHash, and verify&validateSignature}
 	validateTxValues(block, transaction) {
 		console.log('-- validateTxValues', { block, transaction });
@@ -1370,10 +1136,7 @@ class Blockchain {
 		let currentValue;
 
 		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
-		const basicResults = this.basicTxValidation(
-			transaction,
-			block.transactions
-		);
+		const basicResults = basicTxValidation(transaction, block.transactions);
 		if (!basicResults.valid) {
 			basicResults.errors.forEach((err) => errors.push(err));
 		}
@@ -1394,7 +1157,8 @@ class Blockchain {
 			transactionDataHash,
 			senderSignature,
 		} = transaction;
-		const newHash = this.hashTransactionData({
+		// const newHash = this.hashTransactionData({
+		const newHash = trimAndSha256Hash({
 			from,
 			to,
 			value,
@@ -1452,18 +1216,15 @@ class Blockchain {
 		let timestamp = genesis
 			? CONFIG.CHAIN_BIRTHDAY
 			: new Date().toISOString();
-		let hash = SHA256(
-			block.blockDataHash + '|' + timestamp + '|' + nonce
-		);
+		let hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
 
-		while (!this.isValidBlockHash(hash, block.difficulty)) {
+		while (!isValidProof(hash, block.difficulty)) {
+			// while (!this.isValidBlockHash(hash, block.difficulty)) {
 			timestamp = genesis
 				? CONFIG.CHAIN_BIRTHDAY
 				: new Date().toISOString();
 			nonce += 1;
-			hash = SHA256(
-				block.blockDataHash + '|' + timestamp + '|' + nonce
-			);
+			hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
 		}
 
 		return {
@@ -1516,7 +1277,7 @@ class Blockchain {
 		];
 
 		// STEP 3: build our data needed for blockDataHash;
-		const prevBlockHash = SHA256(this.getLastBlock());
+		const prevBlockHash = SHA256(this.lastBlock());
 
 		const blockDataHash = SHA256({
 			index,
@@ -1595,7 +1356,10 @@ class Blockchain {
 		this.addValidBlock(completeBlock);
 
 		return {
-			message: `Block accepted, reward paid: ${foundBlock.transactions[0].value + foundBlock.transactions[0].fee} microcoins`,
+			message: `Block accepted, reward paid: ${
+				foundBlock.transactions[0].value +
+				foundBlock.transactions[0].fee
+			} microcoins`,
 			status: 200,
 		};
 	}
@@ -1638,7 +1402,7 @@ class Blockchain {
 	//    subtract (fee + value) from pendingBalance
 	// balances, address
 	balancesOfAddress(address) {
-		const chainTipIndex = this.getLastBlock().index;
+		const chainTipIndex = this.lastBlock().index;
 		const balances = {
 			safeBalance: 0,
 			confirmedBalance: 0,
@@ -1869,7 +1633,8 @@ function executeIncomingChain(chain) {
 				`${blockDataHash}|${thisBlock.dateCreated}|${thisBlock.nonce}`
 			);
 
-			const blockIsValid = this.isValidBlockHash(
+			const blockIsValid = isValidProof(
+				// const blockIsValid = this.isValidBlockHash(
 				blockHash,
 				thisBlock.difficulty
 			);

@@ -3,10 +3,13 @@ const crypto = require('node:crypto');
 const cors = require('cors');
 const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
 (async function () {
-	// const Blockchain = await import("../blockchain/src/blockchain.js");
+	// const {Blockchain }= await import("../blockchain/src/index.js");
 	const { Blockchain } = require('../blockchain/src/index.js');
 
+
 	const blockchain = new Blockchain();
+	// await blockchain.createGenesisBlock();
+
 	const host = blockchain.config.defaultServerHost;
 	const port = blockchain.config.defaultServerPort;
 
