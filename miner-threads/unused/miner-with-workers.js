@@ -1,13 +1,4 @@
-// let fetch 
-// (async function () {
-// 	fetch = await import("node-fetch");
-// })
-// import fetch from "node-fetch";
-// let fetch = import('node-fetch');
-
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const crypto = require("crypto");
-const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
 
 // import mineBlock from "./basic example hashing copy/main";
 const mineBlock = require('./main');
@@ -28,24 +19,7 @@ const validProof = (hash, difficulty) => {
 	return hash.slice(0, difficulty) === "0".repeat(difficulty);
 }
 
-// const mineBlock = (block) => {
-// 	let nonce = 0;
 
-// 	while (true) {
-// 		const dateCreated = new Date().toISOString();
-// 		const data = block.blockDataHash+"|"+dateCreated+"|"+nonce;
-// 		const blockHash = SHA256(data);
-// 		if (validProof(blockHash, block.difficulty)) {
-// 			return {
-// 				blockDataHash: block.blockDataHash,
-// 				dateCreated,
-// 				nonce,
-// 				blockHash,
-// 			};
-// 		}
-// 		nonce++;
-// 	}
-// }
 
 const postBlockCandidate = async (blockCandidate) => {
 	return await (await fetch(`${nodeUrl}${postMiningJobUrl}`, {
@@ -71,9 +45,7 @@ const miner = async () => {
 		const newBlockJob = await getNewJob();
 		console.log('New Job Received:', newBlockJob);
 
-		const timerStart = Date.now();
 
-		// not working:
 
 
 		const afterMining = async (result) => {

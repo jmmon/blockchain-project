@@ -1,5 +1,4 @@
 const fetch = import('node-fetch');
-const crypto = require('crypto');
 const {
 	CONFIG,
 	txBaseFields,
@@ -19,25 +18,13 @@ const {
 	valueCheck,
 	addFoundErrors,
 } = require('./valueChecks');
-const { default: walletUtils } = require( '../../walletUtils/index.js' );
+const { default: walletUtils } = require('../../walletUtils/index.js');
 
-const SHA256 = (message) =>
-	crypto.createHash('sha256').update(message).digest('hex');
-
-// const sortObjectByKeys = (object) => {
-// 	const sortedKeys = Object.keys(object).sort((a, b) => a - b);
-// 	let newObject = {};
-// 	sortedKeys.forEach((key) => (newObject[key] = object[key]));
-// 	return newObject;
-// };
-
-// class Blockchain implements IBlockchain {
 class Blockchain {
 	constructor(config = CONFIG) {
 		this.config = { ...config };
 		this.chain = [];
 		this.pendingTransactions = [];
-		// this.peers = new Set();
 		this.peers = new Map();
 		this.miningJobs = new Map(); // blockDataHash => blockCandidate
 		this.difficulty = this.config.startDifficulty;
@@ -64,10 +51,11 @@ class Blockchain {
 	//cumulativeDifficulty == 16^d0 + 16^d1 + ... + 16^dn
 	//where d0, d1, ... dn == difficulties of the individual blocks
 	cumulateDifficultyFromLastBlock() {
-		const lastBlockDifficulty =
-			this.chain[this.chain.length - 1].difficulty;
-		const addedDifficulty = this.cumulateDifficulty(lastBlockDifficulty);
+		const finalBlockDifficulty =
+			this.chain[this.chain.length - 1]?.difficulty;
+		const addedDifficulty = this.cumulateDifficulty(finalBlockDifficulty);
 		this.cumulativeDifficulty += addedDifficulty;
+
 		console.log(
 			`--Cumulative Difficulty: ${JSON.stringify({
 				lastBlockDifficulty,
@@ -93,7 +81,7 @@ class Blockchain {
 
 	// block, utils
 	hash(block) {
-		return SHA256(JSON.stringify(block));
+		return walletUtils.sha256Hash(JSON.stringify(block));
 	}
 
 	// block, utils
@@ -114,7 +102,9 @@ class Blockchain {
 
 	// blocks, utils
 	validateBlockHash(timestamp, nonce, blockDataHash, difficulty, blockHash) {
-		const hash = SHA256(blockDataHash + '|' + timestamp + '|' + nonce);
+		const hash = walletUtils.sha256Hash(
+			blockDataHash + '|' + timestamp + '|' + nonce
+		);
 		return this.validHash(hash, difficulty) && hash === blockHash;
 	}
 
@@ -453,7 +443,9 @@ class Blockchain {
 			prevBlockHash: '1',
 			minedBy: this.config.nullAddress,
 		};
-		const blockDataHash = SHA256(JSON.stringify(genesisBlockData));
+		const blockDataHash = walletUtils.sha256Hash(
+			JSON.stringify(genesisBlockData)
+		);
 
 		const genesisBlockCandidate = {
 			index: genesisBlockData.index,
@@ -483,12 +475,16 @@ class Blockchain {
 			dateCreated: minedBlockCandidate.dateCreated,
 			blockHash: minedBlockCandidate.blockHash,
 		};
+		// Add valid block
+
 
 		this.chain.push(genesisBlock);
 
 		this.config.genesisBlock = genesisBlock;
 
 		this.cumulateDifficultyFromLastBlock();
+
+		this.difficulty = this.config.startDifficulty;
 
 		// TODO
 		//propagate block to peers?
@@ -549,7 +545,7 @@ class Blockchain {
 		data,
 		senderPubKey,
 	}) {
-		return SHA256(
+		return walletUtils.sha256Hash(
 			JSON.stringify({
 				from,
 				to,
@@ -784,11 +780,24 @@ class Blockchain {
 		const theirChain = await response.json();
 		if (!response.statusCode === 200)
 			return { valid: false, error: 'Cannot get peer chain' };
+		
+		// execute the whole chain in a new blockchain
+		const {valid, cumulativeDifficulty} = executeIncomingChain(theirChain);
+		if (!valid) {
+			return false;
+		}
 
-		let result = { valid: null, error: null };
+		if (cumulativeDifficulty > this.cumulativeDifficulty) {
+			// replace chain,
+			this.chain = theirChain;
 
-		const ourChainLength = this.chain.length;
-		const theirChainLength = theirChain.length;
+			// clear mining jobs (they are invalid)
+			this.clearMiningJobs();
+		
+			// pendingTransactions: keep those that are not in the blocks and propagate them
+			//and collect those that are in the peer's pendingTransactions
+		}
+
 
 		// TODO:
 		// validate downloaded peer chain (blocks, transactions, etc)
@@ -838,6 +847,10 @@ class Blockchain {
 			const result = this.validateBlock(block, previousBlock);
 			if (!result.valid) return false;
 
+			// validate transactions in the block:
+			// 	validate fields, values, recalculate txDataHash, validate signature, re-execute transactions, re-create minedInBlockIndex & transferSuccessful
+			this.validateBlockTransactions(block);
+
 			previousBlock = block;
 			currentIndex++;
 		}
@@ -854,7 +867,8 @@ class Blockchain {
 	}
 
 	validateBlock(block, previousBlock) {
-		let validationErrors = {};
+		let errors = [];
+		let valid = true;
 		// TODO:
 
 		// validate block fields are present
@@ -863,54 +877,24 @@ class Blockchain {
 			blockBaseFields
 		);
 		if (!fieldsResult.valid) {
-			console.log(
-				`Block fields are not valid, missing: [${fieldsResult.missing.join(
-					', '
-				)}]`
-			);
-			validationErrors.blockFields.missing = fieldsResult.missing;
+			console.log(`Block fields are not valid!`);
+			fieldsResult.missing.forEach((err) => errors.push(err));
+			valid = false;
 		}
 
 		// validate block values
 		const valuesResult = validateBlockValues(block, previousBlock);
 		if (!valuesResult.valid) {
-			console.log(
-				`Block values are not valid, errors: [${valuesResult.errors.join(
-					', '
-				)}]`
-			);
-			validationErrors.blockValues.missing = valuesResult.errors;
+			console.log(`Block values are not valid!`);
+			valuesResult.missing.forEach((err) => errors.push(err));
+			valid = false;
 		}
 
-		// validate transactions in the block:
-		// 	validate fields, values, recalculate txDataHash, validate signature, re-execute transactions, re-create minedInBlockIndex & transferSuccessful
-		this.validateBlockTransactions(block);
-
-		// Then recalculate blockDataHash & blockHash
-
-		// ensure blockHash matches blockDifficulty
-
-		// validate prevBlockHash === previous block's blockHash
-
-		// cumulate difficulty
-
-		//check hash of previous block
-		if (block['prevBlockHash'] !== this.hash(previousBlock)) {
-			console.log('Previous hash does not match!');
-			return false;
+		if (!valid) {
+			return { valid, errors, block };
 		}
 
-		if (!this.validProof(block)) {
-			console.log('Block PoW is Invalid!');
-			return false;
-		}
-
-		// TODO: validate transactions in this current block
-		if (!this.validateBlockTransactions(block)) {
-			console.log('Invalid transactions found!');
-			return false;
-		}
-		return { valid: true, block };
+		return { valid, errors: null, block };
 	}
 
 	// validation, utils
@@ -1378,11 +1362,15 @@ class Blockchain {
 	mineGenesisBlock(block) {
 		let nonce = 0;
 		const timestamp = CONFIG.CHAIN_BIRTHDAY;
-		let hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+		let hash = walletUtils.sha256Hash(
+			block.blockDataHash + '|' + timestamp + '|' + nonce
+		);
 
 		while (!this.validHash(hash, block.difficulty)) {
 			nonce += 1;
-			hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+			hash = walletUtils.sha256Hash(
+				block.blockDataHash + '|' + timestamp + '|' + nonce
+			);
 		}
 
 		return {
@@ -1396,12 +1384,16 @@ class Blockchain {
 	// mining
 	mineBlock(block, nonce = 0) {
 		let timestamp = new Date().toISOString();
-		let hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+		let hash = walletUtils.sha256Hash(
+			block.blockDataHash + '|' + timestamp + '|' + nonce
+		);
 
 		while (!this.validHash(hash, block.difficulty)) {
 			timestamp = new Date().toISOString();
 			nonce += 1;
-			hash = SHA256(block.blockDataHash + '|' + timestamp + '|' + nonce);
+			hash = walletUtils.sha256Hash(
+				block.blockDataHash + '|' + timestamp + '|' + nonce
+			);
 		}
 
 		return {
@@ -1435,8 +1427,8 @@ class Blockchain {
 
 	// mining
 	prepareBlockCandidate(minerAddress, difficulty = this.difficulty) {
+		// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
 		const coinbaseTransaction = this.createCoinbaseTransaction({
-			// STEP 1: prepare coinbase tx paying the minerAddress; stick in a temporary transactions list
 			to: minerAddress,
 		});
 		const index = coinbaseTransaction.minedInBlockIndex;
@@ -1456,7 +1448,7 @@ class Blockchain {
 		// STEP 3: build our data needed for blockDataHash;
 		const prevBlockHash = this.hash(this.chain[this.chain.length - 1]);
 
-		const blockDataHash = SHA256(
+		const blockDataHash = walletUtils.sha256Hash(
 			JSON.stringify({
 				index,
 				allTransactions,
@@ -1724,10 +1716,7 @@ class Blockchain {
 		return prunedBalances;
 	}
 
-	validateAndSendTransaction(signedTransaction) {
-		// run validation and sending, but keep peer propagation separate
-
-		// Validation
+	validateNewTransaction(signedTransaction) {
 		let errors = [];
 
 		// validate the FROM address is derived from the public key
@@ -1775,9 +1764,7 @@ class Blockchain {
 
 		// sender account balance >= value + fee
 		// (NOT allowing sending of pending funds)
-		const balancesOfSender = this.balancesOfAddress(
-			signedTransaction.from
-		);
+		const balancesOfSender = this.balancesOfAddress(signedTransaction.from);
 		const spendingBalance = this.config.SPEND_UNCONFIRMED_FUNDS
 			? balancesOfSender.pendingBalance
 			: balancesOfSender.confirmedBalance;
@@ -1788,42 +1775,142 @@ class Blockchain {
 		}
 
 		// create new transaction
-		const newTransaction =
-			this.createHashedTransaction(signedTransaction);
-		const hash = newTransaction.transactionDataHash;
-		// const hash = signedTransaction.hashData();
+		const newTransaction = this.createHashedTransaction(signedTransaction);
 
 		// check blockchain AND pending transactions for this transactionHash
-		const foundTransaction = this.getTransactionByHash(hash);
+		const foundTransaction = this.getTransactionByHash(
+			newTransaction.transactionDataHash
+		);
 		if (!foundTransaction) {
 			errors.push(`Duplicate transaction data hash!`);
 		}
 
 		// if errors, return the errors
 		if (errors.length > 0) {
-			return { valid: false, errors };
+			return { valid: false, errors, transaction: null };
 		}
 
-		// do the thing!
-		// add transaction to pending, send the response
-		this.addPendingTransaction(newTransaction);
-
-		return { valid: true, errors: null };
+		return { valid: true, errors: null, transaction: newTransaction };
 	}
 }
 
-const executeChain = (chain) => {
-	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
-	instance.createGenesisBlock();
-	for (let i = 1; i < chain.length; i++) {
-		const { transactions: incomingTransactions } = chain[i];
-		for (let k = 0; k < incomingTransactions.length; k++) {
-			// first need to do validation!!!! as /transactions/send
+// Executing incoming chain Steps:
+// 1. Create new blockchain instance w/ same genesis block
+// 2.a. Loop through all the blocks, validating everything.
+//   b. Loop through all transactions in the blocks, run like normal
+//   c. Validate txns, add to pending txns
 
-			instance.addPendingTransaction(incomingTransactions[k]);
+// After validating an entire block && transactions,
+// 1. "Mine the block" or fake-mine the block. Need to basically calculate and check the hashes to make sure the nonce results in the difficulty.
+
+const executeIncomingChain = (chain) => {
+	// create new chain
+	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
+	// generate (same as original chain) genesis block
+	instance.createGenesisBlock();
+
+	try {
+		// Loop through chain and validate each block:
+		let previousBlock = chain[0];
+		let blockIndex = 1;
+
+		while (blockIndex < chain.length) {
+			// validate this block
+			const thisBlock = chain[blockIndex];
+			this.difficulty = thisBlock.difficulty;
+			const blockResult = instance.validateBlock(
+				thisBlock,
+				previousBlock
+			);
+			if (!blockResult.valid)
+				throw new Error(
+					`Block #${blockIndex} failed validation! Errors: ${blockResult.errors.join(
+						'\n'
+					)}`
+				);
+
+			// validate these transactions, add them to pending
+			let txIndex = 0;
+			while (txIndex < thisBlock.transactions.length) {
+				const thisTransaction = thisBlock.transactions[txIndex];
+				const {
+					valid,
+					errors,
+					transaction: validatedTransaction,
+				} = instance.validateNewTransaction(thisTransaction);
+				// if valid, add to pending transactions.
+
+				if (valid) instance.addPendingTransaction(validatedTransaction);
+				else
+					throw Error(
+						`Transaction index ${k} failed validation! Errors: ${errors.join(
+							'\n'
+						)}`
+					);
+
+				txIndex++;
+			}
+			// validate the mining of the block
+			// recalculate blockDataHash
+			// recalculate blockHash
+			// validate prevBlockHash
+			// recalculate cumulative difficulty
+			// const blockHash = sha256Hash(
+			// 	`${thisBlock.blockDataHash}|${dateCreated}|${nonce}`
+			// );
+
+			// includes miner reward tx
+			const allTransactions = this.pendingTransactions.map(
+				(txData) => ({
+					...txData,
+					transferSuccessful: true,
+					minedInBlockIndex: blockIndex,
+				})
+			);
+
+
+			const blockDataHash = walletUtils.sha256Hash(
+				JSON.stringify({
+					index: blockIndex,
+					transactions: allTransactions,
+					difficulty: thisBlock.difficulty,
+					prevBlockHash: thisBlock.prevBlockHash,
+					minedBy: thisBlock.transactions[0].minedBy,
+				})
+			);
+
+			const blockHash = sha256Hash(`${blockDataHash}|${thisBlock.dateCreated}|${thisBlock.nonce}`);
+
+			const blockIsValid = this.validHash(blockHash, thisBlock.difficulty);
+
+			if (!blockIsValid) {
+				throw new Error(`Calculated blockHash is not valid!`);
+			}
+
+			// All valid? Ready to roll forward!
+		this.clearIncludedPendingTransactions(thisBlock);
+
+		this.chain.push(thisBlock);
+
+		this.cumulateDifficultyFromLastBlock();	
+
+			// if all valid, remove pendingTransactions
+
+			previousBlock = block;
+			blockIndex++;
 		}
+		// after all blocks
+
+		// Time to compare cumulative difficulties!
+
+		// Do I return the difficulty?
+		return { valid: true, cumulativeDifficulty: this.cumulativeDifficulty};
+
+	} catch (error) {
+		// if something fails during the chain execution, return false
+		return { valid: false, cumulativeDifficulty: null};
 	}
 };
 
-module.exports = { Blockchain, executeChain };
+module.exports = { Blockchain, executeIncomingChain };
 // export default Blockchain;

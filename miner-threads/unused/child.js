@@ -6,8 +6,7 @@ So should take the current nonce, the data, and then should be able to perform t
 I guess the main function should just loop indefinitely, starting service workers. Once a service worker finds the correct validated hash, it should end the main thread loop  and end all service workers.
 */
 
-const crypto = require("crypto");
-const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
+const {sha256Hash} = import('../../walletUtils/index');
 
 const validProof = (hash, difficulty) => {
 	return hash.slice(0, difficulty) === "0".repeat(difficulty);
@@ -23,7 +22,7 @@ module.exports = function (input, callback) {
 	while (true) {
 		const dateCreated = new Date().toISOString();
 		const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
-		const blockHash = SHA256(dataToHash);
+		const blockHash = sha256Hash(dataToHash);
 
 		if (validProof(blockHash, difficulty)) {
 			console.log(`***Success: Worker ${i} process ${process.pid}`);

@@ -1,60 +1,50 @@
-const {workerData, parentPort, getEnvironmentData} = require('node:worker_threads');
-const {sha256HashTransaction} = import('../walletUtils/index');
+const {
+	workerData: workerIndex,
+	parentPort,
+	getEnvironmentData,
+} = require('node:worker_threads');
+const { sha256Hash } = import('../walletUtils/index');
 
 const validProof = (hash, difficulty) => {
-	return hash.slice(0, difficulty) === "0".repeat(difficulty);
-}
+	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
+};
 
-const thisJob = getEnvironmentData("newJob");
-const {blockDataHash, difficulty, index: blockIndex } = thisJob;
-// console.log({blockDataHash, difficulty});
-const index = workerData;
+const {
+	blockDataHash,
+	difficulty,
+	index: blockIndex,
+} = getEnvironmentData('newJob');
 
-// if (index == 0) {
-// 	process.stdout.write("" + index);
-// } else {
-// 	process.stdout.write(", " + index);
-// }
+process.stdout.write('(' + workerIndex + ') ');
 
-process.stdout.write("(" + index + ") ");
 let nonce = 0;
-let continueLoop = true;
 
-
-while (continueLoop) {
-	if (getEnvironmentData("newJob") == undefined) {
-		console.log('new job is undefined; breaking');
-		break;
-		// process.exit();
-	}
-
+while (true) {
 	const dateCreated = new Date().toISOString();
-	const dataToHash = `${blockDataHash}|${dateCreated}|${nonce}`;
-	const blockHash = sha256HashTransaction(dataToHash);
+	const blockHash = sha256Hash(`${blockDataHash}|${dateCreated}|${nonce}`);
 	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
-	
+
 	if (validProof(blockHash, difficulty)) {
 		const workerInfo = {
-			index,
+			workerIndex,
 			pid: process.pid,
 			hashedBlockCandidate: {
 				blockDataHash,
 				dateCreated,
 				nonce,
-				blockHash
+				blockHash,
 			},
-		}
+		};
 
 		parentPort.postMessage(workerInfo);
 		break;
-
-	} else {
-		// log loading indicator
-		const occurrence = Math.round((16 ** (difficulty)) / 100);
-		if (nonce % occurrence == 0) {
-			process.stdout.write(". ");
-		}
-		
-		nonce++;
 	}
+	
+	// loading indicator
+	const occurrence = Math.round(16 ** difficulty / 100);
+	if (nonce % occurrence == 0) {
+		process.stdout.write('. ');
+	}
+
+	nonce++; // increment for next loop!
 }

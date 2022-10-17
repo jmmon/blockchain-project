@@ -6,8 +6,7 @@
 // let fetch = import('node-fetch');
 
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-const crypto = require("crypto");
-const SHA256 = (message) => crypto.createHash('sha256').update(message).digest('hex');
+const {sha256Hash} = import('../walletUtils/index');
 
 const myAddress = "testAddress"; // address of my miner
 const paddedAddress = myAddress + "0".repeat(40-myAddress.length);
@@ -32,7 +31,7 @@ const mineBlock = (block) => {
 	while (true) {
 		const dateCreated = new Date().toISOString();
 		const data = block.blockDataHash+"|"+dateCreated+"|"+nonce;
-		const blockHash = SHA256(data);
+		const blockHash = sha256Hash(data);
 
 		//for logging:
 		const zeroesAtStartArray = Array.from(blockHash.slice(0, block.difficulty)).filter(char => char === "0");

@@ -2,7 +2,7 @@ const walletUtils = import('../../walletUtils/index.js');
 const { response } = require('express');
 const express = require('express');
 const { txBaseFields } = require('../../blockchain/src/constants.js');
-const Transaction = require( '../../blockchain/src/Transaction.js' );
+const Transaction = require('../../blockchain/src/Transaction.js');
 const { valueCheck } = require('../../blockchain/src/valueChecks.js');
 const router = express.Router();
 
@@ -55,9 +55,9 @@ Peer Connections / Syncing:
 			Propagate transaction to all peer nodes thru REST API (transactions/send I guess)
 */
 
-	// Validate transaction
-	// Add to pending transactions
-	// Send tx to peer nodes thru REST API (/transactions/send ?)
+// Validate transaction
+// Add to pending transactions
+// Send tx to peer nodes thru REST API (/transactions/send ?)
 router.post('/send', async (req, res) => {
 	console.log('transaction received...');
 	const blockchain = req.app.get('blockchain');
@@ -66,38 +66,33 @@ router.post('/send', async (req, res) => {
 	if (Object.values(req.body).length < 8) {
 		return res.status(400).send(
 			JSON.stringify({
-				errorMsg:'Missing transaction data!',
+				errorMsg: 'Missing transaction data!',
 			})
 		);
 	}
 
-    const signedTransaction = req.body;
-
-	// const {to, from, value, fee, dateCreated, data, senderPubKey, senderSignature} = req.body;
-	// const signedTransaction = new Transaction(from, to, value, fee, dateCreated, data, senderPubKey, undefined, senderSignature);
-
+	const signedTransaction = req.body;
 	console.log({ signedTransaction });
 
-	const {valid, errors} = blockchain.validateAndSend(signedTransaction);	
-
+	const { valid, errors, transaction: validatedTransaction} = blockchain.validateNewTransaction(signedTransaction);
+	
 	if (!valid) {
 		return res
 			.status(400)
-			.send(JSON.stringify({ errorMsg: errors.join('\n ') }));
+			.send(JSON.stringify({ errorMsg: errors.join('\n') }));
 	}
-
-	res.status(200).send(JSON.stringify(newTransaction.transactionDataHash));
-
+	// add transaction to pending, send the response
+	this.addPendingTransaction(validatedTransaction);
+	res.status(200).send(JSON.stringify(validatedTransaction.transactionDataHash));
 
 	// BELOW is peer syncing
-
 
 	// need to propagate the transaction to other nodes!
 	// Go through peers and send post requests to send transaction to the nodes
 	const sender = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 	const peers = blockchain.peers();
 
-	console.log('sender from req.socket.remoteAddress:', sender)
+	console.log('transaction received from sender IP address:', sender);
 
 	Promise.all(
 		peers.forEach(async (peerId, peerUrl) => {
@@ -106,7 +101,11 @@ router.post('/send', async (req, res) => {
 				return;
 			}
 
-			let response = await (
+			console.log(
+				`-- sending to: Node ${peerId} (${peerUrl})`
+			);
+			
+			const response = await (
 				await fetch(`${peerUrl}/transactions/send`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -115,10 +114,21 @@ router.post('/send', async (req, res) => {
 			).json();
 
 			console.log(
-				`Node ${peerId} (${peerUrl}) response:\n----${response}`
+				`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`
 			);
+
+// version 2:
+			// await (
+			// 	await fetch(`${peerUrl}/transactions/send`, {
+			// 		method: 'POST',
+			// 		headers: { 'Content-Type': 'application/json' },
+			// 		body: JSON.stringify(signedTransaction),
+			// 	})
+			// ).json().then(response => console.log(`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`));
 		})
 	);
 });
+
+
 
 module.exports = router;
