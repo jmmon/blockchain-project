@@ -19,10 +19,6 @@ router.post("/connect", async (req, res) => {
 
 	const response = await blockchain.connectPeer(peerUrl); // add it to the list
 
-	if (response.status === 404 || response.status === 400) {
-		return res.status(response.status).send(JSON.stringify(response));
-	}
-
 	return res.status(response.status).send(JSON.stringify(response));
 });
 

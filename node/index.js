@@ -2,6 +2,8 @@ const express = require('express');
 const crypto = require('node:crypto');
 const cors = require('cors');
 const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
+
+const _port = process.argv[2] ?? undefined;
 (async function () {
 	// const {Blockchain }= await import("../blockchain/src/index.js");
 	const { Blockchain } = require('../blockchain/src/index.js');
@@ -11,7 +13,7 @@ const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
 	// await blockchain.createGenesisBlock();
 
 	const host = blockchain.config.defaultServerHost;
-	const port = blockchain.config.defaultServerPort;
+	const port = _port ?? blockchain.config.defaultServerPort;
 
 	const nodeInfo = {
 		nodeId: nodeIdentifier,
@@ -76,6 +78,7 @@ POST {
 			pendingTransactions: blockchain.pendingTransactions.length,
 		};
 
+		console.log('get info called', {data});
 		res.status(200).send(JSON.stringify(data));
 	});
 

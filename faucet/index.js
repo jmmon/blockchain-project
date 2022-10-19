@@ -9,7 +9,19 @@ const { get } = require("https");
 
 const payoutRecord = "payoutRecord/"; //  TODO: set wallets directory
 const filePath = `${payoutRecord}payoutRecord.json`;
-const COIN_AMOUNT = 1000000;
+// const faucetWalletInfo.valuePerTransaction = 1000000;
+const {CONSTANTS: {faucet}} = require('../blockchain/src/constants');
+
+
+
+	// const faucetWalletInfo = {
+	// 	mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
+	// 	privateKey: '51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
+	// 	publicKey: '46da25d657a170c983dc01ce736094ef11f557f8a007e752ac1eb1f705e1b9070',
+	// 	address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
+	// };
+
+	const faucetWalletInfo = {...faucet};
 
 const app = express();
 const port = 3007;
@@ -152,13 +164,6 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 	
 	*/
 
-	const faucetWalletInfo = {
-		mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
-		privateKey: '51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
-		publicKey: '46da25d657a170c983dc01ce736094ef11f557f8a007e752ac1eb1f705e1b9070',
-		address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
-	};
-
 	const signAndSend = async (success, object = undefined, address = '', nodeUrl = '') => {
 		if (success) {
 			console.log({newDatabase: object});
@@ -180,7 +185,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 
 			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
 			const confirmedBalance = await getConfirmedBalance(nodeUrl, faucetWalletInfo.address);
-			const amount = (confirmedBalance => COIN_AMOUNT) ? COIN_AMOUNT : confirmedBalance;
+			const amount = (confirmedBalance >= faucetWalletInfo.valuePerTransaction) ? faucetWalletInfo.valuePerTransaction : confirmedBalance;
 
 			console.log({confirmedBalance, amount});
 

@@ -1,13 +1,13 @@
 const { default: walletUtils } = import('../../walletUtils/index.js');
 
-const fetch = import('node-fetch');
+// const {default: fetch} = import('node-fetch');
+const fetch = (...args) =>
+	import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const {
 	CONFIG,
 	txBaseFields,
-	txAllFields,
 	blockBaseFields,
 	hexPattern,
-	// blockRequiredValues,
 } = require('./constants');
 const Transaction = require('./Transaction');
 const Block = require('./Block');
@@ -22,6 +22,7 @@ const {
 	validateFields,
 	validateAddress,
 	basicTxValidation,
+	validateBlockValues,
 } = require('./validation');
 const { SHA256, trimAndSha256Hash, isValidProof } = require('./hashing');
 
@@ -32,7 +33,7 @@ class Blockchain {
 		this.pendingTransactions = [];
 		this.peers = new Map();
 		this.miningJobs = new Map(); // blockDataHash => blockCandidate
-		this.difficulty = this.config.startDifficulty;
+		this.difficulty = this.config.difficulty.starting;
 		this.cumulativeDifficulty = 0; // initial value
 		this.createGenesisBlock(); // create genesis block
 	}
@@ -45,7 +46,7 @@ class Blockchain {
 	// utils
 	reset() {
 		this.chain = [this.chain[0]]; // save genesis block
-		this.difficulty = this.config.startDifficulty;
+		this.difficulty = this.config.difficulty.starting;
 		this.pendingTransactions = [];
 		return true;
 	}
@@ -96,8 +97,8 @@ class Blockchain {
 	//done, testing
 	// blocks, difficulty, utils
 	darkGravityWave(newestBlockIndex = this.lastBlock().index) {
-		const targetSpacing = this.config.targetBlockTimeSeconds;
-		const pastBlocks = this.config.difficultyOverPastBlocks; //max blocks to count
+		const targetSpacing = this.config.difficulty.targetBlockSeconds;
+		const pastBlocks = this.config.difficulty.averageOverBlocks; //max blocks to count
 		const minimumDifficulty = 1;
 
 		let actualTimespan = 0; // counts our actual total block times
@@ -108,7 +109,7 @@ class Blockchain {
 		// check for odd cases at start of chain; return our minimum difficulty
 		if (newestBlockIndex == 0) {
 			//genesis block
-			return this.config.startDifficulty;
+			return this.config.difficulty.starting;
 		}
 
 		// STEP 1: loop backward over our blocks starting at newest block
@@ -162,7 +163,7 @@ class Blockchain {
 
 		// STEP 3: check actual time vs target time
 		// limit readjustment, don't change more than our ratio
-		const adjustmentRatioLimit = this.config.difficultyAdjustmentRatio;
+		const adjustmentRatioLimit = this.config.difficulty.adjustmentRatio;
 
 		if (actualTimespan < targetTimespan / adjustmentRatioLimit) {
 			adjustedTimespan = targetTimespan / adjustmentRatioLimit;
@@ -212,7 +213,7 @@ class Blockchain {
 				timeIncreaseFromOneBumpInDifficulty >
 				targetSpacing *
 					(blockTimeDifferenceRatio ||
-						this.config.difficultyAdjustmentRatio)
+						this.config.difficulty.adjustmentRatio)
 			) {
 				newDifficulty = this.difficulty + 1;
 			}
@@ -234,7 +235,7 @@ class Blockchain {
 
 	// block
 	getBlockTimeByIndex(index) {
-		if (index < 1) return this.config.targetBlockTimeSeconds;
+		if (index < 1) return this.config.difficulty.targetBlockSeconds;
 		const thisBlockDateMs = Date.parse(this.chain[index].dateCreated);
 		const prevBlockDateMs = Date.parse(this.chain[index - 1].dateCreated);
 		return (thisBlockDateMs - prevBlockDateMs) / 1000;
@@ -259,8 +260,8 @@ class Blockchain {
 		const newDifficulty = this.darkGravityWave();
 
 		this.difficulty =
-			newDifficulty > this.config.difficultyLimit
-				? this.config.difficultyLimit
+			newDifficulty > this.config.difficulty.limit
+				? this.config.difficulty.limit
 				: newDifficulty;
 
 		this.notifyPeers(block);
@@ -275,7 +276,7 @@ class Blockchain {
 			transactions: [faucetFundingTransaction],
 			difficulty: 0,
 			prevBlockHash: '1',
-			minedBy: this.config.nullAddress,
+			minedBy: this.config.coinbase.address,
 		};
 		const blockDataHash = SHA256(JSON.stringify(genesisBlockData));
 
@@ -300,7 +301,7 @@ class Blockchain {
 				[faucetFundingTransaction],
 				0,
 				'1',
-				this.config.nullAddress,
+				this.config.coinbase.address,
 				blockDataHash
 			),
 			nonce: minedBlockCandidate.nonce,
@@ -312,13 +313,11 @@ class Blockchain {
 		this.chain.push(genesisBlock);
 
 		this.config.genesisBlock = genesisBlock;
+		this.config.chainId = genesisBlock.blockHash;
 
 		this.cumulateDifficultyFromLastBlock();
 
-		this.difficulty = this.config.startDifficulty;
-
-		// TODO
-		//propagate block to peers?
+		this.difficulty = this.config.difficulty.starting;
 	}
 
 	/*
@@ -330,23 +329,26 @@ class Blockchain {
 	// transactions
 	createFaucetGenesisTransaction() {
 		return this.createCoinbaseTransaction({
-			to: this.config.faucetAddress,
-			value: this.config.faucetGenerateValue,
+			to: this.config.faucet.address,
+			value: this.config.faucet.valueToGenerate,
+			dateCreated: new Date(
+				Date.parse(this.config.CHAIN_BIRTHDAY) + 10
+			).toISOString(),
 			data: 'genesis tx',
 		});
 	}
 
 	// transactions
 	createCoinbaseTransaction({
-		from = this.config.nullAddress,
+		from = this.config.coinbase.address,
 		to,
-		value = this.config.blockReward + 350,
+		value = this.config.coinbase.blockReward + 350,
 		fee = 0,
 		dateCreated = new Date().toISOString(),
 		data = 'coinbase tx',
-		senderPubKey = this.config.nullPublicKey,
+		senderPubKey = this.config.coinbase.publicKey,
 		// transactionDataHash: get this inside our function
-		senderSignature = this.config.nullSignature,
+		senderSignature = this.config.coinbase.signature,
 		minedInBlockIndex = this.chain.length,
 		transferSuccessful = true,
 	}) {
@@ -549,7 +551,8 @@ class Blockchain {
 	async connectPeer(peerUrl) {
 		// try to fetch info
 		const response = await fetch(`${peerUrl}/info`);
-		if (response.statusCode !== 200) {
+		console.log('connect peer: fetch info: response:', { response });
+		if (response.status !== 200) {
 			return {
 				status: 400,
 				errorMsg: `Network error: Could not get peer info`,
@@ -567,14 +570,13 @@ class Blockchain {
 		}
 
 		// Verify same chainId
-		const isSameChain =
-			this.config.genesisBlock.chainId === peerInfo['chainId'];
+		const isSameChain = this.config.chainId === peerInfo['chainId'];
 
 		if (!isSameChain) {
 			return {
 				status: 400,
 				errorMsg: `Chain ID does not match!`,
-				thisChainId: ourChainId,
+				thisChainId: this.config.chainId,
 				peerChainId,
 			};
 		}
@@ -587,10 +589,10 @@ class Blockchain {
 		requestPeer(peerUrl);
 
 		//synchronize chain AND pending transactions
-		const theirChainIsBetter =
+		const isTheirChainBetter =
 			peerInfo.cumulativeDifficulty > this.cumulativeDifficulty;
-		if (theirChainIsBetter) {
-			syncPeer(peerInfo, peerUrl);
+		if (isTheirChainBetter) {
+			attemptSyncPeer(peerInfo, peerUrl);
 		}
 
 		return { status: 200, message: `Connected to peer ${peerUrl}` };
@@ -601,6 +603,9 @@ class Blockchain {
 		Syncing between peers/nodes
 	----------------------------------------------------------------
 	*/
+
+	// peers, sync
+	// Their chain is better, we need to download and validate their chain
 
 	async attemptSyncPeer(peerInfo, peerUrl) {
 		try {
@@ -679,57 +684,6 @@ class Blockchain {
 			});
 		});
 	}
-	// peers, sync
-	// Their chain is better, we need to download and validate their chain
-	// async syncPeer(peerInfo, peerUrl) {
-	// 	console.log(`Syncing with better chain from peer`);
-	// 	const response = await fetch(`${peerUrl}/blocks`);
-	// 	if (!response.statusCode === 200)
-	// 		return { valid: false, error: 'Cannot get peer chain' };
-
-	// 	const theirChain = await response.json();
-
-	// 	// execute the whole chain in a new blockchain
-	// 	const { valid, cumulativeDifficulty } =
-	// 		executeIncomingChain(theirChain);
-
-	// 	if (!valid) {
-	// 		return { valid: false, error: `Their chain isn't valid!` };
-	// 	}
-	// 	if (cumulativeDifficulty <= this.cumulativeDifficulty) {
-	// 		return {
-	// 			valid: false,
-	// 			error: `The valid chain isn't better than ours!`,
-	// 		};
-	// 	}
-
-	// 	// CHAIN IS VALID AND BETTER:
-
-	// 	// replace chain,
-	// 	this.chain = theirChain;
-
-	// 	// clear mining jobs (they are invalid)
-	// 	this.clearMiningJobs();
-
-	// 	// notify peers of new chain! (how?)
-
-	// 	// SYNC PENDING TRANSACTIONS:
-
-	// 	// Clean up current pendingTransactions:
-	// 	// Keep those that are not in the chain
-	// 	this.pendingTransactions = this.keepMissingPendingTransactions();
-
-	// 	// Add those that are in the peer's pendingTransactions
-	// 	this.syncPendingTransactions(peerUrl);
-
-	// 	// Propagate all pendingTransactions
-	// }
-
-	// cleanPendingTransactionsFromChain() {
-	// 	const keptPendingTxns = this.pendingTransactions.filter(txn => )
-
-	// 	this.pendingtrans
-	// }
 
 	keepMissingTransactions(list) {
 		console.log('keepMissingTransactions:');
@@ -807,7 +761,7 @@ class Blockchain {
 		}
 
 		// validate block values
-		const valuesResult = this.validateBlockValues(block, previousBlock);
+		const valuesResult = validateBlockValues(block, previousBlock);
 		if (!valuesResult.valid) {
 			console.log(`Block values are not valid!`);
 			valuesResult.missing.forEach((err) => errors.push(err));
@@ -870,7 +824,7 @@ class Blockchain {
 		// sender account balance >= value + fee
 		// (NOT allowing sending of pending funds)
 		const balancesOfSender = this.balancesOfAddress(signedTransaction.from);
-		const spendingBalance = this.config.SPEND_UNCONFIRMED_FUNDS
+		const spendingBalance = this.config.transactions.spendUnconfirmedFunds
 			? balancesOfSender.pendingBalance
 			: balancesOfSender.confirmedBalance;
 		if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
@@ -898,308 +852,308 @@ class Blockchain {
 		return { valid: true, errors: null, transaction: newTransaction };
 	}
 
-	validateBlockValues(block, prevBlock) {
-		// go thru each entry and make sure the value fits the "requirements"
-		console.log('--validateBlockValues:', { block, prevBlock });
+	// validateBlockValues(block, prevBlock) {
+	// 	// go thru each entry and make sure the value fits the "requirements"
+	// 	console.log('--validateBlockValues:', { block, prevBlock });
 
-		let missing = [];
-		let field = '';
-		let label = '';
-		let currentValue;
+	// 	let missing = [];
+	// 	let field = '';
+	// 	let label = '';
+	// 	let currentValue;
 
-		field = 'index';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'number' }),
-		});
-		addFoundErrors({
-			missing,
-			error: valueCheck({
-				label,
-				value: currentValue,
-				expected: prevBlock[field] + 1,
-				type: '===',
-			}),
-		});
+	// 	field = 'index';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: valueCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			expected: prevBlock[field] + 1,
+	// 			type: '===',
+	// 		}),
+	// 	});
 
-		// transactions: should be array, should have length >= 1
-		field = 'transactions';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'array' }),
-		});
-		addFoundErrors({
-			missing,
-			error: lengthCheck({
-				label,
-				value: currentValue,
-				expected: 1,
-				type: '>=',
-			}),
-		});
+	// 	// transactions: should be array, should have length >= 1
+	// 	field = 'transactions';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'array' }),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: lengthCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			expected: 1,
+	// 			type: '>=',
+	// 		}),
+	// 	});
 
-		// difficulty: should be a number
-		field = 'difficulty';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'number' }),
-		});
+	// 	// difficulty: should be a number
+	// 	field = 'difficulty';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	// 	});
 
-		// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash
-		field = 'prevBlockHash';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'string' }),
-		});
-		if (currentValue !== prevBlock.blockHash) {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: "value to match previous block's blockHash",
-					actual: `is ${currentValue} instead of ${prevBlock.blockHash}`,
-				}),
-			});
-		}
-		if (block.index === 1) {
-			// special case, special messages on these two
-			if (currentValue !== '1') {
-				addFoundErrors({
-					missing,
-					error: invalidStringGen({
-						label: upperFirstLetter(field),
-						expected: "index 1 prevBlockHash to be '1'",
-						actual: `index 1 prevBlockHash is ${currentValue}`,
-					}),
-				});
-			}
-			if (currentValue.length !== 1) {
-				addFoundErrors({
-					missing,
-					error: invalidStringGen({
-						label: upperFirstLetter(field),
-						expected: 'index 1 prevBlockHash.length to be 1',
-						actual: `index 1 prevBlockHash.length === ${currentValue.length}`,
-					}),
-				});
-			}
-		} else {
-			// only hex characters
-			addFoundErrors({
-				missing,
-				error: patternCheck({
-					label,
-					value: currentValue,
-					pattern: hexPattern,
-					expected: 'to be valid hex string',
-					actual: 'not valid hex string',
-				}),
-			});
+	// 	// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash
+	// 	field = 'prevBlockHash';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'string' }),
+	// 	});
+	// 	if (currentValue !== prevBlock.blockHash) {
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: invalidStringGen({
+	// 				label: upperFirstLetter(field),
+	// 				expected: "value to match previous block's blockHash",
+	// 				actual: `is ${currentValue} instead of ${prevBlock.blockHash}`,
+	// 			}),
+	// 		});
+	// 	}
+	// 	if (block.index === 1) {
+	// 		// special case, special messages on these two
+	// 		if (currentValue !== '1') {
+	// 			addFoundErrors({
+	// 				missing,
+	// 				error: invalidStringGen({
+	// 					label: upperFirstLetter(field),
+	// 					expected: "index 1 prevBlockHash to be '1'",
+	// 					actual: `index 1 prevBlockHash is ${currentValue}`,
+	// 				}),
+	// 			});
+	// 		}
+	// 		if (currentValue.length !== 1) {
+	// 			addFoundErrors({
+	// 				missing,
+	// 				error: invalidStringGen({
+	// 					label: upperFirstLetter(field),
+	// 					expected: 'index 1 prevBlockHash.length to be 1',
+	// 					actual: `index 1 prevBlockHash.length === ${currentValue.length}`,
+	// 				}),
+	// 			});
+	// 		}
+	// 	} else {
+	// 		// only hex characters
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: patternCheck({
+	// 				label,
+	// 				value: currentValue,
+	// 				pattern: hexPattern,
+	// 				expected: 'to be valid hex string',
+	// 				actual: 'not valid hex string',
+	// 			}),
+	// 		});
 
-			// 64 length
-			addFoundErrors({
-				missing,
-				error: lengthCheck({
-					label,
-					value: currentValue,
-					expected: 64,
-					type: '===',
-				}),
-			});
-		}
+	// 		// 64 length
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: lengthCheck({
+	// 				label,
+	// 				value: currentValue,
+	// 				expected: 64,
+	// 				type: '===',
+	// 			}),
+	// 		});
+	// 	}
 
-		// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
-		let minedByAddrResult = validateAddress(block.minedBy, 'MinedBy');
-		if (!minedByAddrResult.valid) {
-			minedByAddrResult.missing.forEach((err) => missing.push(err));
-		}
+	// 	// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
+	// 	let minedByAddrResult = validateAddress(block.minedBy, 'MinedBy');
+	// 	if (!minedByAddrResult.valid) {
+	// 		minedByAddrResult.missing.forEach((err) => missing.push(err));
+	// 	}
 
-		// blockDataHash: should be string, only have certain characters, 40 characters?, (Will recalculate later)
-		field = 'blockDataHash';
-		currentValue = block[field];
-		label = upperFirstLetter(field);
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'string' }),
-		});
-		addFoundErrors({
-			missing,
-			error: patternCheck({
-				label,
-				value: currentValue,
-				pattern: hexPattern,
-				expected: 'to be valid hex string',
-				actual: `not valid hex string`,
-			}),
-		});
-		addFoundErrors({
-			missing,
-			error: lengthCheck({
-				label,
-				value: currentValue,
-				expected: 64,
-				type: '===',
-			}),
-		});
+	// 	// blockDataHash: should be string, only have certain characters, 40 characters?, (Will recalculate later)
+	// 	field = 'blockDataHash';
+	// 	currentValue = block[field];
+	// 	label = upperFirstLetter(field);
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'string' }),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: patternCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			pattern: hexPattern,
+	// 			expected: 'to be valid hex string',
+	// 			actual: `not valid hex string`,
+	// 		}),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: lengthCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			expected: 64,
+	// 			type: '===',
+	// 		}),
+	// 	});
 
-		// nonce: should be a number, (later, will validate should give us the correct difficulty)
-		field = 'nonce';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'number' }),
-		});
+	// 	// nonce: should be a number, (later, will validate should give us the correct difficulty)
+	// 	field = 'nonce';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	// 	});
 
-		// dateCreated: should be a number?? should be after the previous block's dateCreated, should be before today??
-		field = 'dateCreated';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'number' }),
-		});
-		if (currentValue <= prevBlock[field]) {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: `prevBlock to be created before block`,
-					actual: `block created ${
-						prevBlock[field] - currentValue
-					}ms before prevBlock`,
-				}),
-			});
-		}
-		const currentTime = Date.now();
-		if (currentValue > currentTime) {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: `block to be created before current time`,
-					actual: `block created ${
-						currentValue - currentTime
-					}ms after current time`,
-				}),
-			});
-		}
+	// 	// dateCreated: should be a number?? should be after the previous block's dateCreated, should be before today??
+	// 	field = 'dateCreated';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	// 	});
+	// 	if (currentValue <= prevBlock[field]) {
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: invalidStringGen({
+	// 				label: upperFirstLetter(field),
+	// 				expected: `prevBlock to be created before block`,
+	// 				actual: `block created ${
+	// 					prevBlock[field] - currentValue
+	// 				}ms before prevBlock`,
+	// 			}),
+	// 		});
+	// 	}
+	// 	const currentTime = Date.now();
+	// 	if (currentValue > currentTime) {
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: invalidStringGen({
+	// 				label: upperFirstLetter(field),
+	// 				expected: `block to be created before current time`,
+	// 				actual: `block created ${
+	// 					currentValue - currentTime
+	// 				}ms after current time`,
+	// 			}),
+	// 		});
+	// 	}
 
-		// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
-		field = 'blockHash';
-		label = upperFirstLetter(field);
-		currentValue = block[field];
-		addFoundErrors({
-			missing,
-			error: typeCheck({ label, value: currentValue, type: 'string' }),
-		});
-		addFoundErrors({
-			missing,
-			error: patternCheck({
-				label,
-				value: currentValue,
-				pattern: hexPattern,
-				expected: 'to be valid hex string',
-				actual: `not valid hex string`,
-			}),
-		});
-		addFoundErrors({
-			missing,
-			error: lengthCheck({
-				label,
-				value: currentValue,
-				expected: 64,
-				type: '===',
-			}),
-		});
+	// 	// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
+	// 	field = 'blockHash';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = block[field];
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: typeCheck({ label, value: currentValue, type: 'string' }),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: patternCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			pattern: hexPattern,
+	// 			expected: 'to be valid hex string',
+	// 			actual: `not valid hex string`,
+	// 		}),
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: lengthCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			expected: 64,
+	// 			type: '===',
+	// 		}),
+	// 	});
 
-		// finally, return the results!
-		if (missing.length > 0) return { valid: false, missing };
-		return { valid: true, missing: null };
-	} // validateBlockValues
+	// 	// finally, return the results!
+	// 	if (missing.length > 0) return { valid: false, missing };
+	// 	return { valid: true, missing: null };
+	// } // validateBlockValues
 
 	// validates {from, to, value, fee, dateCreated, data, senderPubKey} and does {revalidateTransactionDataHash, and verify&validateSignature}
-	validateTxValues(block, transaction) {
-		console.log('-- validateTxValues', { block, transaction });
+	// validateTxValues(block, transaction) {
+	// 	console.log('-- validateTxValues', { block, transaction });
 
-		let errors = [];
-		let field = '';
-		let label = '';
-		let currentValue;
+	// 	let errors = [];
+	// 	let field = '';
+	// 	let label = '';
+	// 	let currentValue;
 
-		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
-		const basicResults = basicTxValidation(transaction, block.transactions);
-		if (!basicResults.valid) {
-			basicResults.errors.forEach((err) => errors.push(err));
-		}
+	// 	// handles {to, from, value, fee, dateCreated, data, senderPubKey}
+	// 	const basicResults = basicTxValidation(transaction, block.transactions);
+	// 	if (!basicResults.valid) {
+	// 		basicResults.errors.forEach((err) => errors.push(err));
+	// 	}
 
-		// Step 2:
-		// recalculate transactionDataHash
-		field = 'transactionDataHash';
-		label = upperFirstLetter(field);
-		currentValue = transaction[field];
-		const {
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-			transactionDataHash,
-			senderSignature,
-		} = transaction;
-		// const newHash = this.hashTransactionData({
-		const newHash = trimAndSha256Hash({
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-		});
-		addFoundErrors({
-			missing,
-			error: valueCheck({
-				label,
-				value: currentValue,
-				expected: newHash,
-				type: '===',
-			}),
-		});
+	// 	// Step 2:
+	// 	// recalculate transactionDataHash
+	// 	field = 'transactionDataHash';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = transaction[field];
+	// 	const {
+	// 		from,
+	// 		to,
+	// 		value,
+	// 		fee,
+	// 		dateCreated,
+	// 		data,
+	// 		senderPubKey,
+	// 		transactionDataHash,
+	// 		senderSignature,
+	// 	} = transaction;
+	// 	// const newHash = this.hashTransactionData({
+	// 	const newHash = trimAndSha256Hash({
+	// 		from,
+	// 		to,
+	// 		value,
+	// 		fee,
+	// 		dateCreated,
+	// 		data,
+	// 		senderPubKey,
+	// 	});
+	// 	addFoundErrors({
+	// 		missing,
+	// 		error: valueCheck({
+	// 			label,
+	// 			value: currentValue,
+	// 			expected: newHash,
+	// 			type: '===',
+	// 		}),
+	// 	});
 
-		// validate signature
-		field = 'senderSignature';
-		label = upperFirstLetter(field);
-		currentValue = transaction[field];
-		const sigValid = walletUtils.verifySignature(
-			newHash,
-			senderPubKey,
-			senderSignature
-		);
-		if (!sigValid) {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: `transaction signature to be valid`,
-					actual: `transaction signature is invalid`,
-				}),
-			});
-		}
+	// 	// validate signature
+	// 	field = 'senderSignature';
+	// 	label = upperFirstLetter(field);
+	// 	currentValue = transaction[field];
+	// 	const sigValid = walletUtils.verifySignature(
+	// 		newHash,
+	// 		senderPubKey,
+	// 		senderSignature
+	// 	);
+	// 	if (!sigValid) {
+	// 		addFoundErrors({
+	// 			missing,
+	// 			error: invalidStringGen({
+	// 				label: upperFirstLetter(field),
+	// 				expected: `transaction signature to be valid`,
+	// 				actual: `transaction signature is invalid`,
+	// 			}),
+	// 		});
+	// 	}
 
-		if (missing.length > 0) return { valid: false, missing };
-		return { valid: true, missing: null };
-	} // validateTxValues
+	// 	if (missing.length > 0) return { valid: false, missing };
+	// 	return { valid: true, missing: null };
+	// } // validateTxValues
 
 	/*
 	----------------------------------------------------------------
@@ -1440,7 +1394,7 @@ class Blockchain {
 			balances.safeBalance += confirmedTransactions.reduce((sum, tx) => {
 				if (
 					this.transactionConfirmations(tx, chainTipIndex) >=
-					this.config.safeConfirmCount
+					this.config.transactions.safeConfirmCount
 				) {
 					if (tx.to === address && tx.transferSuccessful === true) {
 						return sum + +tx.value;

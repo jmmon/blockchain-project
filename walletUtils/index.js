@@ -4,7 +4,7 @@ const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from 'bip39';
 import crypto from 'crypto';
 import fetch from 'node-fetch';
-import { trimAndSha256Hash } from '../blockchain/src/hashing';
+import { trimAndSha256Hash } from '../blockchain/src/hashing.js';
 
 const purpose = '44';
 const coinType = '7789';
