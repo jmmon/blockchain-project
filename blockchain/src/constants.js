@@ -83,6 +83,7 @@ const CONFIG = {
 	// SPEND_UNCONFIRMED_FUNDS: false,
 	CHAIN_BIRTHDAY: new Date(2021, 9, 15).toISOString(),
 	chainId: '',
+	nodeInfo: {},
 };
 
 const txBaseFields = [

@@ -1,29 +1,30 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const cors = require('cors');
-const nodeIdentifier = crypto.randomUUID().replaceAll('-', '');
+const { SHA256 } = require( '../blockchain/src/hashing.js' );
 
-const _port = process.argv[2] ?? undefined;
 (async function () {
-	// const {Blockchain }= await import("../blockchain/src/index.js");
 	const { Blockchain } = require('../blockchain/src/index.js');
 
-
 	const blockchain = new Blockchain();
-	// await blockchain.createGenesisBlock();
 
+	const port = +( process.argv[2] ?? blockchain.config.defaultServerPort);
 	const host = blockchain.config.defaultServerHost;
-	const port = _port ?? blockchain.config.defaultServerPort;
+	const selfUrl =  `http://${host}:${port}`;
+
+	// const randomNodeId = crypto.randomUUID().replaceAll('-', '');
+	const stableNodeId = SHA256(selfUrl).slice(0, 20);
+	const nodeIdentifier = stableNodeId;
 
 	const nodeInfo = {
 		nodeId: nodeIdentifier,
 		host,
 		port,
-		selfUrl: `http://${host}:${port}`,
+		selfUrl,
+		about: `Kingsland Blockchain Node ${nodeIdentifier.slice(0, 8)}`,
 	};
-	console.log(nodeInfo.selfUrl);
+	blockchain.config.nodeInfo = nodeInfo;
 
-	console.log({ nodeIdentifier: nodeInfo.nodeId });
 	console.log(blockchain);
 
 	const app = express();
@@ -33,7 +34,6 @@ const _port = process.argv[2] ?? undefined;
 	app.set('blockchain', blockchain);
 	app.set('nodeInfo', nodeInfo);
 
-	// console.log(blockchain.addressIsValid("eae972db2776e38a75883aa2c0c3b8cd506b004b"));
 
 	/* 
 NODE:
@@ -66,7 +66,7 @@ POST {
 
 	app.get('/info', (req, res) => {
 		const data = {
-			about: 'name of the node',
+			about: nodeInfo.about,
 			nodeId: nodeInfo.nodeId,
 			chainId: blockchain.config.genesisBlock.blockHash,
 			nodeUrl: nodeInfo.selfUrl,
@@ -78,11 +78,10 @@ POST {
 			pendingTransactions: blockchain.pendingTransactions.length,
 		};
 
-		console.log('get info called', {data});
+		console.log('get info called', { data });
 		res.status(200).send(JSON.stringify(data));
 	});
 
-	// done
 	// return ALL balances in the network
 	//non-zero + confirmed (in blocks)
 	app.get('/balances', (req, res) => {
@@ -93,6 +92,24 @@ POST {
 	});
 
 	app.listen(nodeInfo.port, () => {
-		console.log(`node listening on port ${nodeInfo.port}`);
+		console.log(
+			`****************************************\n~~~                                  ~~~\n~~~   node listening on port: ${nodeInfo.port}   ~~~\n~~~                                  ~~~\n****************************************\n`
+		);
 	});
 })();
+
+
+
+
+
+// connecting a peer:
+/*
+expect:
+	node 1: fetch info from node 2
+	node 1: add peer
+	node 1: tellPeerToFriendUsBack (post to node 2)
+		node 2: fetch info from node 1
+		node 2: add peer
+		node2: tellPeerToFriendUsBack
+
+*/
