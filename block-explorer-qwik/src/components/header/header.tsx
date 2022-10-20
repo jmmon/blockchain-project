@@ -1,8 +1,10 @@
-import { component$, useStyles$ } from '@builder.io/qwik';
+import { component$, useRef, useStore, useStyles$, useWatch$ } from '@builder.io/qwik';
 import { useLocation } from '@builder.io/qwik-city';
+import { SessionContext } from '~/libs/context';
 import styles from './header.css?inline';
 
 export default component$(() => {
+	const session = useStore(SessionContext);
   useStyles$(styles);
 
   const pathname = useLocation().pathname;
@@ -14,6 +16,14 @@ export default component$(() => {
           <a href="/">Qwik City 🏙</a>
         </section>
         <nav>
+		  <select 
+		  onChange$={(ev) => {
+			session.port = +ev.target.value
+		}}
+		  >
+			<option value="5555">5555</option>
+			<option value="5554">5554</option>
+		  </select>
           <a href="/info" class={{ active: pathname.startsWith('/info') }}>
             Blockchain Info
           </a>

@@ -1,15 +1,27 @@
-import { component$, Resource } from "@builder.io/qwik";
+import { component$, Resource, useResource$, useStore } from "@builder.io/qwik";
 import {
 	DocumentHead,
 	RequestHandler,
 	useEndpoint,
 	useLocation,
 } from "@builder.io/qwik-city";
+import constants from "~/libs/constants";
+import { SessionContext } from "~/libs/context";
 import Transaction from "../../../../components/transaction/transaction";
 
 export default component$(() => {
 	const { params } = useLocation();
-	const resource = useEndpoint<typeof onGet>();
+	const session = useStore(SessionContext);
+
+	const resource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
+
+		const urlString = `${constants.baseUrl}${session.port}/address/${params.address}/transactions`;
+		return getAddressTransactions(urlString, params.address, controller, );
+	});
 
 	return (
 		<div>
@@ -57,28 +69,13 @@ export const head: DocumentHead = {
 	title: "transactions of this address",
 };
 
-export const onGet: RequestHandler<EndpointData> = async ({
-	params,
-	response,
-}) => {
-	const data = await getTransactions(params.address);
-	if (data.errorMsg) {
-		response.status = 404;
-		return data.errorMsg;
-	}
-
-	response.headers.set("Cache-Control", "no-cache, no-store");
-	return data;
-};
-
-export async function getTransactions(
+export async function getAddressTransactions(
+	urlString: string,
 	address: string,
 	controller?: AbortController
 ): Promise<Object> {
 	console.log("fetching transactions of address", address + "...");
-	const response = await fetch(
-		`http://localhost:5555/address/${address}/transactions`,
-		{
+	const response = await fetch(urlString,	{
 			signal: controller?.signal,
 		}
 	);

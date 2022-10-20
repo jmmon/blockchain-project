@@ -1,8 +1,19 @@
-import { component$, Resource } from "@builder.io/qwik";
+import { component$, Resource, useContext, useResource$ } from "@builder.io/qwik";
 import { DocumentHead, RequestHandler, useEndpoint } from "@builder.io/qwik-city";
+import constants from "~/libs/constants";
+import { SessionContext } from "~/libs/context";
 
 export default component$(() => {
-	const resource = useEndpoint<typeof onGet>();
+	const session = useContext(SessionContext);
+	const resource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
+		
+		const urlString = `${constants.baseUrl}${session.port}/peers`;
+		return getPeers(urlString, controller);
+	});
 
 	return (
 		<>
@@ -48,31 +59,14 @@ export const head: DocumentHead = {
 }
 
 // onGet NEVER runs on client. If I want to run on client, do useResource$ (in our component) and fetch inside
-export const onGet: RequestHandler<EndpointData> = async ({response}) => {
-	try {
-		const data = await getPeers();
-
-		response.headers.set('Cache-Control', 'no-cache, no-store');
-		return data;
-
-	} catch(error) {
-		console.log('onGet catch');
-		if (error.message) {
-			response.status = 404;
-			return error.message;
-		}
-
-		response.status = 404;
-		return error.errorMsg;
-	}		
-}
 
 export async function getPeers(
+	urlString: String,
 	controller?: AbortController
 ): Promise<Object> {
-	console.log('fetching peers...');
+	console.log('fetching peers...', {urlString});
 	try {
-		const response = await fetch('http://localhost:5555/peers', {
+		const response = await fetch(urlString, {
 			signal: controller?.signal,
 		});
 		const responseJson = await response.json();

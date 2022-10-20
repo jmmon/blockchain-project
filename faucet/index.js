@@ -10,7 +10,7 @@ const { get } = require("https");
 const payoutRecord = "payoutRecord/"; //  TODO: set wallets directory
 const filePath = `${payoutRecord}payoutRecord.json`;
 // const faucetWalletInfo.valuePerTransaction = 1000000;
-const {CONSTANTS: {faucet}} = require('../blockchain/src/constants');
+const {CONFIG: {faucet}} = require('../blockchain/src/constants');
 
 
 
@@ -294,6 +294,6 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 		res.render(__dirname + "/views/" + view + ".html", data);
 
 	app.listen(port, () => {
-		console.log(`App running on http://localhost:${port}`);
+		console.log(`Faucet running on http://localhost:${port}`);
 	});
 })();

@@ -27,8 +27,8 @@ export const Head = component$(() => {
         <style {...s.props} dangerouslySetInnerHTML={s.style} />
       ))}
 
-      <Social />
-      <Analytics loc={loc} />
+      {/* <Social /> */}
+      {/* <Analytics loc={loc} /> */}
     </head>
   );
 });

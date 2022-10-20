@@ -129,36 +129,6 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	}
 };
 
-// const sha256Hash = (obj) =>{
-// 	return Buffer.from(
-// 		crypto.createHash('sha256').update(JSON.stringify(obj)).digest()
-// 	);
-// }
-
-// // for transactions: removes "data" field if empty, or escapes spaces inside. Next, goes JSON and removes all non-escaped spaces from the JSON.
-// const removeSpaces = (obj) => {
-// 	if (!obj.data) {
-// 		// if data is '' or null / undefined
-// 		const newObj = {};
-// 		Object.keys(obj)
-// 			.filter((key) => key !== 'data')
-// 			.forEach((key) => (newObj[key] = obj[key]));
-// 		obj = newObj;
-// 	} else {
-// 		// escape spaces in data field
-// 		obj.data = obj.data.replaceAll(/\s/gm, '\ ');
-// 	}
-// 	// rebuild to make sure order stays the same
-// 	const objJson= JSON.stringify(obj);
-
-// 	// replace non-escaped spaces
-// 	const escapedObjJson = objJson.replace(/(?<!\\)\s/gm, '');
-
-// 	return escapedObjJson;
-// };
-
-// const trimAndSha256Hash = (obj) => sha256Hash(removeSpaces(obj));
-
 const decryptAndSign = async (
 	walletOrKeys,
 	recipient,

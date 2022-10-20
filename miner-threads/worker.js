@@ -3,7 +3,7 @@ const {
 	parentPort,
 	getEnvironmentData,
 } = require('node:worker_threads');
-const { sha256Hash } = import('../walletUtils/index');
+const { SHA256 } = require('../blockchain/src/hashing.js');
 
 const isValidProof = (hash, difficulty) => {
 	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
@@ -21,7 +21,7 @@ process.stdout.write('(' + workerIndex + ') ');
 
 while (true) {
 	const dateCreated = new Date().toISOString();
-	const blockHash = sha256Hash(`${blockDataHash}|${dateCreated}|${nonce}`);
+	const blockHash = SHA256(`${blockDataHash}|${dateCreated}|${nonce}`);
 	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
 
 	if (isValidProof(blockHash, difficulty)) {
@@ -41,7 +41,8 @@ while (true) {
 	}
 	
 	// loading indicator
-	const occurrence = Math.round(16 ** difficulty / 100);
+	// const occurrence = Math.round(16 ** difficulty / 100);
+	const occurrence = Math.round(16 ** difficulty);
 	if (nonce % occurrence == 0) {
 		process.stdout.write('. ');
 	}

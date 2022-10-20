@@ -1,13 +1,21 @@
-import { component$, Resource, useResource$ } from '@builder.io/qwik';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import { DocumentHead } from '@builder.io/qwik-city';
+import constants from '~/libs/constants';
+import { SessionContext } from '~/libs/context';
+import { getTransactions } from '~/routes/layout';
 import Transaction from "../../../components/transaction/transaction";
 
 export default component$(() => {
+	const session = useContext(SessionContext);
+
 	const confirmedTransactionsResource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		return getConfirmedTransactions(controller);
+		const urlString = `${constants.baseUrl}${session.port}/transactions/pending`
+		return getTransactions(urlString, controller);
 	});
   return (
     <div>
@@ -37,16 +45,3 @@ export default component$(() => {
 export const head: DocumentHead = {
   title: 'Confirmed Transactions',
 };
-
-export async function getConfirmedTransactions(
-	controller?: AbortController
-): Promise<Object> {
-	console.log("Fetching confirmed transactions...");
-	const response = await fetch(`http://localhost:5555/transactions/confirmed`, {
-		signal: controller?.signal,
-	});
-	const responseJson = await response.json();
-	console.log("json:", responseJson);
-	if (responseJson.errorMsg) return Promise.reject(responseJson);
-	return responseJson;
-}

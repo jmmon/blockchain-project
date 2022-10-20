@@ -1,9 +1,4 @@
-const walletUtils = import('../../walletUtils/index.js');
-const { response } = require('express');
 const express = require('express');
-const { txBaseFields } = require('../../blockchain/src/constants.js');
-const Transaction = require('../../blockchain/src/Transaction.js');
-const { valueCheck } = require('../../blockchain/src/validation.js');
 const router = express.Router();
 
 // works:
@@ -121,35 +116,6 @@ router.post('/send', async (req, res) => {
 					)
 				).catch((err) => console.log(`Error propagating transactions to Node ${peerid} (${peerUrl}): ${err.message}`));
 		})
-		// peers.forEach(async (peerId, peerUrl) => {
-		// 	if (peerUrl.includes(sender)) {
-		// 		console.log(`--Skipping peer`, { sender, peerId, peerUrl });
-		// 		return;
-		// 	}
-
-		// 	console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
-
-		// 	const response = await (
-		// 		await fetch(`${peerUrl}/transactions/send`, {
-		// 			method: 'POST',
-		// 			headers: { 'Content-Type': 'application/json' },
-		// 			body: JSON.stringify(signedTransaction),
-		// 		})
-		// 	).json();
-
-		// 	console.log(
-		// 		`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`
-		// 	);
-
-		// 	// version 2:
-		// 	// await (
-		// 	// 	await fetch(`${peerUrl}/transactions/send`, {
-		// 	// 		method: 'POST',
-		// 	// 		headers: { 'Content-Type': 'application/json' },
-		// 	// 		body: JSON.stringify(signedTransaction),
-		// 	// 	})
-		// 	// ).json().then(response => console.log(`-- response from: Node ${peerId} (${peerUrl}) response:\n----${response}`));
-		// })
 	);
 });
 

@@ -1,13 +1,20 @@
-import { component$, Resource, useResource$ } from "@builder.io/qwik";
+import { component$, Resource, useContext, useResource$ } from "@builder.io/qwik";
 import { DocumentHead } from "@builder.io/qwik-city";
 import Transaction from "../../../components/transaction/transaction";
+import { SessionContext } from "~/libs/context";
+import constants from "~/libs/constants";
+import { getTransactions } from "~/routes/layout";
 
 export default component$(() => {
+	const session = useContext(SessionContext);
 	const pendingTransactionsResource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
-
-		return getPendingTransactions(controller);
+		
+		const urlString = `${constants.baseUrl}${session.port}/transactions/pending`
+		return getTransactions(urlString, controller);
 	});
 	return (
 		<div>
@@ -42,16 +49,3 @@ export default component$(() => {
 export const head: DocumentHead = {
 	title: "Pending Transactions",
 };
-
-export async function getPendingTransactions(
-	controller?: AbortController
-): Promise<Object> {
-	console.log("Fetching pending transactions...");
-	const response = await fetch(`http://localhost:5555/transactions/pending`, {
-		signal: controller?.signal,
-	});
-	const responseJson = await response.json();
-	console.log("json:", responseJson);
-	if (responseJson.errorMsg) return Promise.reject(responseJson);
-	return responseJson;
-}

@@ -1,8 +1,20 @@
-import { component$, Resource } from '@builder.io/qwik';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import { DocumentHead, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
+import constants from '~/libs/constants';
+import { SessionContext } from '~/libs/context';
 
 export default component$(() => {
-  const resource = useEndpoint<typeof onGet>();
+	const session = useContext(SessionContext);
+  const resource = useResource$(({track, cleanup})=>{
+		track(session, "port");
+
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
+		
+		const urlString = `${constants.baseUrl}${session.port}/info`;
+		return getInfo(urlString, controller);
+  })
+
   return (
     <div>
       <h1>Blockchain Info</h1>
@@ -39,22 +51,12 @@ export const head: DocumentHead = {
   title: 'Blockchain Info',
 };
 
-export const onGet: RequestHandler<EndpointData> = async ({response}) => {
-  const data = await getInfo();
-  if (data.errorMsg) {
-    response.status = 404;
-    return data.errorMsg;
-  }
-
-  response.headers.set('Cache-Control', 'no-cache, no-store');
-  return data;
-}
-
 export async function getInfo(
+	 urlString: String,
   controller?: AbortController
 ): Promise<Object> {
   console.log('Fetching info...');
-  const response = await fetch('http://localhost:5555/info', {signal: controller?.signal});
+  const response = await fetch(urlString, {signal: controller?.signal});
   const responseJson = await response.json();
   console.log('json:', responseJson);
 

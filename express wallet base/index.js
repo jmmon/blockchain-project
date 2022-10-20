@@ -439,6 +439,6 @@ const authChecker = (req, res, next) => {
 		res.render(__dirname + "/views/" + view + ".html", data);
 
 	app.listen(PORT, () => {
-		console.log(`App running on http://localhost:${PORT}`);
+		console.log(`Wallet running on http://localhost:${PORT}`);
 	});
 })();

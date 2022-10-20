@@ -1,15 +1,21 @@
-import { component$, Resource, useResource$ } from "@builder.io/qwik";
+import { component$, Resource, useResource$, useStore } from "@builder.io/qwik";
 import { DocumentHead, useLocation } from "@builder.io/qwik-city";
+import constants from "~/libs/constants";
+import { SessionContext } from "~/libs/context";
 import Block from "../../../components/block/block";
 
 export default component$(() => {
 	const { params } = useLocation();
+	const session = useStore(SessionContext);
 
 	const blockResource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		return getBlock(params.index, controller);
+		const urlString = `${constants.baseUrl}${session.port}/blocks/${params.index}`;
+		return getBlock(urlString, controller);
 	});
 
 	return (
@@ -26,11 +32,11 @@ export default component$(() => {
 });
 
 export async function getBlock(
-	index: string,
+	urlString: String,
 	controller?: AbortController
 ): Promise<Object> {
 	console.log("Fetching block...");
-	const response = await fetch(`http://localhost:5555/blocks/${index}`, {
+	const response = await fetch(urlString, {
 		signal: controller?.signal,
 	});
 	const responseJson = await response.json();

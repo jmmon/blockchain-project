@@ -1,9 +1,22 @@
-import { component$, Resource } from '@builder.io/qwik';
+import { component$, Resource, useResource$, useStore } from '@builder.io/qwik';
 import { DocumentHead, useLocation, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
+import constants from '~/libs/constants';
+import { SessionContext } from '~/libs/context';
 
 export default component$(() => {
 	const { params } = useLocation();
-  const resource = useEndpoint<typeof onGet>();
+	const session = useStore(SessionContext);
+
+	const resource = useResource$(({ track, cleanup }) => {
+		track(session, "port");
+
+		const controller = new AbortController();
+		cleanup(() => controller.abort());
+		
+		const urlString = `${constants.baseUrl}${session.port}/address/${params.address}/balance`;
+		return getBalance(urlString, controller, );
+	});
+
   return (
     <div>
       <h1>Address: {params.address}</h1>
@@ -37,23 +50,12 @@ export const head: DocumentHead = {
   title: 'An Address',
 };
 
-export const onGet: RequestHandler<EndpointData> = async ({params, response}) => {
-  const data = await getBalance(params.address);
-  if (data.errorMsg) {
-    response.status = 404;
-    return data.errorMsg;
-  }
-
-  response.headers.set('Cache-Control', 'no-cache, no-store');
-  return data;
-}
-
 export async function getBalance(
-  address: string,
+  urlString: String,
   controller?: AbortController
 ): Promise<object> {
   console.log('fetching balances of', address);
-  const response = await fetch(`http://localhost:5555/address/${address}/balance`, {
+  const response = await fetch(urlString, {
     signal: controller?.signal,
   });
   const responseJson = await response.json();
