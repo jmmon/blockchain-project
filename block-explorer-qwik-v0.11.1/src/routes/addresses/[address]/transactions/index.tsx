@@ -1,26 +1,26 @@
-import { component$, Resource, useResource$, useStore } from "@builder.io/qwik";
+import { component$, Resource, useResource$, useStore } from '@builder.io/qwik';
 import {
 	DocumentHead,
 	RequestHandler,
 	useEndpoint,
 	useLocation,
-} from "@builder.io/qwik-city";
-import constants from "~/libs/constants";
-import { SessionContext } from "~/libs/context";
-import Transaction from "../../../../components/transaction/transaction";
+} from '@builder.io/qwik-city';
+import constants from '~/libs/constants';
+import { SessionContext } from '~/libs/context';
+import Transaction from '../../../../components/transaction/transaction';
 
 export default component$(() => {
 	const { params } = useLocation();
-	const session = useStore(SessionContext);
+	const session = useContext(SessionContext);
 
 	const resource = useResource$(({ track, cleanup }) => {
-		track(session, "port");
+		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
 		const urlString = `${constants.baseUrl}${session.port}/address/${params.address}/transactions`;
-		return getAddressTransactions(urlString, params.address, controller, );
+		return getAddressTransactions(urlString, params.address, controller);
 	});
 
 	return (
@@ -28,7 +28,7 @@ export default component$(() => {
 			<h1>address transactions</h1>
 			<p> fetch transactions of address {params.address}</p>
 			<Resource
-				resource={resource}
+				value={resource}
 				onPending={() => (
 					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
 						Loading...
@@ -66,7 +66,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: "transactions of this address",
+	title: 'transactions of this address',
 };
 
 export async function getAddressTransactions(
@@ -74,14 +74,13 @@ export async function getAddressTransactions(
 	address: string,
 	controller?: AbortController
 ): Promise<Object> {
-	console.log("fetching transactions of address", address + "...");
-	const response = await fetch(urlString,	{
-			signal: controller?.signal,
-		}
-	);
+	console.log('fetching transactions of address', address + '...');
+	const response = await fetch(urlString, {
+		signal: controller?.signal,
+	});
 
 	const responseJson = await response.json();
-	console.log("json:", responseJson);
+	console.log('json:', responseJson);
 
 	if (responseJson.errorMsg) {
 		return Promise.reject(responseJson);

@@ -1,26 +1,31 @@
-import { component$, Resource, useContext, useResource$ } from "@builder.io/qwik";
-import { DocumentHead } from "@builder.io/qwik-city";
-import Transaction from "../../../components/transaction/transaction";
-import { SessionContext } from "~/libs/context";
-import constants from "~/libs/constants";
+import {
+	component$,
+	Resource,
+	useContext,
+	useResource$,
+} from '@builder.io/qwik';
+import { DocumentHead } from '@builder.io/qwik-city';
+import Transaction from '../../../components/transaction/transaction';
+import { SessionContext } from '~/libs/context';
+import constants from '~/libs/constants';
 import { getTransactions } from '~/routes/transactions/index';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
 	const pendingTransactionsResource = useResource$(({ track, cleanup }) => {
-		track(session, "port");
+		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
-		
-		const urlString = `${constants.baseUrl}${session.port}/transactions/pending`
+
+		const urlString = `${constants.baseUrl}${session.port}/transactions/pending`;
 		return getTransactions(urlString, controller);
 	});
 	return (
 		<div>
 			<h1>Pending Transactions</h1>
 			<Resource
-				resource={pendingTransactionsResource}
+				value={pendingTransactionsResource}
 				onPending={() => <p>Loading...</p>}
 				onResolved={(transactions) => {
 					if (transactions.length === 0)
@@ -47,5 +52,5 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: "Pending Transactions",
+	title: 'Pending Transactions',
 };

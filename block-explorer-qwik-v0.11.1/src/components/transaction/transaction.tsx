@@ -14,6 +14,7 @@ export default component$(
 	const {pathname} = useLocation();
 
 	const isTransactionsPath = (pathname.substring(1).substring(0, pathname.substring(1).indexOf("/")) === "transactions");
+	// console.log({isTransactionsPath});
 
 	let last = true;
 	if (totalTransactions) {
