@@ -867,7 +867,6 @@ class Blockchain {
 		let errors = [];
 
 		// validate the FROM address is derived from the public key
-		// const hexAddress = walletUtils.addressFromCompressedPubKey(signedTransaction.senderPubKey);
 		const hexAddress = addressFromCompressedPubKey(
 			signedTransaction.senderPubKey
 		);
@@ -879,12 +878,6 @@ class Blockchain {
 
 		//validate signature is from public key
 		if (
-			// !walletUtils.verifySignature(
-			// 	signedTransaction.transactionDataHash,
-			// 	signedTransaction.senderPubKey,
-			// 	signedTransaction.senderSignature
-			// )
-
 			!verifySignature(
 				signedTransaction.transactionDataHash,
 				signedTransaction.senderPubKey,
@@ -930,14 +923,14 @@ class Blockchain {
 			);
 		}
 
-		// create new transaction
+		// build new transaction
 		const newTransaction = this.createHashedTransaction(signedTransaction);
 
 		// check blockchain AND pending transactions for this transactionHash
 		const foundTransaction = this.getTransactionByHash(
 			newTransaction.transactionDataHash
 		);
-		if (!foundTransaction) {
+		if (foundTransaction) {
 			errors.push(`Duplicate transaction data hash!`);
 		}
 
@@ -1000,9 +993,9 @@ class Blockchain {
 	saveMiningJob(candidate) {
 		this.miningJobs.set(candidate.blockDataHash, candidate);
 		console.log(
-			`fn saveMiningJob: Mining job saved! Block candidate prepared for mining.\nTransactions: ${
+			`fn saveMiningJob: Done! Candidate block prepared! Transactions included: ${
 				candidate.transactions.length
-			}\nThis candidate: ${JSON.stringify(candidate)}`
+			}\n{${Object.entries(candidate).map(([key, value]) => `${key}: ${key === 'transactions' ? value.length : value},`).join('\n')}`
 		);
 	}
 

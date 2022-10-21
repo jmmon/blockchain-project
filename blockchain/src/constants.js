@@ -11,12 +11,12 @@ const CONFIG = {
 		adjustmentRatio: 3,
 	},
 	faucet: {
-		mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
-		address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
+		mnemonic: 'flame renew maze sun piano sentence poet metal text name toast situate',
 		privateKey:
-			'51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
+			'1516726651051106b89d093cca3e887303610ac491b6c9a19a70fe5329fe57ab',
 		publicKey:
-			'46da25d657a170c983dc01ce736094ef11f557f8a007e752ac1eb1f705e1b9070',
+			'cfe8495e9e582ec5c834bfd37e5f1ebc1559440558c74068513da1a64ff377b30',
+		address: '00a5d9bf2555dfffc45f64386d612b46fce92dea',
 		valueToGenerate: 1000000000000, // 1,000,000,000,000
 		valuePerTransaction: 1000000,
 	},

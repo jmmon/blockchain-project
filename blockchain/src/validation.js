@@ -16,7 +16,7 @@ const failingCondition = ({ value, expected, type }) =>
 		: type === '<'
 		? value >= expected
 		: true; // fallback to force adding an error if no match
-const {hexPattern, CONFIG} = require('./constants');
+const { hexPattern, CONFIG } = require('./constants');
 
 const typeCheck = ({ label, value, type }) => {
 	const actualType = typeof value;
@@ -33,7 +33,7 @@ const typeCheck = ({ label, value, type }) => {
 const patternCheck = ({ label, value, pattern, expected, actual }) => {
 	const isValid = pattern.test(value);
 	if (!isValid) {
-		console.log('failed pattern.test(value)', {isValid})
+		console.log('failed pattern.test(value)', { isValid });
 		return invalidStringGen({
 			label,
 			expected,
@@ -183,7 +183,41 @@ const validateData = (data) => {
 	return { valid, missing };
 };
 
-const validateDateCreated = (dateCreated, prevDateCreated, currentTime, isBlock = false) => {
+// i.e. blockDataHash, blockHash, prevBlockHash* (only basic), transactionDataHash
+const validateHash = (hash, label, length) => {
+	// type length pattern value
+	const results = [
+		typeCheck({
+			label,
+			value: hash,
+			type: 'string',
+		}),
+		lengthCheck({
+			label,
+			value: hash,
+			expected: `to be ${length} chars`,
+			type: '===',
+		}),
+		patternCheck({
+			label,
+			value: hash,
+			pattern: hexPattern,
+			expected: `to be hex`,
+			actual: `failed validation`,
+		}),
+	];
+	const missing = results.filter((result) => result !== false);
+	const valid = missing.length === 0;
+	if (valid) return { valid, missing: null };
+	return { valid, missing };
+};
+
+const validateDateCreated = (
+	dateCreated,
+	prevDateCreated,
+	currentTime,
+	isBlock = false
+) => {
 	const label = 'DateCreated';
 	const results = [
 		typeCheck({
@@ -196,8 +230,10 @@ const validateDateCreated = (dateCreated, prevDateCreated, currentTime, isBlock 
 		dateCreated > currentTime
 			? invalidStringGen({
 					label,
-					expected: `${isBlock ? "block" : "transaction"} to be created before current time`,
-					actual: `${isBlock ? "block" : "transaction"} created ${
+					expected: `${
+						isBlock ? 'block' : 'transaction'
+					} to be created before current time`,
+					actual: `${isBlock ? 'block' : 'transaction'} created ${
 						dateCreated - currentTime
 					}ms after current time`,
 			  })
@@ -207,10 +243,14 @@ const validateDateCreated = (dateCreated, prevDateCreated, currentTime, isBlock 
 		prevDateCreated && dateCreated <= prevDateCreated
 			? invalidStringGen({
 					label,
-					expected: `prev${isBlock ? "Block" : "Transaction"} to be created before ${isBlock ? "block" : "transaction"}`,
-					actual: `${isBlock ? "block" : "transaction"} created ${
+					expected: `prev${
+						isBlock ? 'Block' : 'Transaction'
+					} to be created before ${
+						isBlock ? 'block' : 'transaction'
+					}`,
+					actual: `${isBlock ? 'block' : 'transaction'} created ${
 						prevDateCreated - dateCreated
-					}ms before prev${isBlock ? "Block" : "Transaction"}`,
+					}ms before prev${isBlock ? 'Block' : 'Transaction'}`,
 			  })
 			: false,
 	];
@@ -234,7 +274,7 @@ const validateFields = (fields, requiredFields) => {
 		: { valid: true, missing: null };
 };
 
-const basicTxValidation = ({transaction, prevDateParsed}) => {
+const basicTxValidation = ({ transaction, prevDateParsed }) => {
 	let valid = true;
 	let errors = [];
 
@@ -318,7 +358,7 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'transactions';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	console.log({transactions: currentValue})
+	console.log({ transactions: currentValue });
 	addFoundErrors({
 		missing,
 		error: typeCheck({ label, value: currentValue, type: 'array' }),
@@ -346,10 +386,6 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'prevBlockHash';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'string' }),
-	});
 	if (currentValue !== prevBlock.blockHash) {
 		addFoundErrors({
 			missing,
@@ -360,51 +396,15 @@ const validateBlockValues = (block, prevBlock) => {
 			}),
 		});
 	}
+	let prevBlockHashResult;
 	if (block.index === 0) {
 		// special case, special messages on these two
-		if (currentValue !== '1') {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: "index 1 prevBlockHash to be '1'",
-					actual: `index 1 prevBlockHash is ${currentValue}`,
-				}),
-			});
-		}
-		if (currentValue.length !== 1) {
-			addFoundErrors({
-				missing,
-				error: invalidStringGen({
-					label: upperFirstLetter(field),
-					expected: 'index 1 prevBlockHash.length to be 1',
-					actual: `index 1 prevBlockHash.length === ${currentValue.length}`,
-				}),
-			});
-		}
+		prevBlockHashResult = validateHash(currentValue, label, 1); // length, string type, hex pattern
 	} else {
-		// only hex characters
-		addFoundErrors({
-			missing,
-			error: patternCheck({
-				label,
-				value: currentValue,
-				pattern: hexPattern,
-				expected: 'to be valid hex string',
-				actual: 'not valid hex string',
-			}),
-		});
-
-		// 64 length
-		addFoundErrors({
-			missing,
-			error: lengthCheck({
-				label,
-				value: currentValue,
-				expected: 64,
-				type: '===',
-			}),
-		});
+		prevBlockHashResult = validateHash(currentValue, label, 64); // length, string type, hex pattern
+	}
+	if (!prevBlockHashResult.valid) {
+		prevBlockHashResult.missing.forEach((err) => missing.push(err));
 	}
 
 	// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
@@ -417,29 +417,10 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'blockDataHash';
 	currentValue = block[field];
 	label = upperFirstLetter(field);
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'string' }),
-	});
-	addFoundErrors({
-		missing,
-		error: patternCheck({
-			label,
-			value: currentValue,
-			pattern: hexPattern,
-			expected: 'to be valid hex string',
-			actual: `not valid hex string`,
-		}),
-	});
-	addFoundErrors({
-		missing,
-		error: lengthCheck({
-			label,
-			value: currentValue,
-			expected: 64,
-			type: '===',
-		}),
-	});
+	const blockDataHashResult = validateHash(currentValue, label, 64); // length, string type, hex pattern
+	if (!blockDataHashResult.valid){
+		blockDataHashResult.missing.forEach((err) => missing.push(err))
+	}
 
 	// nonce: should be a number, (later, will validate should give us the correct difficulty)
 	field = 'nonce';
@@ -450,12 +431,11 @@ const validateBlockValues = (block, prevBlock) => {
 		error: typeCheck({ label, value: currentValue, type: 'number' }),
 	});
 
-
 	// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
 	const currentTime = Date.now();
 	const dateCreatedResult = validateDateCreated(
 		Date.parse(block.dateCreated),
-		prevDateParsed ,
+		prevDateParsed,
 		currentTime,
 		true
 	);
@@ -464,32 +444,11 @@ const validateBlockValues = (block, prevBlock) => {
 	}
 
 	// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
-	field = 'blockHash';
-	label = upperFirstLetter(field);
-	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'string' }),
-	});
-	addFoundErrors({
-		missing,
-		error: patternCheck({
-			label,
-			value: currentValue,
-			pattern: hexPattern,
-			expected: 'to be valid hex string',
-			actual: `not valid hex string`,
-		}),
-	});
-	addFoundErrors({
-		missing,
-		error: lengthCheck({
-			label,
-			value: currentValue,
-			expected: 64,
-			type: '===',
-		}),
-	});
+	label = "BlockHash";
+	const blockHashResult = validateHash(block["blockHash"], label, 64); // length, string type, hex pattern
+	if (!blockHashResult.valid) {
+		blockHashResult.missing.forEach((err) => missing.push(err));
+	}
 
 	// finally, return the results!
 	if (missing.length > 0) return { valid: false, missing };
@@ -513,5 +472,4 @@ module.exports = {
 	validateFields,
 	basicTxValidation,
 	validateBlockValues,
-
 };
