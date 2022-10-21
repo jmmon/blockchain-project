@@ -11,11 +11,14 @@ import Header from '../components/header/header';
 
 export default component$(() => {
 	const session = useStore({ port: constants.defaultPort });
+
 	useContextProvider(SessionContext, session);
+
 	useWatch$(({ track }) => {
 		track(() => session.port);
 		console.log('Port changed');
 	});
+	
 	return (
 		<>
 			<main>

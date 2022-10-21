@@ -1,6 +1,7 @@
 import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import {
 	DocumentHead,
+	Link,
 	RequestHandler,
 	useEndpoint,
 } from '@builder.io/qwik-city';
@@ -39,7 +40,7 @@ export default component$(() => {
 							<ul>
 								{Object.keys(balances).map((address) => (
 									<li class="ml-4">
-										<a href={`/addresses/${address}`}>{address}</a>: {balances[address]}
+										<Link href={`/addresses/${address}`} >{address}</Link>: {balances[address]}
 									</li>
 								))}
 							</ul>

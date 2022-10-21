@@ -9,6 +9,7 @@ import {
 	useLocation,
 	RequestHandler,
 	useEndpoint,
+	Link,
 } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
@@ -63,9 +64,9 @@ export default component$(() => {
 					);
 				}}
 			/>
-			<a href={`/addresses/${params.address}/transactions`}>
+			<Link href={`/addresses/${params.address}/transactions`}>
 				View Transactions...
-			</a>
+			</Link>
 		</div>
 	);
 });

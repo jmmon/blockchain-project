@@ -1,4 +1,4 @@
-import { component$, Resource, useResource$, useStore } from '@builder.io/qwik';
+import { component$, Resource, useContext, useResource$, } from '@builder.io/qwik';
 import {
 	DocumentHead,
 	RequestHandler,

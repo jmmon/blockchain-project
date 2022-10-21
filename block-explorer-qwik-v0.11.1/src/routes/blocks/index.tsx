@@ -4,16 +4,15 @@ import {
 	useContext,
 	useResource$,
 } from '@builder.io/qwik';
-import type { DocumentHead } from '@builder.io/qwik-city';
+import { DocumentHead, Link } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
 	const blocksResource = useResource$(({ track, cleanup }) => {
+		// track(session, "port");
 		track(() => session.port);
-		console.log('-- running resource');
-		console.log({ session });
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
@@ -39,7 +38,7 @@ export default component$(() => {
 					<ul>
 						{blocks.map((block, index) => (
 							<li>
-								<a href={`/blocks/${index}`}>Block #{index}</a>
+								<Link href={`/blocks/${index}`}>Block #{index}</Link>
 							</li>
 						))}
 					</ul>
@@ -49,21 +48,22 @@ export default component$(() => {
 	);
 });
 
+export const head: DocumentHead = {
+	title: 'Blocks',
+};
+
 export async function getBlocks(
 	urlString: String,
 	controller?: AbortController
 ): Promise<string[]> {
-	console.log('Fetching blocks...');
+	console.log(`Fetching blocks from ${urlString}...`);
 	const response = await fetch(urlString, {
 		signal: controller?.signal,
 	});
-	console.log('fetch resolved!');
+
 	const json = await response.json();
+
 	return Array.isArray(json)
 		? json.map((block) => JSON.stringify(block))
 		: Promise.reject(json);
 }
-
-export const head: DocumentHead = {
-	title: 'Blocks',
-};

@@ -6,6 +6,7 @@ import {
 } from '@builder.io/qwik';
 import {
 	DocumentHead,
+	Link,
 	RequestHandler,
 	useEndpoint,
 } from '@builder.io/qwik-city';
@@ -29,7 +30,7 @@ export default component$(() => {
 		<div>
 			<h1>Blockchain Info</h1>
 			<p>
-				<a href="/info/peers">Peers</a> and difficulty, etc
+				<Link href="/info/peers">Peers</Link> and difficulty, etc
 			</p>
 			<Resource
 				value={resource}
@@ -51,11 +52,42 @@ export default component$(() => {
 								<h5>All Blockchain Info:</h5>
 								<ul class="ml-2">
 									{'{'}
-									{Object.keys(info).map((key) => (
-										<li class="ml-4">
-											{key}: {info[key]}
-										</li>
-									))}
+									{Object.keys(info).map((key) => {
+										const data = (
+											<>
+												{key}: {info[key]}
+											</>
+										);
+										return (
+											<li class="ml-4">
+												{key === 'blocksCount' ? (
+													<Link href="/blocks">
+														{data}
+													</Link>
+												) : key === 'chainId' ? (
+													<Link href="/blocks/0">
+														{data}
+													</Link>
+												) : key === 'peers' ? (
+													<Link href="/info/peers">
+														{data}
+													</Link>
+												) : key ===
+												  'pendingTransactions' ? (
+													<Link href="/transactions/pending">
+														{data}
+													</Link>
+												) : key ===
+												  'confirmedTransactions' ? (
+													<Link href="/transactions/confirmed">
+														{data}
+													</Link>
+												) : (
+													<>{data}</>
+												)}
+											</li>
+										);
+									})}
 									{'}'}
 								</ul>
 							</div>

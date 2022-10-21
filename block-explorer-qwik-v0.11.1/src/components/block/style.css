@@ -1,0 +1,7 @@
+details[open] span.extra {
+	display: none;
+}
+
+details[closed]  span.extra {
+	display: initial;
+}
