@@ -60,9 +60,11 @@ const db = {
 		if (!fs.existsSync(payoutRecord)) {
 			fs.mkdirSync(payoutRecord);
 		}
-		if (!fs.existsSync(filePath)) {
-			fs.writeFileSync(filePath, '{}');
-		}
+		// if (!fs.existsSync(filePath)) {
+		// 	fs.writeFileSync(filePath, '{}');
+		// }
+
+		fs.writeFileSync(filePath, '{}');
 		return true;
 	},
 
@@ -169,71 +171,83 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 	) => {
 		// error saving, do not send transaction
 		if (!success) {
-			console.error('Error: Try waiting an hour before requesting more funds!');
-			return { data: null, error: 'Error: Try waiting an hour before requesting more funds!' };
-		}
-
-		console.log({ newDatabase });
-		// payout! sign and send transaction
-		const keys = {
-			privateKey: faucetWalletInfo.privateKey,
-			publicKey: faucetWalletInfo.publicKey,
-			address: faucetWalletInfo.address,
-		};
-
-		const getConfirmedBalance = async (nodeUrl, address) => {
-			// fetch balance from node!
-			const balances = await fetch(
-				`${nodeUrl}/address/${address}/balance`
+			console.error(
+				'Error: Try waiting an hour before requesting more funds!'
 			);
-			const data = await balances.json();
-			console.log('fetched data:', { data });
-
-			return data.confirmedBalance;
-		};
-
-		// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
-		const confirmedBalance = await getConfirmedBalance(
-			nodeUrl,
-			faucetWalletInfo.address
-		);
-		const amount =
-			confirmedBalance >= faucetWalletInfo.valuePerTransaction
-				? faucetWalletInfo.valuePerTransaction
-				: confirmedBalance;
-
-		console.log({ confirmedBalance, amount });
-
-		const signedTransaction = await decryptAndSign(
-			keys, // faucet keys
-			address, // recipient
-			amount // amount
-		);
-
-		if (signedTransaction.error) {
-			console.log('signing error:', signedTransaction.error);
-			return { data: null, error: signedTransaction.error };
+			return {
+				data: null,
+				error: 'Error: Try waiting an hour before requesting more funds!',
+			};
 		}
+		try {
+			console.log({ newDatabase });
+			// payout! sign and send transaction
+			const keys = {
+				privateKey: faucetWalletInfo.privateKey,
+				publicKey: faucetWalletInfo.publicKey,
+				address: faucetWalletInfo.address,
+			};
 
-		console.log('attempting submit');
-		const submitResponse = await submitTransaction(
-			nodeUrl,
-			signedTransaction.data
-		);
+			const getConfirmedBalance = async (nodeUrl, address) => {
+				// fetch balance from node!
+				const balances = await fetch(
+					`${nodeUrl}/address/${address}/balance`
+				);
+				const data = await balances.json();
+				console.log('fetched data:', { data });
 
-		if (submitResponse.error) {
-			console.log('submit error:', submitResponse.error);
-			return { data: null, error: submitResponse.error };
+				return data.confirmedBalance;
+			};
+
+			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
+			const confirmedBalance = await getConfirmedBalance(
+				nodeUrl,
+				faucetWalletInfo.address
+			);
+			const amount =
+				confirmedBalance >= faucetWalletInfo.valuePerTransaction
+					? faucetWalletInfo.valuePerTransaction
+					: confirmedBalance;
+
+			console.log({ confirmedBalance, amount });
+
+			const signedTransaction = await decryptAndSign(
+				keys, // faucet keys
+				address, // recipient
+				amount // amount
+			);
+
+			if (signedTransaction.error) {
+				console.log('signing error:', signedTransaction.error);
+				return { data: null, error: signedTransaction.error };
+			}
+
+			console.log('attempting submit');
+			const submitResponse = await submitTransaction(
+				nodeUrl,
+				signedTransaction.data
+			);
+
+			if (submitResponse.error) {
+				console.log('submit error:', submitResponse.error);
+				return { data: null, error: submitResponse.error };
+			}
+
+			//transaction was signed and sent! draw success view:
+			return {
+				data: {
+					transactionDataHash:
+						signedTransaction.data.transactionDataHash,
+					amount,
+				},
+				error: null,
+			};
+		} catch (err) {
+			return {
+				data: null,
+				error: err,
+			};
 		}
-
-		//transaction was signed and sent! draw success view:
-		return {
-			data: {
-				transactionDataHash: signedTransaction.data.transactionDataHash,
-				amount,
-			},
-			error: null,
-		};
 	};
 
 	app.get('/', async (req, res) => {
@@ -281,7 +295,10 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 		// else we try sending a transaction to the recipient
 		const response = await db.findAndSave(address, nodeUrl, signAndSend);
 		if (response.error) {
-			console.log('Error signing and sending transaction:', response.error);
+			console.log(
+				'Error signing and sending transaction:',
+				response.error
+			);
 			drawView(res, active, {
 				transactionData: undefined,
 				error: response.error,

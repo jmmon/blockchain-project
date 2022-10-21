@@ -106,7 +106,7 @@ const generateWallet = async () => {
 };
 
 const signTransaction = (privateKey, txDataHashBuffer) => {
-	console.log({privateKey, txDataHashBuffer});
+	console.log({ privateKey, txDataHashBuffer });
 	let response = { data: null, error: null };
 	try {
 		const splitSignature = (signature) => {
@@ -117,13 +117,13 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const txDataArray = Uint8Array.from(Buffer.from(txDataHashBuffer, 'hex'));
+		const txDataArray = Uint8Array.from(
+			Buffer.from(txDataHashBuffer, 'hex')
+		);
 		// const signature = Buffer.from(
 		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		// );
-		const signature = Buffer.from(
-			ecc.sign(txDataArray, privateKeyArray)
-		);
+		const signature = Buffer.from(ecc.sign(txDataArray, privateKeyArray));
 		const [r, s] = splitSignature(signature);
 
 		response = { data: [r, s], error: null };
@@ -164,7 +164,7 @@ const decryptAndSign = async (
 
 	// prepare and hash our transaction data
 	const { privateKey, publicKey, address } = keys;
-	console.log('faucet info:', {privateKey, publicKey, address});
+	console.log('faucet info:', { privateKey, publicKey, address });
 	let txData = {
 		from: address,
 		to: recipient,
@@ -174,9 +174,9 @@ const decryptAndSign = async (
 		data: '',
 		senderPubKey: publicKey,
 	};
-	console.log('txData:', {txData});
+	console.log('txData:', { txData });
 	const txDataHashBuffer = trimAndSha256Hash(txData);
-	console.log({txDataHashBuffer});
+	console.log({ txDataHashBuffer });
 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
@@ -184,7 +184,7 @@ const decryptAndSign = async (
 		return { data: null, error: signResponse.error };
 	}
 
-	console.log('done signing')
+	console.log('done signing');
 	// add our hash and signature fields
 	txData['transactionDataHash'] = txDataHashBuffer.toString('hex');
 	txData['senderSignature'] = signResponse.data;
@@ -193,29 +193,36 @@ const decryptAndSign = async (
 };
 
 const submitTransaction = async (nodeUrl, signedTransaction) => {
-	// post to node to submit signed transaction
-	const response = await fetch(`${nodeUrl}/transactions/send`, {
-		method: 'POST',
-		body: JSON.stringify(signedTransaction),
-		headers: { 'Content-Type': 'application/json' },
-	});
-	console.log({ submitTransactionResponse: response });
+	let response;
+	try {
+		// post to node to submit signed transaction
+		response = await fetch(`${nodeUrl}/transactions/send`, {
+			method: 'POST',
+			body: JSON.stringify(signedTransaction),
+			headers: { 'Content-Type': 'application/json' },
+		});
+		console.log({ submitTransactionResponse: response });
 
-	// save our sent transaction for displaying
-	if (response.status === 200) {
-		return { data: signedTransaction, error: null };
+		// save our sent transaction for displaying
+
+		if (response.status === 200) {
+			return { data: signedTransaction, error: null };
+		}
+
+		console.log(`error submitting transaction`);
+		const json = await response.json();
+
+		// data / validation error
+		if (response.status === 400) {
+			return { data: null, error: json.errorMsg };
+		}
+
+		// 404, etc
+		return { data: null, error: 'Error connecting to node' };
+
+	} catch (err) {
+		return { data: null, error: err };
 	}
-
-	console.log(`error submitting transaction`);
-	const json = await response.json();
-
-	// data / validation error
-	if (response.status === 400) {
-		return { data: null, error: json.errorMsg };
-	}
-
-	// 404, etc
-	return { data: null, error: 'Error connecting to node' };
 };
 
 const fetchAddressBalance = async (nodeUrl, address) => {

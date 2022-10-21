@@ -1,36 +1,39 @@
 // const { default: walletUtils } = import('../../walletUtils/index.js');
-// addressFromCompressedPubKey
-//verifySignature
-let walletUtils;
-;(async () => {
-	walletUtils = import('../../walletUtils/index.js');
+// // addressFromCompressedPubKey
+// //verifySignature
+// let walletUtils;
+// // let addressFromCompressedPubKey;
+// // let verifySignature;
+// ;(async () => {
+// 	// import('../../walletUtils/index.')
+// 	walletUtils = await import('../../walletUtils/index.js');
+// 	console.log({walletUtils});
 
-	// const {
-	// 	default: { decryptAndSign, submitTransaction },
-	// } = await import('../walletUtils/index.js');
-})()
+// 	// const {
+// 	// 	default: { decryptAndSign, submitTransaction },
+// 	// } = await import('../walletUtils/index.js');
+// })()
+
+// const {default: walletUtils} = import('../../walletUtils/index.js');
+
+const verifySignature = (...args) =>
+	import('../../walletUtils/index.js').then(
+		({ default: { verifySignature } }) => verifySignature(...args)
+	);
+const addressFromCompressedPubKey = (...args) =>
+	import('../../walletUtils/index.js').then(
+		({ default: { addressFromCompressedPubKey } }) =>
+			addressFromCompressedPubKey(...args)
+	);
 
 // const {default: fetch} = import('node-fetch');
 const fetch = (...args) =>
 	import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const {
-	CONFIG,
-	txBaseFields,
-	blockBaseFields,
-	hexPattern,
-} = require('./constants');
+const { CONFIG, txBaseFields, blockBaseFields } = require('./constants');
 const Transaction = require('./Transaction');
 const Block = require('./Block');
 const {
-	// typeCheck,
-	// invalidStringGen,
-	// upperFirstLetter,
-	// lengthCheck,
-	// patternCheck,
-	// valueCheck,
-	// addFoundErrors,
 	validateFields,
-	// validateAddress,
 	basicTxValidation,
 	validateBlockValues,
 } = require('./validation');
@@ -593,7 +596,6 @@ class Blockchain {
 			this.tellPeerToFriendUsBack(peerUrl);
 		}
 
-
 		//synchronize chain AND pending transactions
 
 		if (this.isTheirChainBetter(peerInfo.cumulativeDifficulty)) {
@@ -645,11 +647,13 @@ class Blockchain {
 	async checkChainFromPeer(peerUrl) {
 		console.log(`-- fn checkChainFromPeer`);
 		// let theirChain, theirPending;
-		console.log({peerUrl})
-		const theirChain = await fetch(`${peerUrl}/blocks`).then(async (res) => await res.json());
-		const theirPending = await fetch(`${peerUrl}/transactions/pending`).then(
+		console.log({ peerUrl });
+		const theirChain = await fetch(`${peerUrl}/blocks`).then(
 			async (res) => await res.json()
 		);
+		const theirPending = await fetch(
+			`${peerUrl}/transactions/pending`
+		).then(async (res) => await res.json());
 
 		// async validateChain(theirChain, peerUrl) {
 		console.log('-- Validating chain');
@@ -657,7 +661,7 @@ class Blockchain {
 			// execute the whole chain in a new blockchain
 			const { valid, cumulativeDifficulty, errors } =
 				executeIncomingChain(theirChain);
-				// executeIncomingChain(await theirChain);
+			// executeIncomingChain(await theirChain);
 
 			if (!valid) {
 				errors.forEach(console.log);
@@ -668,7 +672,10 @@ class Blockchain {
 			}
 
 			console.log('-- -- Chain is valid! Checking difficulty...');
-			console.log({ours: this.cumulativeDifficulty, theirs: cumulativeDifficulty})
+			console.log({
+				ours: this.cumulativeDifficulty,
+				theirs: cumulativeDifficulty,
+			});
 			if (cumulativeDifficulty <= this.cumulativeDifficulty) {
 				return console.log(`-- -- difficulty check`, {
 					valid: false,
@@ -702,7 +709,7 @@ class Blockchain {
 		// Add those that are in the peer's pendingTransactions
 		const uniqueTransactions = new Set([
 			...this.pendingTransactions,
-			...(theirPending),
+			...theirPending,
 			// ...(await theirPending),
 		]);
 		// Keep those that are not in the chain
@@ -715,23 +722,22 @@ class Blockchain {
 		});
 	}
 
-
 	// should be run any time the chain changes (when a block is mined)
 	propagateBlock(skipPeer = null) {
-		console.log(`fn propagateBlock`, {peers: this.peers});
+		console.log(`fn propagateBlock`, { peers: this.peers });
 
 		if (this.peers.size === 0) return;
 
-		// notify peers of new chain! 
+		// notify peers of new chain!
 		const data = {
 			blocksCount: this.chain.length,
 			cumulativeDifficulty: this.cumulativeDifficulty,
 			nodeUrl: this.config.nodeInfo.selfUrl,
 		};
-	
+
 		this.peers.entries().map(([peerId, peerUrl]) => {
-			console.log({peerId, peerUrl});
-			console.log(`Checking Peer ${peerId, peerUrl}`);
+			console.log({ peerId, peerUrl });
+			console.log(`Checking Peer ${(peerId, peerUrl)}`);
 
 			if (skipPeer !== null && skipPeer === peerUrl) return;
 
@@ -745,7 +751,7 @@ class Blockchain {
 					this.peers.delete(id);
 				}
 			});
-		})
+		});
 	}
 
 	isTheirChainBetter(theirCumulativeDifficulty) {
@@ -781,7 +787,7 @@ class Blockchain {
 				', '
 			)}`
 		);
-		console.log({chain: this.chain, type: typeof this.chain});
+		console.log({ chain: this.chain, type: typeof this.chain });
 		for (const block of this.chain) {
 			for (const { thisTxDataHash } of block.transactions) {
 				// see if transaction is in incoming list
@@ -824,8 +830,11 @@ class Blockchain {
 		console.log(`fn validateBlock`);
 		let errors = [];
 		let valid = true;
-		console.log('--', {block, previousBlock})
-		console.log('-- --', {txs: block.transactions[0], prevTxs: previousBlock.transactions[0]})
+		console.log('--', { block, previousBlock });
+		console.log('-- --', {
+			txs: block.transactions[0],
+			prevTxs: previousBlock.transactions[0],
+		});
 
 		// validate block fields are present
 		const fieldsResult = validateFields(
@@ -858,7 +867,8 @@ class Blockchain {
 		let errors = [];
 
 		// validate the FROM address is derived from the public key
-		const hexAddress = walletUtils.addressFromCompressedPubKey(
+		// const hexAddress = walletUtils.addressFromCompressedPubKey(signedTransaction.senderPubKey);
+		const hexAddress = addressFromCompressedPubKey(
 			signedTransaction.senderPubKey
 		);
 		if (signedTransaction.from !== hexAddress) {
@@ -869,7 +879,13 @@ class Blockchain {
 
 		//validate signature is from public key
 		if (
-			!walletUtils.verifySignature(
+			// !walletUtils.verifySignature(
+			// 	signedTransaction.transactionDataHash,
+			// 	signedTransaction.senderPubKey,
+			// 	signedTransaction.senderSignature
+			// )
+
+			!verifySignature(
 				signedTransaction.transactionDataHash,
 				signedTransaction.senderPubKey,
 				signedTransaction.senderSignature
@@ -890,10 +906,12 @@ class Blockchain {
 		//check for invalid values :
 
 		// handles {to, from, value, fee, dateCreated, data, senderPubKey}
-		const basicResults = basicTxValidation(
-			signedTransaction,
-			this.pendingTransactions
-		);
+		const basicResults = basicTxValidation({
+			transaction: signedTransaction,
+			prevDateParsed: Date.parse(
+				this.pendingTransactions.slice(-1).dateCreated
+			),
+		});
 		if (!basicResults.valid) {
 			basicResults.errors.forEach((err) => errors.push(err));
 		}
@@ -982,9 +1000,9 @@ class Blockchain {
 	saveMiningJob(candidate) {
 		this.miningJobs.set(candidate.blockDataHash, candidate);
 		console.log(
-			`fn saveMiningJob: Mining job saved! Block candidate prepared for mining.\nTransactions: ${candidate.transactions.length}\nThis candidate: ${JSON.stringify(
-				candidate
-			)}`
+			`fn saveMiningJob: Mining job saved! Block candidate prepared for mining.\nTransactions: ${
+				candidate.transactions.length
+			}\nThis candidate: ${JSON.stringify(candidate)}`
 		);
 	}
 
@@ -1050,7 +1068,7 @@ class Blockchain {
 	// if not, we add our new verified block and propagate it! (notify other nodes so they may request it?)
 	// if block is already mined, we were too slow so we return a sad error message!
 	// mining
-	validateMinedBlock({blockDataHash, dateCreated, nonce, blockHash}) {
+	validateMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
 		console.log(`fn validateMinedBlock`);
 		if (this.miningJobs.size === 0) {
 			return {
@@ -1089,10 +1107,14 @@ class Blockchain {
 				status: 404,
 			};
 		}
-		return {status: 200, message: 'Block is valid!', data: {foundBlockCandidate, completeBlock}};
+		return {
+			status: 200,
+			message: 'Block is valid!',
+			data: { foundBlockCandidate, completeBlock },
+		};
 	}
 
-	submitBlockAndPropagate({foundBlockCandidate, completeBlock}) {
+	submitBlockAndPropagate({ foundBlockCandidate, completeBlock }) {
 		console.log(`fn submitBlockAndPropagate`);
 
 		this.clearIncludedPendingTransactions(completeBlock);
@@ -1379,11 +1401,13 @@ function executeIncomingChain(chain) {
 			// );
 
 			// includes miner reward tx
-			const allTransactions = instance.pendingTransactions.map((txData) => ({
-				...txData,
-				transferSuccessful: true,
-				minedInBlockIndex: blockIndex,
-			}));
+			const allTransactions = instance.pendingTransactions.map(
+				(txData) => ({
+					...txData,
+					transferSuccessful: true,
+					minedInBlockIndex: blockIndex,
+				})
+			);
 
 			const blockDataHash = SHA256({
 				index: blockIndex,
@@ -1421,7 +1445,11 @@ function executeIncomingChain(chain) {
 		// Time to compare cumulative difficulties!
 
 		// Do I return the difficulty?
-		return { valid: true, cumulativeDifficulty: instance.cumulativeDifficulty, errors: null};
+		return {
+			valid: true,
+			cumulativeDifficulty: instance.cumulativeDifficulty,
+			errors: null,
+		};
 	} catch (error) {
 		console.log('Error!', { error });
 		// if something fails during the chain execution, return false

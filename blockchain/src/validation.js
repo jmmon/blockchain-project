@@ -16,7 +16,7 @@ const failingCondition = ({ value, expected, type }) =>
 		: type === '<'
 		? value >= expected
 		: true; // fallback to force adding an error if no match
-const {hexPattern} = require('./constants');
+const {hexPattern, CONFIG} = require('./constants');
 
 const typeCheck = ({ label, value, type }) => {
 	const actualType = typeof value;
@@ -158,7 +158,7 @@ const validateFee = (fee) => {
 		valueCheck({
 			label,
 			value: fee,
-			expected: this.config.transactions.minFee,
+			expected: CONFIG.transactions.minFee,
 			type: '>=',
 		}),
 	];
@@ -183,7 +183,7 @@ const validateData = (data) => {
 	return { valid, missing };
 };
 
-const validateDateCreated = (dateCreated, prevDateCreated, currentTime) => {
+const validateDateCreated = (dateCreated, prevDateCreated, currentTime, isBlock = false) => {
 	const label = 'DateCreated';
 	const results = [
 		typeCheck({
@@ -196,21 +196,21 @@ const validateDateCreated = (dateCreated, prevDateCreated, currentTime) => {
 		dateCreated > currentTime
 			? invalidStringGen({
 					label,
-					expected: `transaction to be created before current time`,
-					actual: `transaction created ${
+					expected: `${isBlock ? "block" : "transaction"} to be created before current time`,
+					actual: `${isBlock ? "block" : "transaction"} created ${
 						dateCreated - currentTime
 					}ms after current time`,
 			  })
 			: false,
 
-		// should be after previous transaction
+		// if not after previous transaction/block
 		prevDateCreated && dateCreated <= prevDateCreated
 			? invalidStringGen({
 					label,
-					expected: `prevTransaction to be created before block`,
-					actual: `transaction created ${
+					expected: `prev${isBlock ? "Block" : "Transaction"} to be created before ${isBlock ? "block" : "transaction"}`,
+					actual: `${isBlock ? "block" : "transaction"} created ${
 						prevDateCreated - dateCreated
-					}ms before prevTransaction`,
+					}ms before prev${isBlock ? "Block" : "Transaction"}`,
 			  })
 			: false,
 	];
@@ -234,7 +234,7 @@ const validateFields = (fields, requiredFields) => {
 		: { valid: true, missing: null };
 };
 
-const basicTxValidation = (transaction, date_transactions) => {
+const basicTxValidation = ({transaction, prevDateParsed}) => {
 	let valid = true;
 	let errors = [];
 
@@ -264,12 +264,9 @@ const basicTxValidation = (transaction, date_transactions) => {
 
 	// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
 	const currentTime = Date.now();
-	const prevDateCreated =
-		date_transactions[date_transactions.indexOf(transaction) - 1]
-			.dateCreated || undefined;
 	const dateCreatedResult = validateDateCreated(
 		Date.parse(transaction.dateCreated),
-		Date.parse(prevDateCreated) || undefined,
+		prevDateParsed || undefined,
 		currentTime
 	);
 	if (!dateCreatedResult.valid) {
@@ -293,6 +290,7 @@ const basicTxValidation = (transaction, date_transactions) => {
 const validateBlockValues = (block, prevBlock) => {
 	// go thru each entry and make sure the value fits the "requirements"
 	console.log('--validateBlockValues:', { block, prevBlock });
+	const prevDateParsed = Date.parse(prevBlock.dateCreated) || undefined;
 
 	let missing = [];
 	let field = '';
@@ -452,40 +450,17 @@ const validateBlockValues = (block, prevBlock) => {
 		error: typeCheck({ label, value: currentValue, type: 'number' }),
 	});
 
-	// dateCreated: should be a number?? should be after the previous block's dateCreated, should be before today??
-	field = 'dateCreated';
-	label = upperFirstLetter(field);
-	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'string' }),
-	});
-	const currentParsed = Date.parse(currentValue);
-	const prevParsed = Date.parse(prevBlock[field]);
-	if (currentParsed <= prevParsed) {
-		addFoundErrors({
-			missing,
-			error: invalidStringGen({
-				label: upperFirstLetter(field),
-				expected: `prevBlock to be created before block`,
-				actual: `block created ${
-					prevParsed - currentParsed
-				}ms before prevBlock`,
-			}),
-		});
-	}
+
+	// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
 	const currentTime = Date.now();
-	if (currentParsed > currentTime) {
-		addFoundErrors({
-			missing,
-			error: invalidStringGen({
-				label: upperFirstLetter(field),
-				expected: `block to be created before current time`,
-				actual: `block created ${
-					currentParsed - currentTime
-				}ms after current time`,
-			}),
-		});
+	const dateCreatedResult = validateDateCreated(
+		Date.parse(block.dateCreated),
+		prevDateParsed ,
+		currentTime,
+		true
+	);
+	if (!dateCreatedResult.valid) {
+		dateCreatedResult.missing.forEach((err) => errors.push(err));
 	}
 
 	// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
