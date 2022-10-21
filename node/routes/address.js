@@ -1,4 +1,5 @@
 const express = require("express");
+const { validateAddress } = require( "../../blockchain/src/validation" );
 const router = express.Router();
 
 
@@ -19,7 +20,7 @@ router.get("/:address/balance", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {address} = req.params;
 
-	if (!blockchain.addressIsValid(address)) {
+	if (!validateAddress(address)) {
 		res.status(404).send(JSON.stringify({errorMsg: "Invalid address"}));
 		return;
 	}
@@ -29,3 +30,9 @@ router.get("/:address/balance", (req, res) => {
 
 
 module.exports = router;
+
+
+
+
+
+// eae972db2776e38a75883aa2c0c3b8cd506b004d

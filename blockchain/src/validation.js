@@ -16,6 +16,7 @@ const failingCondition = ({ value, expected, type }) =>
 		: type === '<'
 		? value >= expected
 		: true; // fallback to force adding an error if no match
+const {hexPattern} = require('./constants');
 
 const typeCheck = ({ label, value, type }) => {
 	const actualType = typeof value;
