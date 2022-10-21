@@ -1,4 +1,14 @@
-const { default: walletUtils } = import('../../walletUtils/index.js');
+// const { default: walletUtils } = import('../../walletUtils/index.js');
+// addressFromCompressedPubKey
+//verifySignature
+let walletUtils;
+;(async () => {
+	walletUtils = import('../../walletUtils/index.js');
+
+	// const {
+	// 	default: { decryptAndSign, submitTransaction },
+	// } = await import('../walletUtils/index.js');
+})()
 
 // const {default: fetch} = import('node-fetch');
 const fetch = (...args) =>
@@ -272,19 +282,6 @@ class Blockchain {
 
 		this.pendingTransactions = remainingTransactions;
 	}
-	// blocks
-	addBlock(block) {
-		this.clearIncludedPendingTransactions(block);
-
-		this.chain.push(block);
-
-		this.cumulateDifficultyFromLastBlock();
-		this.clearMiningJobs();
-
-		this.updateDifficulty();
-
-		this.notifyPeers();
-	}
 
 	// blocks
 	createGenesisBlock() {
@@ -552,28 +549,6 @@ class Blockchain {
 		PEERS
 	----------------------------------------------------------------
 	*/
-	// peers
-	// tell them to add us
-	async tellPeerToFriendUsBack(peerUrl) {
-		console.log(`-- tellPeerToFriendUsBack(${peerUrl})`);
-		try {
-			const response = await (
-				await fetch(`${peerUrl}/peers/connect`, {
-					method: 'POST',
-					body: JSON.stringify({
-						peerUrl: this.config.nodeInfo.selfUrl,
-					}),
-					headers: { 'Content-Type': 'application/json' },
-				})
-			).json();
-			console.log(`-- =>`, { response });
-			return response;
-		} catch (err) {
-			console.log('Error friending back the peer!', err.message);
-		}
-	}
-
-	// peers
 	// connect peer if not connected
 	async connectPeer(peerUrl) {
 		// try to fetch info
@@ -589,7 +564,7 @@ class Blockchain {
 
 		const peerInfo = await response.json();
 		const peerNodeId = peerInfo.nodeId;
-		console.log(`--fetched info:`, { response: peerInfo });
+		console.log(`-- fetched info from peer node:`, { peerInfo });
 
 		// check chainId
 		const isDifferentChain = this.config.chainId !== peerInfo['chainId'];
@@ -618,12 +593,16 @@ class Blockchain {
 			this.tellPeerToFriendUsBack(peerUrl);
 		}
 
-		console.log('-- ', { peerInfo });
 
 		//synchronize chain AND pending transactions
+
 		if (this.isTheirChainBetter(peerInfo.cumulativeDifficulty)) {
+			console.log('-- is their chain better? YES', { peerInfo });
 			this.checkChainFromPeer(peerUrl);
+		} else {
+			console.log('-- is their chain better? NO', { peerInfo });
 		}
+
 		console.log(` END fn connectPeer`);
 		return {
 			status: 200,
@@ -635,6 +614,26 @@ class Blockchain {
 		this.peers.set(peerNodeId, peerUrl);
 		console.log(`-- added peer:`, { peerNodeId, peerUrl });
 	}
+
+	// tell them to add us
+	async tellPeerToFriendUsBack(peerUrl) {
+		console.log(`-- tellPeerToFriendUsBack ( ${peerUrl} )`);
+		try {
+			const response = await (
+				await fetch(`${peerUrl}/peers/connect`, {
+					method: 'POST',
+					body: JSON.stringify({
+						peerUrl: this.config.nodeInfo.selfUrl,
+					}),
+					headers: { 'Content-Type': 'application/json' },
+				})
+			).json();
+			console.log(`-- friend's response:`, { response });
+			return response;
+		} catch (err) {
+			console.log('Error friending back the peer!', err.message);
+		}
+	}
 	/*
 	----------------------------------------------------------------
 		Syncing between peers/nodes
@@ -642,47 +641,15 @@ class Blockchain {
 	*/
 
 	// peers, sync
-	async historyFrom(peerUrl) {
-		console.log(`-- fn getTheirChain`);
+	// async historyFrom(peerUrl) {
+	async checkChainFromPeer(peerUrl) {
+		console.log(`-- fn checkChainFromPeer`);
 		// let theirChain, theirPending;
 		console.log({peerUrl})
 		const theirChain = await fetch(`${peerUrl}/blocks`).then(async (res) => await res.json());
 		const theirPending = await fetch(`${peerUrl}/transactions/pending`).then(
 			async (res) => await res.json()
 		);
-		// const theirChain = fetch(`${peerUrl}/blocks`).then( (res) => res.json());
-		// const theirPending = fetch(`${peerUrl}/transactions/pending`).then(
-		// 	(res) =>  res.json()
-		// );
-
-		try {
-			// [theirChain, theirPending] = await Promise.all([
-			// 	fetch(`${peerUrl}/blocks`),
-			// 	fetch(`${peerUrl}/transactions/pending`),
-			// ]).then(async ([chainR, pendingR]) => {
-			// 	// if we can't get chain, we're done.
-			// 	// if we can't get pendingTransasctions, no problem!
-			// 	if (chainR.statusCode !== 200) {
-			// 		throw new Error('Cannot get peer chain');
-			// 	}
-			// 	return [await chainR.json(), await pendingR.json() ?? null];
-			// });
-			// console.log(
-			// 	`-- -- Fetched chain: ${theirChain
-			// 		.map((block) => block.blockHash)
-			// 		.join(', ')} \n-- -- Fetched pending: ${
-			// 		theirPending
-			// 			.map((txn) => txn.transactionDataHash)
-			// 			.join(', ') ?? 'null'
-			// 	}`
-			// );
-			// Should have theirChain and theirPending || null
-			// return  {theirChain: (await fetch(`${peerUrl}/blocks`)).json(), theirPending: (await fetch(`${peerUrl}/transactions/pending`)).json()}
-			// return { theirChain, theirPending };
-		} catch (err) {
-			console.log('fn historyFrom error:', err.message);
-		}
-		// }
 
 		// async validateChain(theirChain, peerUrl) {
 		console.log('-- Validating chain');
@@ -720,7 +687,7 @@ class Blockchain {
 			this.clearMiningJobs();
 			console.log('-- -- Notifying peers of the new chain...');
 
-			this.notifyPeers(peerUrl);
+			this.propagateBlock(peerUrl);
 		} catch (err) {
 			return console.log(`-- validateChain error:`, {
 				valid: false,
@@ -748,28 +715,26 @@ class Blockchain {
 		});
 	}
 
-	// Their chain is better, we need to download and validate their chain
-	async checkChainFromPeer(peerUrl) {
-		this.historyFrom(peerUrl);
-		// const {theirChain, theirPending} = this.historyFrom(peerUrl);
-		// this.validateChain(await theirChain, peerUrl);
-		// this.syncPendingTransactions(await theirPending);
-	}
 
 	// should be run any time the chain changes (when a block is mined)
-	notifyPeers(skipPeer = null) {
-		console.log(`fn notifyPeers`, {peers: this.peers});
+	propagateBlock(skipPeer = null) {
+		console.log(`fn propagateBlock`, {peers: this.peers});
+
 		if (this.peers.size === 0) return;
-		// notify peers of new chain! (how?)
+
+		// notify peers of new chain! 
 		const data = {
 			blocksCount: this.chain.length,
 			cumulativeDifficulty: this.cumulativeDifficulty,
 			nodeUrl: this.config.nodeInfo.selfUrl,
 		};
-		for (const id in this.peers) {
-			const peerUrl = this.peers[id];
-			console.log(`Checking Peer ${id, peerUrl}`);
+	
+		this.peers.entries().map(([peerId, peerUrl]) => {
+			console.log({peerId, peerUrl});
+			console.log(`Checking Peer ${peerId, peerUrl}`);
+
 			if (skipPeer !== null && skipPeer === peerUrl) return;
+
 			fetch(`${peerUrl}/peers/notify-new-block`, {
 				method: 'POST',
 				body: JSON.stringify(data),
@@ -780,25 +745,11 @@ class Blockchain {
 					this.peers.delete(id);
 				}
 			});
-		}
-		// this.peers.forEach(([peerInfo, peerUrl]) => {
-		// 	console.log(`Checking Peer ${peerInfo, peerUrl}`);
-		// 	if (skipPeer !== null && skipPeer === peerUrl) return;
-		// 	fetch(`${peerUrl}/peers/notify-new-block`, {
-		// 		method: 'POST',
-		// 		body: JSON.stringify(data),
-		// 		headers: { 'Content-Type': 'application/json' },
-		// 	}).then((res) => {
-		// 		// delete peers that don't respond
-		// 		if (res.status !== 200) {
-		// 			this.peers.delete(peerInfo);
-		// 		}
-		// 	});
-		// });
+		})
 	}
 
 	isTheirChainBetter(theirCumulativeDifficulty) {
-		return this.cumulativeDifficulty > theirCumulativeDifficulty;
+		return theirCumulativeDifficulty > this.cumulativeDifficulty;
 	}
 
 	/* 
@@ -873,7 +824,8 @@ class Blockchain {
 		console.log(`fn validateBlock`);
 		let errors = [];
 		let valid = true;
-		// TODO:
+		console.log('--', {block, previousBlock})
+		console.log('-- --', {txs: block.transactions[0], prevTxs: previousBlock.transactions[0]})
 
 		// validate block fields are present
 		const fieldsResult = validateFields(
@@ -1030,7 +982,7 @@ class Blockchain {
 	saveMiningJob(candidate) {
 		this.miningJobs.set(candidate.blockDataHash, candidate);
 		console.log(
-			`fn saveMiningJob: Mining job saved! Block candidate prepared for mining.\nThis candidate:${JSON.stringify(
+			`fn saveMiningJob: Mining job saved! Block candidate prepared for mining.\nTransactions: ${candidate.transactions.length}\nThis candidate: ${JSON.stringify(
 				candidate
 			)}`
 		);
@@ -1058,7 +1010,7 @@ class Blockchain {
 		];
 
 		// STEP 3: build our data needed for blockDataHash;
-		const prevBlockHash = SHA256(this.lastBlock());
+		const prevBlockHash = this.lastBlock().blockHash;
 
 		const blockDataHash = SHA256({
 			index,
@@ -1098,8 +1050,8 @@ class Blockchain {
 	// if not, we add our new verified block and propagate it! (notify other nodes so they may request it?)
 	// if block is already mined, we were too slow so we return a sad error message!
 	// mining
-	submitMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
-		console.log(`fn submitMinedBlock`);
+	validateMinedBlock({blockDataHash, dateCreated, nonce, blockHash}) {
+		console.log(`fn validateMinedBlock`);
 		if (this.miningJobs.size === 0) {
 			return {
 				status: 400,
@@ -1134,11 +1086,25 @@ class Blockchain {
 			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
-				status: 400,
+				status: 404,
 			};
 		}
+		return {status: 200, message: 'Block is valid!', data: {foundBlockCandidate, completeBlock}};
+	}
 
-		this.addBlock(completeBlock);
+	submitBlockAndPropagate({foundBlockCandidate, completeBlock}) {
+		console.log(`fn submitBlockAndPropagate`);
+
+		this.clearIncludedPendingTransactions(completeBlock);
+
+		this.chain.push(completeBlock);
+
+		this.cumulateDifficultyFromLastBlock();
+		this.clearMiningJobs();
+
+		this.updateDifficulty();
+
+		this.propagateBlock();
 
 		return {
 			message: `Block accepted, reward paid: ${
@@ -1258,46 +1224,11 @@ class Blockchain {
 				address,
 				confirmedTransactions
 			);
-			// balances.confirmedBalance += confirmedTransactions.reduce(
-			// 	(sum, tx) => {
-			// 		if (tx.to === address && tx.transferSuccessful === true) {
-			// 			return sum + +tx.value;
-			// 		}
-			// 		if (tx.from === address) {
-			// 			return (
-			// 				sum -
-			// 				(+tx.fee + (tx.transferSuccessful === true)
-			// 					? +tx.value
-			// 					: 0)
-			// 			);
-			// 		}
-			// 	},
-			// 	0
-			// );
 
 			balances.safeBalance += this.safeBalanceOfAddress(
 				address,
 				confirmedTransactions
 			);
-			// balances.safeBalance += confirmedTransactions.reduce((sum, tx) => {
-			// 	if (
-			// 		this.transactionConfirmations(tx, chainTipIndex) >=
-			// 		this.config.transactions.safeConfirmCount
-			// 	) {
-			// 		if (tx.to === address && tx.transferSuccessful === true) {
-			// 			return sum + +tx.value;
-			// 		}
-			// 		if (tx.from === address) {
-			// 			return (
-			// 				sum -
-			// 				(+tx.fee + (tx.transferSuccessful === true)
-			// 					? tx.value
-			// 					: 0)
-			// 			);
-			// 		}
-			// 	}
-			// 	return sum;
-			// }, 0);
 		}
 
 		// pending balance also includes confirmed balance
@@ -1392,20 +1323,18 @@ class Blockchain {
 // 1. "Mine the block" or fake-mine the block. Need to basically calculate and check the hashes to make sure the nonce results in the difficulty.
 
 function executeIncomingChain(chain) {
-	console.log(`fn executeIncomingChain`);
-	// create new chain
-	console.log({ chain });
+	console.log(`fn executeIncomingChain`, { incomingChain: chain });
+
+	// create new chain (and creates the matching genesis block)
 	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
-	// generate (same as original chain) genesis block
-	instance.createGenesisBlock();
 
 	try {
 		// Loop through chain and validate each block:
-		let previousBlock = chain[0];
 		let blockIndex = 1;
 
 		while (blockIndex < chain.length) {
 			// validate this block
+			const previousBlock = chain[blockIndex - 1];
 			const thisBlock = chain[blockIndex];
 			instance.difficulty = thisBlock.difficulty;
 			const blockResult = instance.validateBlock(
@@ -1450,7 +1379,7 @@ function executeIncomingChain(chain) {
 			// );
 
 			// includes miner reward tx
-			const allTransactions = this.pendingTransactions.map((txData) => ({
+			const allTransactions = instance.pendingTransactions.map((txData) => ({
 				...txData,
 				transferSuccessful: true,
 				minedInBlockIndex: blockIndex,
@@ -1485,9 +1414,6 @@ function executeIncomingChain(chain) {
 
 			instance.cumulateDifficultyFromLastBlock();
 
-			// if all valid, remove pendingTransactions
-
-			previousBlock = block;
 			blockIndex++;
 		}
 		// after all blocks

@@ -5,6 +5,7 @@ const SHA256 = (message) =>
 
 // for transactions: removes "data" field if empty, or escapes spaces inside. Next, goes JSON and removes all non-escaped spaces from the JSON.
 const removeSpaces = (obj) => {
+	console.log('-- removeSpaces', {obj});
 	if (!obj.data) {
 		// if data is '' or null / undefined
 		const newObj = {};
@@ -16,13 +17,16 @@ const removeSpaces = (obj) => {
 		// escape spaces in data field
 		obj.data = obj.data.replaceAll(/\s/gm, '\ ');
 	}
+	console.log('-- removeSpaces - after data', {obj});
 	// rebuild to make sure order stays the same
-	const objJson= JSON.stringify(obj);
+	const objJson = JSON.stringify(obj);
 
+	console.log('-- removeSpaces - json', {objJson});
 	// replace non-escaped spaces
-	const escapedObjJson = objJson.replace(/(?<!\\)\s/gm, '');
+	const cleanedObjJson = objJson.replace(/(?<!\\)\s/gm, '');
 
-	return escapedObjJson;
+	console.log('-- removeSpaces - cleaned json', {cleanedObjJson});
+	return cleanedObjJson;
 };
 
 const trimAndSha256Hash = (obj) => SHA256(removeSpaces(obj));

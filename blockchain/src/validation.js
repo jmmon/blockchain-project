@@ -31,7 +31,9 @@ const typeCheck = ({ label, value, type }) => {
 };
 
 const patternCheck = ({ label, value, pattern, expected, actual }) => {
-	if (!pattern.test(value)) {
+	const isValid = pattern.test(value);
+	if (!isValid) {
+		console.log('failed pattern.test(value)', {isValid})
 		return invalidStringGen({
 			label,
 			expected,
@@ -266,8 +268,8 @@ const basicTxValidation = (transaction, date_transactions) => {
 		date_transactions[date_transactions.indexOf(transaction) - 1]
 			.dateCreated || undefined;
 	const dateCreatedResult = validateDateCreated(
-		transaction.dateCreated,
-		prevDateCreated,
+		Date.parse(transaction.dateCreated),
+		Date.parse(prevDateCreated) || undefined,
 		currentTime
 	);
 	if (!dateCreatedResult.valid) {
@@ -318,6 +320,7 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'transactions';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
+	console.log({transactions: currentValue})
 	addFoundErrors({
 		missing,
 		error: typeCheck({ label, value: currentValue, type: 'array' }),
@@ -341,7 +344,7 @@ const validateBlockValues = (block, prevBlock) => {
 		error: typeCheck({ label, value: currentValue, type: 'number' }),
 	});
 
-	// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock blockHash
+	// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock's blockHash
 	field = 'prevBlockHash';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
@@ -359,7 +362,7 @@ const validateBlockValues = (block, prevBlock) => {
 			}),
 		});
 	}
-	if (block.index === 1) {
+	if (block.index === 0) {
 		// special case, special messages on these two
 		if (currentValue !== '1') {
 			addFoundErrors({
@@ -455,29 +458,31 @@ const validateBlockValues = (block, prevBlock) => {
 	currentValue = block[field];
 	addFoundErrors({
 		missing,
-		error: typeCheck({ label, value: currentValue, type: 'number' }),
+		error: typeCheck({ label, value: currentValue, type: 'string' }),
 	});
-	if (currentValue <= prevBlock[field]) {
+	const currentParsed = Date.parse(currentValue);
+	const prevParsed = Date.parse(prevBlock[field]);
+	if (currentParsed <= prevParsed) {
 		addFoundErrors({
 			missing,
 			error: invalidStringGen({
 				label: upperFirstLetter(field),
 				expected: `prevBlock to be created before block`,
 				actual: `block created ${
-					prevBlock[field] - currentValue
+					prevParsed - currentParsed
 				}ms before prevBlock`,
 			}),
 		});
 	}
 	const currentTime = Date.now();
-	if (currentValue > currentTime) {
+	if (currentParsed > currentTime) {
 		addFoundErrors({
 			missing,
 			error: invalidStringGen({
 				label: upperFirstLetter(field),
 				expected: `block to be created before current time`,
 				actual: `block created ${
-					currentValue - currentTime
+					currentParsed - currentTime
 				}ms after current time`,
 			}),
 		});

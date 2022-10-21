@@ -78,22 +78,32 @@ POST {
 			pendingTransactions: blockchain.pendingTransactions.length,
 		};
 
-		console.log('get info called', { data });
+		console.log('(get info called)');
 		res.status(200).send(JSON.stringify(data));
 	});
-
+	
 	// return ALL balances in the network
 	//non-zero + confirmed (in blocks)
 	app.get('/balances', (req, res) => {
 		const allBalances = blockchain.allConfirmedAccountBalances();
 		const balances = blockchain.filterNonZeroBalances(allBalances);
-		console.log({ allBalances, balances });
+		console.log(`(get balances called)`, { allBalances, balances });
 		return res.status(200).send(JSON.stringify(balances));
 	});
 
+	const getDateString = () => {
+		let date = Date().toString().split(' ').slice(0,5).join(' ');
+		let front = true;
+		while (date.length < 34) {
+			date = (front)? ' ' + date : date + ' ';
+			front = !front;
+		}
+		return date;
+	}
+
 	app.listen(nodeInfo.port, () => {
 		console.log(
-			`****************************************\n~~~                                  ~~~\n~~~   node listening on port: ${nodeInfo.port}   ~~~\n~~~                                  ~~~\n****************************************\n`
+			`****************************************\n~~~                                  ~~~\n~~~   node listening on port: ${nodeInfo.port}   ~~~\n~~~                                  ~~~\n~~~${getDateString()}~~~\n~~~                                  ~~~\n****************************************\n`
 		);
 	});
 })();

@@ -22,7 +22,7 @@ const compressThisPubKey = async (compactPubKey) =>
 	compactPubKey.slice(2).concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 
 // used to derive our address from our compressed public key
-const getAddressFromCompressedPubKey = (compressedPubKey) =>
+const addressFromCompressedPubKey = (compressedPubKey) =>
 	crypto.createHash('ripemd160').update(compressedPubKey).digest('hex');
 
 const padBuffer = (string, bytes = 32) =>
@@ -88,7 +88,7 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 		hexPublicKeyCompact
 	);
 
-	const hexAddress = getAddressFromCompressedPubKey(hexPublicKeyCompressed);
+	const hexAddress = addressFromCompressedPubKey(hexPublicKeyCompressed);
 
 	return {
 		privateKey: hexPrivateKey,
@@ -106,6 +106,7 @@ const generateWallet = async () => {
 };
 
 const signTransaction = (privateKey, txDataHashBuffer) => {
+	console.log({privateKey, txDataHashBuffer});
 	let response = { data: null, error: null };
 	try {
 		const splitSignature = (signature) => {
@@ -116,8 +117,12 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
+		const txDataArray = Uint8Array.from(Buffer.from(txDataHashBuffer, 'hex'));
+		// const signature = Buffer.from(
+		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
+		// );
 		const signature = Buffer.from(
-			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
+			ecc.sign(txDataArray, privateKeyArray)
 		);
 		const [r, s] = splitSignature(signature);
 
@@ -159,6 +164,7 @@ const decryptAndSign = async (
 
 	// prepare and hash our transaction data
 	const { privateKey, publicKey, address } = keys;
+	console.log('faucet info:', {privateKey, publicKey, address});
 	let txData = {
 		from: address,
 		to: recipient,
@@ -168,14 +174,17 @@ const decryptAndSign = async (
 		data: '',
 		senderPubKey: publicKey,
 	};
+	console.log('txData:', {txData});
 	const txDataHashBuffer = trimAndSha256Hash(txData);
+	console.log({txDataHashBuffer});
 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
 	if (signResponse.error) {
-		return { data: null, error: 'Error signing transaction!' };
+		return { data: null, error: signResponse.error };
 	}
 
+	console.log('done signing')
 	// add our hash and signature fields
 	txData['transactionDataHash'] = txDataHashBuffer.toString('hex');
 	txData['senderSignature'] = signResponse.data;
@@ -233,7 +242,7 @@ const walletUtils = {
 	decrypt,
 	deriveKeysFromMnemonic,
 	signTransaction,
-	getAddressFromCompressedPubKey,
+	addressFromCompressedPubKey,
 	decryptAndSign,
 	submitTransaction,
 	fetchAddressBalance,

@@ -11,6 +11,7 @@ const CONFIG = {
 		adjustmentRatio: 3,
 	},
 	faucet: {
+		mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
 		address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
 		privateKey:
 			'51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
@@ -77,7 +78,7 @@ const blockBaseFields = [
 ];
 
 
-const hexPattern = /^(0[xX])?[a-fA-F0-9]+$/g;
+const hexPattern = /^(0[xX])?[a-fA-F0-9]+$/;
 
 module.exports = {
 	CONFIG,

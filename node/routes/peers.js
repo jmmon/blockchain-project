@@ -8,6 +8,7 @@ router.get('/', (req, res) => {
 });
 
 // takes {peerUrl: "http://host:port"}
+// Connect this node to a given peer
 router.post('/connect', async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { peerUrl } = req.body;

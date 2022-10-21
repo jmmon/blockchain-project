@@ -80,8 +80,10 @@ router.post('/send', async (req, res) => {
 			.status(400)
 			.send(JSON.stringify({ errorMsg: errors.join('\n') }));
 	}
+
 	// add transaction to pending, send the response
 	this.addPendingTransaction(validatedTransaction);
+
 	res.status(200).send(
 		JSON.stringify(validatedTransaction.transactionDataHash)
 	);
@@ -93,6 +95,11 @@ router.post('/send', async (req, res) => {
 	const sender = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 	const peers = blockchain.peers;
 
+	propagateTransaction(signedTransaction, peers, sender);
+});
+
+
+function propagateTransaction(signedTransaction, peers, sender) {
 	console.log('transaction received from sender IP address:', sender);
 
 	if (peers.size === 0) return;
@@ -114,9 +121,9 @@ router.post('/send', async (req, res) => {
 					console.log(
 						`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
 					)
-				).catch((err) => console.log(`Error propagating transactions to Node ${peerid} (${peerUrl}): ${err.message}`));
+				).catch((err) => console.log(`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`));
 		})
 	);
-});
+}
 
 module.exports = router;
