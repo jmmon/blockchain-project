@@ -124,9 +124,9 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
 		const txDataArray =
-			// Uint8Array.from(
-			Buffer.from(txDataHashBuffer, 'hex');
-		// );
+			Uint8Array.from(
+			Buffer.from(txDataHashBuffer, 'hex')
+		);
 
 		// const signature = Buffer.from(
 		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
@@ -135,8 +135,10 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		const [r, s] = splitSignature(signature);
 
 		response = { data: [r, s], error: null };
+
 	} catch (err) {
 		response = { data: null, error: err };
+
 	} finally {
 		return response;
 	}
@@ -173,7 +175,7 @@ const decryptAndSign = async (
 	// prepare and hash our transaction data
 	const { privateKey, publicKey, address } = keys;
 	console.log('faucet info:', { privateKey, publicKey, address });
-	let txData = {
+	let txDataToHash = {
 		from: address,
 		to: recipient,
 		value,
@@ -182,8 +184,8 @@ const decryptAndSign = async (
 		data: '',
 		senderPubKey: publicKey,
 	};
-	console.log('txData:', { txData });
-	const txDataHashBuffer = trimAndSha256Hash(txData);
+	console.log('txData:', {txDataToHash});
+	const txDataHashBuffer = trimAndSha256Hash(txDataToHash);
 	console.log({ txDataHashBuffer });
 
 	// attempt signing
@@ -194,8 +196,11 @@ const decryptAndSign = async (
 
 	console.log('done signing');
 	// add our hash and signature fields
-	txData['transactionDataHash'] = txDataHashBuffer.toString('hex');
-	txData['senderSignature'] = signResponse.data;
+	const txData = {
+		transactionDataHash: txDataHashBuffer.toString('hex'),
+		senderSignature: signResponse.data,
+		...txDataToHash,
+	}
 
 	return { data: txData, error: null };
 };

@@ -3,10 +3,11 @@ const express = require('express');
 const session = require('express-session');
 const favicon = require('serve-favicon');
 const ejs = require('ejs');
-const db = require('./libs/db')
+const db = require('./libs/db');
 
 const {
 	CONFIG: { faucet },
+	CONFIG,
 } = require('../blockchain/src/constants');
 console.log({ faucet });
 
@@ -108,10 +109,13 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				nodeUrl,
 				faucetWalletInfo.address
 			);
-			const amount =
-				confirmedBalance >= faucetWalletInfo.valuePerTransaction
-					? faucetWalletInfo.valuePerTransaction
-					: confirmedBalance;
+			const enoughFundsRemaining =
+				confirmedBalance >=
+				faucetWalletInfo.valuePerTransaction +
+					CONFIG.transactions.minFee;
+			const amount = enoughFundsRemaining
+				? faucetWalletInfo.valuePerTransaction
+				: confirmedBalance - CONFIG.transactions.minFee;
 
 			console.log({ confirmedBalance, amount });
 
@@ -127,7 +131,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 			}
 
 			console.log('attempting submit');
-			console.log({keys, address});
+			console.log({ keys, address });
 			const submitResponse = await submitTransaction(
 				nodeUrl,
 				signedTransaction.data
