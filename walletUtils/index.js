@@ -21,6 +21,12 @@ const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 const compressThisPubKey = async (compactPubKey) =>
 	compactPubKey.slice(2).concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 
+// convert our ...1 or ...0 address into address with 03... or 02... (prepended to front):
+const decompressThisPubKey = (compressedPubKey) =>
+	(compressedPubKey.slice(-1) % 2 === 0 ? '02' : '03').concat(
+		compressedPubKey.slice(0, -1)
+	);
+
 // used to derive our address from our compressed public key
 const addressFromCompressedPubKey = (compressedPubKey) =>
 	crypto.createHash('ripemd160').update(compressedPubKey).digest('hex');
@@ -117,11 +123,11 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const txDataArray = 
-		// Uint8Array.from(
-			Buffer.from(txDataHashBuffer, 'hex')
+		const txDataArray =
+			// Uint8Array.from(
+			Buffer.from(txDataHashBuffer, 'hex');
 		// );
-		
+
 		// const signature = Buffer.from(
 		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		// );
@@ -221,7 +227,6 @@ const submitTransaction = async (nodeUrl, signedTransaction) => {
 
 		// 404, etc
 		return { data: null, error: 'Error connecting to node' };
-
 	} catch (err) {
 		return { data: null, error: err };
 	}
@@ -235,9 +240,10 @@ const fetchAddressBalance = async (nodeUrl, address) => {
 const verifySignature = (txDataHash, publicKey, signature) => {
 	// h == txDataHash
 	// Q == their public key?
-	console.log({txDataHash, publicKey, signature});
+	console.log({ txDataHash, publicKey, signature });
+const decompPubKey = decompressThisPubKey(publicKey);
 	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, 'hex'));
-	const publicKeyArray = Uint8Array.from(Buffer.from(publicKey, 'hex'));
+	const publicKeyArray = Uint8Array.from(Buffer.from(decompPubKey, 'hex'));
 	const signatureArray = Uint8Array.from(
 		Buffer.from(signature.join(''), 'hex')
 	);
