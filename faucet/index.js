@@ -138,6 +138,7 @@ const db = {
 		default: {
 			decryptAndSign,
 			submitTransaction,
+			verifySignature,
 		},
 	} = await import("../walletUtils/index.js");
 	const { default: fetch } = await import("node-fetch");
@@ -159,6 +160,14 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 		address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
 	};
 
+			const getConfirmedBalance = async (nodeUrl, address) => {
+				// fetch balance from node!
+				const balances = await fetch(`${nodeUrl}/address/${address}/balance`);
+				const data = await balances.json();
+				console.log("fetched data:", {data});
+
+				return data.confirmedBalance;
+			}
 	const signAndSend = async (success, object = undefined, address = '', nodeUrl = '') => {
 		if (success) {
 			console.log({newDatabase: object});
@@ -169,18 +178,10 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				address: faucetWalletInfo.address,
 			};
 
-			const getConfirmedBalance = async (nodeUrl, address) => {
-				// fetch balance from node!
-				const balances = await fetch(`${nodeUrl}/address/${address}/balance`);
-				const data = await balances.json();
-				console.log("fetched data:", {data});
-
-				return balances.confirmedBalance;
-			}
 
 			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
 			const confirmedBalance = await getConfirmedBalance(nodeUrl, faucetWalletInfo.address);
-			const amount = (confirmedBalance => COIN_AMOUNT) ? COIN_AMOUNT : confirmedBalance;
+			const amount = (confirmedBalance >= COIN_AMOUNT) ? COIN_AMOUNT : confirmedBalance;
 
 			console.log({confirmedBalance, amount});
 
@@ -189,6 +190,15 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				address, // recipient
 				amount, // amount
 			);
+
+
+
+// TESTING VERIFY SIGNATURE
+
+			const result_verifySig = verifySignature(signedTransaction.data.transactionDataHash, keys.publicKey, signedTransaction.data.senderSignature)
+			console.log('Signature from transaction just created is valid?', {result_verifySig});
+
+// TESTING VERIFY SIGNATURE END
 
 			if (signedTransaction.error) {
 				console.log('signing error:', signedTransaction.error);
