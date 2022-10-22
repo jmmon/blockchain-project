@@ -117,9 +117,11 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const txDataArray = Uint8Array.from(
+		const txDataArray = 
+		// Uint8Array.from(
 			Buffer.from(txDataHashBuffer, 'hex')
-		);
+		// );
+		
 		// const signature = Buffer.from(
 		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		// );
