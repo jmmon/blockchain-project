@@ -1,4 +1,25 @@
-const walletUtils = import('../../walletUtils/index.js');
+// const {default: walletUtils} = import('../../walletUtils/index.js');
+
+// const {	
+// 	generateWallet,
+// 	encrypt,
+// 	decrypt,
+// 	deriveKeysFromMnemonic,
+// 	signTransaction,
+// 	hashTransaction,
+// 	getAddressFromCompressedPubKey,
+// 	decryptAndSign,
+// 	submitTransaction,
+// 	fetchAddressBalance,
+// 	verifySignature,
+// 	CONSTANTS,
+// } = import('../../walletUtils/index.js');
+let getAddressFromCompressedPubKey;
+let verifySignature;
+;(async () => {
+	getAddressFromCompressedPubKey = (...args) => import('../../walletUtils/index.js').then(({default: walletUtils}) => walletUtils.getAddressFromCompressedPubKey(...args));
+	verifySignature = (...args) => import('../../walletUtils/index.js').then(({default: walletUtils}) => walletUtils.verifySignature(...args));
+})()
 const express = require("express");
 const router = express.Router();
 
@@ -108,15 +129,17 @@ router.post("/send", async (req, res) => {
 		return res.status(400).send(JSON.stringify({errorMsg: `Public Key is invalid!`}));
 	}
 		// could validate the FROM address is derived from the public key
-	const hexAddress = walletUtils.getAddressFromCompressedPubKey(
+	const hexAddress = await getAddressFromCompressedPubKey(
 		signedTransaction.senderPubKey
 	);
+	console.log({ originalFromAddress: signedTransaction.from, calculatedHexAddress: hexAddress});
 	if (signedTransaction.from !== hexAddress) {
 		return res.status(400).send(JSON.stringify({errorMsg: `FROM address is not derived from sender's public key!`}));
 	}
 
 	//validate signature is from public key
-	if (!walletUtils.verifySignature(signedTransaction.transactionDataHash, signedTransaction.senderPubKey, signedTransaction.senderSignature)) {
+	console.log({txDataHash: signedTransaction.transactionDataHash, pubKey: signedTransaction.senderPubKey, signature: signedTransaction.senderSignature});
+	if (!verifySignature(signedTransaction.transactionDataHash, signedTransaction.senderPubKey, signedTransaction.senderSignature)) {
 		return res.status(400).send(JSON.stringify({errorMsg: `Transaction signature is invalid!`}));
 	}
 
@@ -139,9 +162,7 @@ router.post("/send", async (req, res) => {
 		// TODO: change peers to an object, instead of a set/array of objects?
 		const peerUrl = Object.values(peer)[0];
 		// don't really need to await the responses, but will for testing purposes:
-		const response = await fetch(peerUrl, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(signedTransaction)});
-		const json = await response.json();
-		console.log(`Node ${Object.keys(peer)[0]} (${peerUrl}) response:\n----`, {json});
+		const response = fetch(peerUrl, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(signedTransaction)}).then(res => res.json()).then(res => console.log(`Node ${Object.keys(peer)[0]} (${peerUrl}) response:\n----`, {res}));
 	});
 
 

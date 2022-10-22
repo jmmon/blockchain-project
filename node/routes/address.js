@@ -19,7 +19,7 @@ router.get("/:address/balance", (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const {address} = req.params;
 
-	if (!blockchain.addressIsValid(address)) {
+	if (!blockchain.validateAddress(address)) {
 		res.status(404).send(JSON.stringify({errorMsg: "Invalid address"}));
 		return;
 	}

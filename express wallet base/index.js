@@ -69,9 +69,9 @@ const authChecker = (req, res, next) => {
 			decryptAndSign,
 			submitTransaction,
 			fetchAddressBalance,
+			verifySignature,
 		},
 	} = await import("../walletUtils/index.js");
-	const { default: fetch } = await import("node-fetch");
 
 	app.get("/", async (req, res) => {
 		const active = "index";
@@ -327,6 +327,27 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			} 
+
+// TESTING VERIFY SIGNATURE
+		const encrypted = {IV: wallet.IV, encrypted: wallet.encryptedMnemonic};
+		const response = decrypt(encrypted, password);
+		if (response.error) {
+			return {data: null, error: "Error decrypting wallet! Try a different password?"};
+		}
+
+		// derive our keys
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
+response.data
+		);
+		// console.log({txDataHash: data.transactionDataHash, pubKey: publicKey, signature: data.senderSignature})
+			const result_verifySig = await verifySignature(data.transactionDataHash, publicKey, data.senderSignature)
+			console.log({result_verifySig});
+
+// TESTING VERIFY SIGNATURE END
+
+
+
+
 
 			// fetch balance to see if the transaction will work
 			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
