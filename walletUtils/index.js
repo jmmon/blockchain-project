@@ -138,7 +138,6 @@ const decryptAndSign = async (
 	let keys;
 	if (walletOrKeys.encryptedMnemonic) {
 		// decrypt wallet for signing
-
 		const encrypted = {
 			IV: walletOrKeys.IV,
 			encrypted: walletOrKeys.encryptedMnemonic,
