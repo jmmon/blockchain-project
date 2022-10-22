@@ -1,3 +1,4 @@
+const {hexPattern} = require('./constants');
 const invalidStringGen = ({ label, expected, actual }) =>
 	`${label} invalid. Expected ${expected} / Actually ${actual}`;
 const upperFirstLetter = (string) =>
