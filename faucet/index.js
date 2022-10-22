@@ -54,7 +54,7 @@ app.use(express.static('public'));
 
 (async () => {
 	const {
-		default: { decryptAndSign, submitTransaction },
+		default: { decryptAndSign, submitTransaction, verifySignature },
 	} = await import('../walletUtils/index.js');
 	const { default: fetch } = await import('node-fetch');
 
@@ -124,6 +124,13 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				address, // recipient
 				amount // amount
 			);
+
+// TESTING VERIFY SIGNATURE
+
+			const result_verifySig = verifySignature(signedTransaction.data.transactionDataHash, keys.publicKey, signedTransaction.data.senderSignature)
+			console.log('Signature from transaction just created is valid?', {result_verifySig});
+
+// TESTING VERIFY SIGNATURE END
 
 			if (signedTransaction.error) {
 				console.log('signing error:', signedTransaction.error);

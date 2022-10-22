@@ -73,16 +73,17 @@ router.post('/send', async (req, res) => {
 		valid,
 		errors,
 		transaction: validatedTransaction,
-	} = blockchain.validateNewTransaction(signedTransaction);
+	} = await blockchain.validateNewTransaction(signedTransaction);
 
 	if (!valid) {
+		console.log({errors});
 		return res
 			.status(400)
 			.send(JSON.stringify({ errorMsg: errors.join('\n') }));
 	}
 
 	// add transaction to pending, send the response
-	this.addPendingTransaction(validatedTransaction);
+	blockchain.addPendingTransaction(validatedTransaction);
 
 	res.status(200).send(
 		JSON.stringify(validatedTransaction.transactionDataHash)

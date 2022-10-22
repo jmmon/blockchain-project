@@ -862,28 +862,28 @@ class Blockchain {
 		return { valid, errors: null, block };
 	}
 
-	validateNewTransaction(signedTransaction) {
+	async validateNewTransaction(signedTransaction) {
 		console.log(`fn validateNewTransaction`);
 		let errors = [];
 
 		// validate the FROM address is derived from the public key
-		const hexAddress = addressFromCompressedPubKey(
+		const hexAddress = await addressFromCompressedPubKey(
 			signedTransaction.senderPubKey
 		);
 		if (signedTransaction.from !== hexAddress) {
+			console.log({derived: hexAddress, from: signedTransaction.from});
 			errors.push(
 				`FROM address is not derived from sender's public key!`
 			);
 		}
 
 		//validate signature is from public key
-		if (
-			!verifySignature(
-				signedTransaction.transactionDataHash,
-				signedTransaction.senderPubKey,
-				signedTransaction.senderSignature
-			)
-		) {
+		const isSignatureValid = await verifySignature(
+			signedTransaction.transactionDataHash,
+			signedTransaction.senderPubKey,
+			signedTransaction.senderSignature
+		);
+		if (!isSignatureValid) {
 			errors.push(`Transaction signature is invalid!`);
 		}
 
@@ -995,7 +995,14 @@ class Blockchain {
 		console.log(
 			`fn saveMiningJob: Done! Candidate block prepared! Transactions included: ${
 				candidate.transactions.length
-			}\n{${Object.entries(candidate).map(([key, value]) => `${key}: ${key === 'transactions' ? value.length : value},`).join('\n')}`
+			}\n{${Object.entries(candidate)
+				.map(
+					([key, value]) =>
+						`${key}: ${
+							key === 'transactions' ? value.length : value
+						},`
+				)
+				.join('\n')}`
 		);
 	}
 
