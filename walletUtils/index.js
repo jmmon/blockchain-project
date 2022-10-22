@@ -4,7 +4,7 @@ const bip32 = BIP32Factory.default(ecc);
 import * as bip39 from 'bip39';
 import crypto from 'crypto';
 import fetch from 'node-fetch';
-import { trimAndSha256Hash } from '../blockchain/src/hashing.js';
+// import { trimAndSha256Hash } from '../blockchain/src/hashing.js';
 
 const purpose = '44';
 const coinType = '7789';
@@ -18,7 +18,7 @@ const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	}`;
 
 // convert our 03... or 02... address into address with ...1 or ...0 (appended to end):
-const compressThisPubKey = async (compactPubKey) =>
+const compressThisPubKey = (compactPubKey) =>
 	compactPubKey.slice(2).concat(compactPubKey.slice(1, 2) % 2 === 0 ? 0 : 1);
 
 // convert our ...1 or ...0 address into address with 03... or 02... (prepended to front):
@@ -26,6 +26,38 @@ const decompressThisPubKey = (compressedPubKey) =>
 	(compressedPubKey.slice(-1) % 2 === 0 ? '02' : '03').concat(
 		compressedPubKey.slice(0, -1)
 	);
+
+const removeSpaces = ({
+	from,
+	to,
+	value,
+	fee,
+	dateCreated,
+	data,
+	senderPubKey,
+}) => {
+	// escape data field spaces
+	data = data.replaceAll(/\s/gm, ' ');
+
+	// rebuild to make sure order stays the same
+	const txDataJson = JSON.stringify({
+		from,
+		to,
+		value,
+		fee,
+		dateCreated,
+		data,
+		senderPubKey,
+	});
+
+	// replace non-escaped spaces
+	const escapedTxData = txDataJson.replace(/(?<!\\)\s/gm, '');
+
+	return escapedTxData;
+};
+
+const hashTransaction = (tx) =>
+	Buffer.from(crypto.createHash('sha256').update(removeSpaces(tx)).digest());
 
 // used to derive our address from our compressed public key
 const addressFromCompressedPubKey = (compressedPubKey) =>
@@ -90,8 +122,11 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 	const hexPrivateKey = account0change0index0.privateKey.toString('hex');
 	const hexPublicKeyCompact = account0change0index0.publicKey.toString('hex');
 
-	const hexPublicKeyCompressed = await compressThisPubKey(
-		hexPublicKeyCompact
+	const hexPublicKeyCompressed = compressThisPubKey(hexPublicKeyCompact);
+	const testingDecompress = decompressThisPubKey(hexPublicKeyCompressed);
+	console.log(
+		'compress and decompress works?',
+		hexPublicKeyCompact === testingDecompress
 	);
 
 	const hexAddress = addressFromCompressedPubKey(hexPublicKeyCompressed);
@@ -123,15 +158,9 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const txDataArray =
-			Uint8Array.from(
-			Buffer.from(txDataHashBuffer, 'hex')
+		const signature = Buffer.from(
+			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
 		);
-
-		// const signature = Buffer.from(
-		// 	ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
-		// );
-		const signature = Buffer.from(ecc.sign(txDataArray, privateKeyArray));
 		const [r, s] = splitSignature(signature);
 
 		response = { data: [r, s], error: null };
@@ -185,7 +214,7 @@ const decryptAndSign = async (
 		senderPubKey: publicKey,
 	};
 	console.log('txData:', {txDataToHash});
-	const txDataHashBuffer = trimAndSha256Hash(txDataToHash);
+	const txDataHashBuffer = hashTransaction(txDataToHash);
 	console.log({ txDataHashBuffer });
 
 	// attempt signing
