@@ -369,27 +369,6 @@ class Blockchain {
 		};
 	}
 
-	// transaction, utils
-	hashTransactionData({
-		from,
-		to,
-		value,
-		fee,
-		dateCreated,
-		data,
-		senderPubKey,
-	}) {
-		return SHA256({
-			from,
-			to,
-			value,
-			fee,
-			dateCreated,
-			data,
-			senderPubKey,
-		});
-	}
-
 	createHashedTransaction({
 		from,
 		to,
@@ -408,7 +387,6 @@ class Blockchain {
 			dateCreated,
 			data,
 			senderPubKey,
-			// this.hashTransactionData({
 			trimAndSha256Hash({
 				from,
 				to,
@@ -1439,6 +1417,7 @@ async function executeIncomingChain(chain) {
 					transaction: validatedTransaction,
 				} = await instance.validateNewTransaction(thisTransaction);
 				// if valid, add to pending transactions.
+				console.log({thisTransaction, validatedTransaction});
 
 				if (valid) instance.addPendingTransaction(validatedTransaction);
 				else
@@ -1467,6 +1446,7 @@ async function executeIncomingChain(chain) {
 					minedInBlockIndex: blockIndex,
 				})
 			);
+			console.log({ pending: instance.pendingTransactions, allTransactions});
 
 			const blockDataHash = SHA256({
 				index: blockIndex,
@@ -1476,9 +1456,11 @@ async function executeIncomingChain(chain) {
 				minedBy: thisBlock.transactions[0].minedBy,
 			});
 
-			const blockHash = sha256Hash(
+			const blockHash = SHA256(
 				`${blockDataHash}|${thisBlock.dateCreated}|${thisBlock.nonce}`
 			);
+
+			console.log({blockDataHash, blockHash});
 
 			const blockIsValid = isValidProof(
 				// const blockIsValid = this.isValidBlockHash(
@@ -1510,7 +1492,6 @@ async function executeIncomingChain(chain) {
 			errors: null,
 		};
 	} catch (error) {
-		console.log('Error!', { error });
 		// if something fails during the chain execution, return false
 		return { valid: false, cumulativeDifficulty: null, error: error };
 	}
