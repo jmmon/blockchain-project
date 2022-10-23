@@ -1,21 +1,3 @@
-// const { default: walletUtils } = import('../../walletUtils/index.js');
-// // addressFromCompressedPubKey
-// //verifySignature
-// let walletUtils;
-// // let addressFromCompressedPubKey;
-// // let verifySignature;
-// ;(async () => {
-// 	// import('../../walletUtils/index.')
-// 	walletUtils = await import('../../walletUtils/index.js');
-// 	console.log({walletUtils});
-
-// 	// const {
-// 	// 	default: { decryptAndSign, submitTransaction },
-// 	// } = await import('../walletUtils/index.js');
-// })()
-
-// const {default: walletUtils} = import('../../walletUtils/index.js');
-
 const verifySignature = (...args) =>
 	import('../../walletUtils/index.js').then(
 		({ default: { verifySignature } }) => verifySignature(...args)
@@ -552,8 +534,12 @@ class Blockchain {
 		PEERS
 	----------------------------------------------------------------
 	*/
+
+	isDifferentChain(theirId) {
+		return this.config.chainId !== theirId;
+	}
 	// connect peer if not connected
-	async connectPeer(peerUrl) {
+	async connectAndSyncPeer(peerUrl, needToReciprocate) {
 		// try to fetch info
 		const response = await fetch(`${peerUrl}/info`);
 		console.log('fn connectPeer', { connectingTo: peerUrl });
@@ -570,30 +556,28 @@ class Blockchain {
 		console.log(`-- fetched info from peer node:`, { peerInfo });
 
 		// check chainId
-		const isDifferentChain = this.config.chainId !== peerInfo['chainId'];
-
-		if (isDifferentChain) {
+		if (this.isDifferentChain(peerInfo.chainId)) {
 			console.log('-- Other node is not on same chain');
-			console.log(`-- check chainId`);
 			return {
 				status: 400,
 				errorMsg: `Chain ID does not match!`,
 				thisChainId: this.config.chainId,
-				peerChainId: peerInfo['chainId'],
+				peerChainId: peerInfo.chainId,
 			};
 		}
 
 		// if nodeId is already connected, don't try to connect again
-		if (this.peers.get(peerNodeId)) {
+		if (!needToReciprocate || this.peers.get(peerNodeId)) {
 			console.log(`-- check nodeId`, {
 				status: 409,
 				errorMsg: `Already connected to peer ${peerUrl}`,
 			});
 		} else {
 			// same chain, node added
-			this.addPeer({ peerNodeId, peerUrl });
+			this.peers.set(peerNodeId, peerUrl);
+			console.log(`-- added peer:`, { peerNodeId, peerUrl });
 			// Send connect request to the new peer to ensure bi-directional connection
-			this.tellPeerToFriendUsBack(peerUrl);
+			tellPeerToFriendUsBack(peerUrl);
 		}
 
 		//synchronize chain AND pending transactions
@@ -612,11 +596,6 @@ class Blockchain {
 		};
 	}
 
-	addPeer({ peerNodeId, peerUrl }) {
-		this.peers.set(peerNodeId, peerUrl);
-		console.log(`-- added peer:`, { peerNodeId, peerUrl });
-	}
-
 	// tell them to add us
 	async tellPeerToFriendUsBack(peerUrl) {
 		console.log(`-- tellPeerToFriendUsBack ( ${peerUrl} )`);
@@ -627,7 +606,10 @@ class Blockchain {
 					body: JSON.stringify({
 						peerUrl: this.config.nodeInfo.selfUrl,
 					}),
-					headers: { 'Content-Type': 'application/json' },
+					headers: {
+						'Content-Type': 'application/json',
+						'need-to-reciprocate': 'false',
+					},
 				})
 			).json();
 			console.log(`-- friend's response:`, { response });
@@ -659,12 +641,11 @@ class Blockchain {
 		console.log('-- Validating chain');
 		try {
 			// execute the whole chain in a new blockchain
-			const { valid, cumulativeDifficulty, errors } =
-				executeIncomingChain(theirChain);
-			// executeIncomingChain(await theirChain);
+			const { valid, cumulativeDifficulty, error } =
+				await executeIncomingChain(theirChain);
 
 			if (!valid) {
-				errors.forEach(console.log);
+				console.log(error);
 				return console.log(`-- -- chain validation`, {
 					valid: false,
 					error: `Their chain isn't valid!`,
@@ -676,7 +657,8 @@ class Blockchain {
 				ours: this.cumulativeDifficulty,
 				theirs: cumulativeDifficulty,
 			});
-			if (cumulativeDifficulty <= this.cumulativeDifficulty) {
+
+			if (!this.isTheirChainBetter(cumulativeDifficulty)) {
 				return console.log(`-- -- difficulty check`, {
 					valid: false,
 					error: `The valid chain isn't better than ours!`,
@@ -736,26 +718,92 @@ class Blockchain {
 		};
 
 		this.peers.entries().map(([peerId, peerUrl]) => {
-			console.log({ peerId, peerUrl });
-			console.log(`Checking Peer ${(peerId, peerUrl)}`);
+			if (skipPeer !== null && skipPeer === peerUrl) {
+				console.log(`Skipping peer ${{ peerId, skipPeer }}`);
+				return;
+			}
 
-			if (skipPeer !== null && skipPeer === peerUrl) return;
+			console.log(`Checking Peer ${{ peerId, peerUrl }}`);
 
 			fetch(`${peerUrl}/peers/notify-new-block`, {
 				method: 'POST',
 				body: JSON.stringify(data),
 				headers: { 'Content-Type': 'application/json' },
-			}).then((res) => {
-				// delete peers that don't respond
-				if (res.status !== 200) {
-					this.peers.delete(id);
-				}
-			});
+			})
+				.then((res) => {
+					// delete peers that don't respond
+					if (res.status !== 200) {
+						this.peers.delete(id);
+					}
+					return res.json();
+				})
+				.then((res) =>
+					console.log(
+						`-- peer ${peerId} (${peerUrl}) response:${res}`
+					)
+				)
+				.catch((err) =>
+					console.log(
+						`Error propagating block to Node ${peerId} (${peerUrl}): ${err.message}`
+					)
+				);
 		});
+	}
+
+	// for propagating received transactions after they have been verified and added to the node
+	propagateTransaction(signedTransaction, peers, sender) {
+		if (peers.size === 0) {
+			console.log(`fn propagateTransaction: no peers connected!`);
+			return;
+		}
+
+		console.log(
+			`fn propagateTransaction: Attempting propagation to ${peers.size} peers...`
+		);
+		Promise.all(
+			peers.entries().map(([peerId, peerUrl]) => {
+				if (sender && peerUrl.includes(sender)) {
+					console.log(`--Skipping peer`, { sender, peerId, peerUrl });
+					return;
+				}
+				console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+				return fetch(`${peerUrl}/transactions/send`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'sending-node-url': this.config.selfUrl,
+					},
+					body: JSON.stringify(signedTransaction),
+				})
+					.then((res) => {
+						if (res.status !== 200 && res.status !== 400) {
+							// assuming no response, remove node
+							this.peers.delete(peerId);
+							console.log(
+								`-- deleting peer ${peerId} because of incorrect response`
+							);
+						}
+						return res.json();
+					})
+					.then((res) =>
+						console.log(
+							`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
+						)
+					)
+					.catch((err) =>
+						console.log(
+							`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`
+						)
+					);
+			})
+		);
 	}
 
 	isTheirChainBetter(theirCumulativeDifficulty) {
 		return theirCumulativeDifficulty > this.cumulativeDifficulty;
+	}
+	isTheirChainLonger(length) {
+		return length > this.chain.length;
 	}
 
 	/* 
@@ -764,9 +812,8 @@ class Blockchain {
 		new chain is then downloaded from /blocks endpoint
 	*/
 	handleIncomingBlock({ blocksCount, cumulativeDifficulty, nodeUrl }) {
-		const isTheirChainLonger = blocksCount > this.chain.length;
 		if (
-			isTheirChainLonger &&
+			this.isTheirChainLonger(blocksCount) &&
 			this.isTheirChainBetter(cumulativeDifficulty)
 		) {
 			// download new chain from /blocks
@@ -843,7 +890,7 @@ class Blockchain {
 		);
 		if (!fieldsResult.valid) {
 			console.log(`Block fields are not valid!`);
-			fieldsResult.missing.forEach((err) => errors.push(err));
+			fieldsResult.errors.forEach((err) => errors.push(err));
 			valid = false;
 		}
 
@@ -851,7 +898,7 @@ class Blockchain {
 		const valuesResult = validateBlockValues(block, previousBlock);
 		if (!valuesResult.valid) {
 			console.log(`Block values are not valid!`);
-			valuesResult.missing.forEach((err) => errors.push(err));
+			valuesResult.errors.forEach((err) => errors.push(err));
 			valid = false;
 		}
 
@@ -865,26 +912,35 @@ class Blockchain {
 	async validateNewTransaction(signedTransaction) {
 		console.log(`fn validateNewTransaction`);
 		let errors = [];
+		const { senderPubKey, senderSignature, transactionDataHash, from } =
+			signedTransaction;
 
-		// validate the FROM address is derived from the public key
-		const hexAddress = await addressFromCompressedPubKey(
-			signedTransaction.senderPubKey
+		const isNotCoinbaseSender = !(
+			senderPubKey === this.config.coinbase.publicKey &&
+			senderSignature[0] === this.config.coinbase.signature[0] &&
+			senderSignature[1] === this.config.coinbase.signature[1] &&
+			from === this.config.coinbase.address
 		);
-		if (signedTransaction.from !== hexAddress) {
-			console.log({derived: hexAddress, from: signedTransaction.from});
-			errors.push(
-				`FROM address is not derived from sender's public key!`
+
+		if (isNotCoinbaseSender) {
+			// validate the FROM address is derived from the public key
+			const hexAddress = await addressFromCompressedPubKey(senderPubKey);
+			if (from !== hexAddress) {
+				console.log({ derived: hexAddress, from: from });
+				errors.push(
+					`FROM address is not derived from sender's public key!`
+				);
+			}
+
+			//validate signature is from public key (only if not a coinbase tx)
+			const isSignatureValid = await verifySignature(
+				transactionDataHash,
+				senderPubKey,
+				senderSignature
 			);
-		}
-
-		//validate signature is from public key
-		const isSignatureValid = await verifySignature(
-			signedTransaction.transactionDataHash,
-			signedTransaction.senderPubKey,
-			signedTransaction.senderSignature
-		);
-		if (!isSignatureValid) {
-			errors.push(`Transaction signature is invalid!`);
+			if (!isSignatureValid) {
+				errors.push(`Transaction signature is invalid!`);
+			}
 		}
 
 		// check for all fields
@@ -893,7 +949,7 @@ class Blockchain {
 			txBaseFields
 		);
 		if (result.valid !== true) {
-			result.missing.forEach((errMsg) => errors.push(errMsg));
+			result.errors.forEach((errMsg) => errors.push(errMsg));
 		}
 
 		//check for invalid values :
@@ -913,14 +969,22 @@ class Blockchain {
 
 		// sender account balance >= value + fee
 		// (NOT allowing sending of pending funds)
-		const balancesOfSender = this.balancesOfAddress(signedTransaction.from);
-		const spendingBalance = this.config.transactions.spendUnconfirmedFunds
-			? balancesOfSender.pendingBalance
-			: balancesOfSender.confirmedBalance;
-		if (spendingBalance < signedTransaction.value + signedTransaction.fee) {
-			errors.push(
-				`Invalid transaction: 'from' address does not have enough funds!`
+		if (isNotCoinbaseSender) {
+			const balancesOfSender = this.balancesOfAddress(
+				signedTransaction.from
 			);
+			const spendingBalance = this.config.transactions
+				.spendUnconfirmedFunds
+				? balancesOfSender.pendingBalance
+				: balancesOfSender.confirmedBalance;
+			if (
+				spendingBalance <
+				signedTransaction.value + signedTransaction.fee
+			) {
+				errors.push(
+					`Invalid transaction: 'from' address does not have enough funds!`
+				);
+			}
 		}
 
 		// build new transaction
@@ -1292,29 +1356,22 @@ class Blockchain {
 		console.log('---Getting all confirmed account balances...');
 		let balances = {};
 		for (const block of this.chain) {
-			console.log('scanning block', block.index);
+			// console.log('scanning block', block.index);
 			for (const transaction of block.transactions) {
-				// console.log('found transaction', transaction.transactionDataHash);
 				const { from, to, value, fee } = transaction;
-				//handle {to: address}
 				if (to in balances) {
-					console.log(
-						'adding to existing entry for received transaction'
-					);
+					// adding to existing entry for received transaction
 					balances[to] += value;
 				} else {
-					console.log('creating new entry for received transaction');
+					// creating new entry for received transaction
 					balances[to] = value;
 				}
 
-				//handle {from: address}
 				if (from in balances) {
-					console.log(
-						'adding to existing entry for sent transaction'
-					);
+					// adding to existing entry for sent transaction
 					balances[from] -= fee + value;
 				} else {
-					console.log('creating new entry for sent transaction');
+					// creating new entry for sent transaction
 					balances[from] = 0 - (fee + value);
 				}
 			}
@@ -1344,7 +1401,7 @@ class Blockchain {
 // After validating an entire block && transactions,
 // 1. "Mine the block" or fake-mine the block. Need to basically calculate and check the hashes to make sure the nonce results in the difficulty.
 
-function executeIncomingChain(chain) {
+async function executeIncomingChain(chain) {
 	console.log(`fn executeIncomingChain`, { incomingChain: chain });
 
 	// create new chain (and creates the matching genesis block)
@@ -1359,16 +1416,18 @@ function executeIncomingChain(chain) {
 			const previousBlock = chain[blockIndex - 1];
 			const thisBlock = chain[blockIndex];
 			instance.difficulty = thisBlock.difficulty;
-			const blockResult = instance.validateBlock(
+			const { valid, errors, block } = await instance.validateBlock(
 				thisBlock,
 				previousBlock
 			);
-			if (!blockResult.valid)
+			if (!valid) {
+				console.log('validateBlock has failed for block', blockIndex);
 				throw new Error(
-					`Block #${blockIndex} failed validation! Errors: ${blockResult.errors.join(
+					`Block #${blockIndex} failed validation! Errors: ${errors.join(
 						'\n'
 					)}`
 				);
+			}
 
 			// validate these transactions, add them to pending
 			let txIndex = 0;
@@ -1378,13 +1437,13 @@ function executeIncomingChain(chain) {
 					valid,
 					errors,
 					transaction: validatedTransaction,
-				} = instance.validateNewTransaction(thisTransaction);
+				} = await instance.validateNewTransaction(thisTransaction);
 				// if valid, add to pending transactions.
 
 				if (valid) instance.addPendingTransaction(validatedTransaction);
 				else
 					throw Error(
-						`Transaction index ${k} failed validation! Errors: ${errors.join(
+						`Transaction index #${txIndex} (block #${blockIndex}) failed validation! Errors: ${errors.join(
 							'\n'
 						)}`
 					);
@@ -1453,7 +1512,7 @@ function executeIncomingChain(chain) {
 	} catch (error) {
 		console.log('Error!', { error });
 		// if something fails during the chain execution, return false
-		return { valid: false, cumulativeDifficulty: null, errors: error };
+		return { valid: false, cumulativeDifficulty: null, error: error };
 	}
 }
 

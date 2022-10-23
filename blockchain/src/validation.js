@@ -1,12 +1,20 @@
+const { hexPattern, CONFIG } = require('./constants');
+
 const invalidStringGen = ({ label, expected, actual }) =>
 	`${label} invalid. Expected ${expected} / Actually ${actual}`;
 const upperFirstLetter = (string) =>
 	string.substring(0, 1).toUpperCase() + string.substring(1);
-const failingCondition = ({ value, expected, type }) =>
-	type === '==='
+const failingCondition = ({ value, expected, type }) => {
+	value = String(value);
+	expected = String(expected);
+	return type === '==='
 		? value !== expected
 		: type === '!=='
 		? value === expected
+		: type === '=='
+		? value != expected
+		: type === '!='
+		? value == expected
 		: type === '>='
 		? value < expected
 		: type === '<='
@@ -16,7 +24,7 @@ const failingCondition = ({ value, expected, type }) =>
 		: type === '<'
 		? value >= expected
 		: true; // fallback to force adding an error if no match
-const { hexPattern, CONFIG } = require('./constants');
+};
 
 const typeCheck = ({ label, value, type }) => {
 	const actualType = typeof value;
@@ -43,7 +51,7 @@ const patternCheck = ({ label, value, pattern, expected, actual }) => {
 	return false;
 };
 
-const lengthCheck = ({ label, value, expected, type }) => {
+const lengthCheck = ({ label, value, expectedLength: expected, type }) => {
 	if (failingCondition({ value: value.length, expected, type })) {
 		return invalidStringGen({
 			label,
@@ -65,10 +73,6 @@ const valueCheck = ({ label, value, expected, type }) => {
 	return false;
 };
 
-const addFoundErrors = ({ missing, error }) => {
-	if (error) missing.push(error);
-};
-
 /*
 	----------------------------------------------------------------
 		VALIDATION
@@ -88,16 +92,16 @@ const validateAddress = (address, label) => {
 	const lengthResult = lengthCheck({
 		label,
 		value: address,
-		expected: 40,
+		expectedLength: 40,
 		type: '===',
 	});
 
-	const missing = [typeResult, patternResult, lengthResult].filter(
+	const errors = [typeResult, patternResult, lengthResult].filter(
 		(result) => result !== false
 	);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 // validation
@@ -108,7 +112,7 @@ const validatePublicKey = (pubKey) => {
 		lengthCheck({
 			label,
 			value: pubKey,
-			expected: 65,
+			expectedLength: 65,
 			type: '===',
 		}),
 		patternCheck({
@@ -120,10 +124,10 @@ const validatePublicKey = (pubKey) => {
 		}),
 	];
 
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 const validateValue = (value) => {
@@ -141,10 +145,10 @@ const validateValue = (value) => {
 			type: '>=',
 		}),
 	];
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 const validateFee = (fee) => {
@@ -162,10 +166,10 @@ const validateFee = (fee) => {
 			type: '>=',
 		}),
 	];
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 const validateData = (data) => {
@@ -177,15 +181,20 @@ const validateData = (data) => {
 			type: 'string',
 		}),
 	];
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 // i.e. blockDataHash, blockHash, prevBlockHash* (only basic), transactionDataHash
 const validateHash = (hash, label, length) => {
 	// type length pattern value
+	console.log(
+		{ hashLength: hash.length, type: typeof hash.length },
+		{ expectedLength: length, type: typeof length }
+	);
+
 	const results = [
 		typeCheck({
 			label,
@@ -195,8 +204,8 @@ const validateHash = (hash, label, length) => {
 		lengthCheck({
 			label,
 			value: hash,
-			expected: `to be ${length} chars`,
-			type: '===',
+			expectedLength: length,
+			type: '==',
 		}),
 		patternCheck({
 			label,
@@ -206,10 +215,10 @@ const validateHash = (hash, label, length) => {
 			actual: `failed validation`,
 		}),
 	];
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 const validateDateCreated = (
@@ -254,24 +263,24 @@ const validateDateCreated = (
 			  })
 			: false,
 	];
-	const missing = results.filter((result) => result !== false);
-	const valid = missing.length === 0;
-	if (valid) return { valid, missing: null };
-	return { valid, missing };
+	const errors = results.filter((result) => result !== false);
+	const valid = errors.length === 0;
+	if (valid) return { valid, errors: null };
+	return { valid, errors };
 };
 
 // validation, utils
-// returns {valid: boolean; missing: array | null}
+// returns {valid: boolean; errors: array | null}
 const validateFields = (fields, requiredFields) => {
-	let missing = [];
+	let errors = [];
 	for (const field of requiredFields) {
 		if (!fields.includes(field)) {
-			missing.push(field);
+			errors.push(field);
 		}
 	}
-	return missing.length > 0
-		? { valid: false, missing }
-		: { valid: true, missing: null };
+	return errors.length > 0
+		? { valid: false, errors }
+		: { valid: true, errors: null };
 };
 
 const basicTxValidation = ({ transaction, prevDateParsed }) => {
@@ -281,25 +290,25 @@ const basicTxValidation = ({ transaction, prevDateParsed }) => {
 	// to:
 	let toAddrResult = validateAddress(transaction.to, 'To');
 	if (!toAddrResult.valid) {
-		toAddrResult.missing.forEach((err) => errors.push(err));
+		toAddrResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// from:
 	let fromAddrResult = validateAddress(transaction.from, 'From');
 	if (!fromAddrResult.valid) {
-		fromAddrResult.missing.forEach((err) => errors.push(err));
+		fromAddrResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// value: number, >=0
 	const valueResult = validateValue(transaction.value);
 	if (!valueResult.valid) {
-		valueResult.missing.forEach((err) => errors.push(err));
+		valueResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// fee: number, >minFee
 	const feeResult = validateFee(transaction.fee);
 	if (!feeResult.valid) {
-		feeResult.missing.forEach((err) => errors.push(err));
+		feeResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
@@ -310,19 +319,19 @@ const basicTxValidation = ({ transaction, prevDateParsed }) => {
 		currentTime
 	);
 	if (!dateCreatedResult.valid) {
-		dateCreatedResult.missing.forEach((err) => errors.push(err));
+		dateCreatedResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// data: string,
 	const dataResult = validateData(transaction.data);
 	if (!dataResult.valid) {
-		dataResult.missing.forEach((err) => errors.push(err));
+		dataResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// senderPubKey: string, hex, 65chars?
 	const pubKeyResult = validatePublicKey(transaction.senderPubKey);
 	if (!pubKeyResult.valid) {
-		pubKeyResult.missing.forEach((err) => errors.push(err));
+		pubKeyResult.errors.forEach((err) => errors.push(err));
 	}
 	return { valid, errors };
 };
@@ -332,7 +341,7 @@ const validateBlockValues = (block, prevBlock) => {
 	console.log('--validateBlockValues:', { block, prevBlock });
 	const prevDateParsed = Date.parse(prevBlock.dateCreated) || undefined;
 
-	let missing = [];
+	let errors = [];
 	let field = '';
 	let label = '';
 	let currentValue;
@@ -340,77 +349,74 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'index';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	const indexTypeError = typeCheck({
+		label,
+		value: currentValue,
+		type: 'number',
 	});
-	addFoundErrors({
-		missing,
-		error: valueCheck({
-			label,
-			value: currentValue,
-			expected: prevBlock[field] + 1,
-			type: '===',
-		}),
+	if (indexTypeError) errors.push(indexTypeError);
+	const indexValueError = valueCheck({
+		label,
+		value: currentValue,
+		expected: prevBlock[field] + 1,
+		type: '===',
 	});
+	if (indexValueError) errors.push(indexValueError);
 
 	// transactions: should be array, should have length >= 1
 	field = 'transactions';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
 	console.log({ transactions: currentValue });
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'array' }),
+	console.log('keys:', Object.keys(currentValue));
+	const transactionsTypeError = typeCheck({
+		label,
+		value: currentValue,
+		type: 'object',
 	});
-	addFoundErrors({
-		missing,
-		error: lengthCheck({
-			label,
-			value: currentValue,
-			expected: 1,
-			type: '>=',
-		}),
+	if (transactionsTypeError) errors.push(transactionsTypeError);
+	const transactionsLengthError = lengthCheck({
+		label,
+		value: Object.keys(currentValue), // because for some reason it comes in as an object
+		expectedLength: 1,
+		type: '>=',
 	});
+	if (transactionsLengthError) errors.push(transactionsLengthError);
 
 	// difficulty: should be a number
 	field = 'difficulty';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	const difficultyTypeError = typeCheck({
+		label,
+		value: currentValue,
+		type: 'number',
 	});
+	if (difficultyTypeError) errors.push(difficultyTypeError);
 
 	// prevBlockHash: should be a string, should have only certain characters ?hex?, should be so many characters (40?), should match prevBlock's blockHash
 	field = 'prevBlockHash';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	if (currentValue !== prevBlock.blockHash) {
-		addFoundErrors({
-			missing,
-			error: invalidStringGen({
-				label: upperFirstLetter(field),
-				expected: "value to match previous block's blockHash",
-				actual: `is ${currentValue} instead of ${prevBlock.blockHash}`,
-			}),
-		});
-	}
-	let prevBlockHashResult;
-	if (block.index === 0) {
-		// special case, special messages on these two
-		prevBlockHashResult = validateHash(currentValue, label, 1); // length, string type, hex pattern
-	} else {
-		prevBlockHashResult = validateHash(currentValue, label, 64); // length, string type, hex pattern
-	}
-	if (!prevBlockHashResult.valid) {
-		prevBlockHashResult.missing.forEach((err) => missing.push(err));
-	}
+	let prevBlockHashResult = validateHash(
+		currentValue,
+		label,
+		block.index === 0 ? 1 : 64
+	);
+	if (!prevBlockHashResult.valid)
+		prevBlockHashResult.errors.forEach((err) => errors.push(err));
+	const prevBlockHashValueError = valueCheck({
+		label,
+		value: currentValue,
+		expected: prevBlock.blockHash,
+		type: '===',
+	});
+	if (prevBlockHashValueError) errors.push(prevBlockHashValueError);
 
 	// minedBy: should be an address, certain characters? || all 0's, 40 characters, string
 	let minedByAddrResult = validateAddress(block.minedBy, 'MinedBy');
 	if (!minedByAddrResult.valid) {
-		minedByAddrResult.missing.forEach((err) => missing.push(err));
+		minedByAddrResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// blockDataHash: should be string, only have certain characters, 40 characters?, (Will recalculate later)
@@ -418,18 +424,20 @@ const validateBlockValues = (block, prevBlock) => {
 	currentValue = block[field];
 	label = upperFirstLetter(field);
 	const blockDataHashResult = validateHash(currentValue, label, 64); // length, string type, hex pattern
-	if (!blockDataHashResult.valid){
-		blockDataHashResult.missing.forEach((err) => missing.push(err))
+	if (!blockDataHashResult.valid) {
+		blockDataHashResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// nonce: should be a number, (later, will validate should give us the correct difficulty)
 	field = 'nonce';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	addFoundErrors({
-		missing,
-		error: typeCheck({ label, value: currentValue, type: 'number' }),
+	const nonceTypeError = typeCheck({
+		label,
+		value: currentValue,
+		type: 'number',
 	});
+	if (nonceTypeError) errors.push(nonceTypeError);
 
 	// dateCreated: should be a number?? should be after the previous transaction's dateCreated, should be before today??
 	const currentTime = Date.now();
@@ -440,19 +448,19 @@ const validateBlockValues = (block, prevBlock) => {
 		true
 	);
 	if (!dateCreatedResult.valid) {
-		dateCreatedResult.missing.forEach((err) => errors.push(err));
+		dateCreatedResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// blockHash: should be a string, only certain characters, 64 characters? (recalc later)
-	label = "BlockHash";
-	const blockHashResult = validateHash(block["blockHash"], label, 64); // length, string type, hex pattern
+	label = 'BlockHash';
+	const blockHashResult = validateHash(block['blockHash'], label, 64); // length, string type, hex pattern
 	if (!blockHashResult.valid) {
-		blockHashResult.missing.forEach((err) => missing.push(err));
+		blockHashResult.errors.forEach((err) => errors.push(err));
 	}
 
 	// finally, return the results!
-	if (missing.length > 0) return { valid: false, missing };
-	return { valid: true, missing: null };
+	if (errors.length > 0) return { valid: false, errors };
+	return { valid: true, errors: null };
 }; // validateBlockValues
 
 module.exports = {
@@ -462,7 +470,6 @@ module.exports = {
 	patternCheck,
 	lengthCheck,
 	valueCheck,
-	addFoundErrors,
 	validateAddress,
 	validatePublicKey,
 	validateValue,

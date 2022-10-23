@@ -126,3 +126,20 @@ October 8th:
 
 					
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Data propagation:
+	Transactions should propagate to connected nodes
+
+	new blocks should trigger communication between nodes so they can fetch the block

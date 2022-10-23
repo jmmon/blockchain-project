@@ -14,6 +14,7 @@ router.get('/get-mining-job/:address', (req, res) => {
 
 // Done, needs testing
 router.post('/submit-mined-block', (req, res) => {
+	console.log('Block received');
 	const blockchain = req.app.get('blockchain');
 	const minedBlockData = req.body;
 

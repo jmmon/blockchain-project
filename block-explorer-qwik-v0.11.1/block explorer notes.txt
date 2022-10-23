@@ -45,3 +45,12 @@ Other links:
 		(index: could link to the same page... probably not.)
 		
 		(prevBlockHash: link to the block? Look up block by hash?)
+
+
+
+
+
+
+
+TODO: Fix balances:
+	Expected balances to not include spent transactions that are still pending.

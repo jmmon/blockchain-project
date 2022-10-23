@@ -2,6 +2,7 @@ const fs = require('fs');
 
 const payoutRecord = 'payoutRecord/'; //  TODO: set wallets directory
 const filePath = `${payoutRecord}payoutRecord.json`;
+const TIME_BETWEEN_TRANSACTIONS_SECONDS = 4;
 
 const db = {
 	init() {
@@ -37,8 +38,7 @@ const db = {
 				(currentTimeMs - previousTimestampMs) / 1000;
 
 			// if waited an hour or more
-			if (differenceSeconds >= 4) {
-				// 3600
+			if (differenceSeconds >= TIME_BETWEEN_TRANSACTIONS_SECONDS) {
 				// add to file
 				object[address] = new Date(currentTimeMs).toISOString();
 				return true;
@@ -73,6 +73,7 @@ const db = {
 				dataJson
 			);
 			return object;
+			
 		} catch (err) {
 			console.log(err);
 		}

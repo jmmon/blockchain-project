@@ -19,3 +19,7 @@ faucet works like a wallet with a hard-coded private key
 
 
 TODO: More validation (NodeUrl incorrect?)
+
+
+
+TODO: Captcha!

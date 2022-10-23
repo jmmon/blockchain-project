@@ -274,7 +274,7 @@ const fetchAddressBalance = async (nodeUrl, address) => {
 const verifySignature = (txDataHash, publicKey, signature) => {
 	// h == txDataHash
 	// Q == their public key?
-	console.log({ txDataHash, publicKey, signature });
+	console.log('walletUtils - verifySignature:', { txDataHash, publicKey, signature });
 	const decompPubKey = decompressThisPubKey(publicKey);
 	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, 'hex'));
 	const publicKeyArray = Uint8Array.from(Buffer.from(decompPubKey, 'hex'));

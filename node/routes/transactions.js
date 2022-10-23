@@ -56,6 +56,7 @@ Peer Connections / Syncing:
 router.post('/send', async (req, res) => {
 	console.log('transaction received...');
 	const blockchain = req.app.get('blockchain');
+	const sendingNodeUrl = req.get('sending-node-url') || false;
 
 	//check for missing data object
 	if (Object.values(req.body).length < 8) {
@@ -89,42 +90,11 @@ router.post('/send', async (req, res) => {
 		JSON.stringify(validatedTransaction.transactionDataHash)
 	);
 
-	// BELOW is peer syncing
-
-	// need to propagate the transaction to other nodes!
-	// Go through peers and send post requests to send transaction to the nodes
-	const sender = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-	const peers = blockchain.peers;
-
-	propagateTransaction(signedTransaction, peers, sender);
+	// propagate the transaction to other nodes
+	console.log((sendingNodeUrl) ? `transaction came from node ${sendingNodeUrl}` : `transaction did not come from a node`);
+	blockchain.propagateTransaction(signedTransaction, blockchain.peers, sendingNodeUrl);
 });
 
 
-function propagateTransaction(signedTransaction, peers, sender) {
-	console.log('transaction received from sender IP address:', sender);
-
-	if (peers.size === 0) return;
-
-	Promise.all(
-		peers.entries().map(([peerId, peerUrl]) => {
-			if (peerUrl.includes(sender)) {
-				console.log(`--Skipping peer`, { sender, peerId, peerUrl });
-				return;
-			}
-			console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
-			return fetch(`${peerUrl}/transactions/send`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(signedTransaction),
-			})
-				.then((res) => res.json())
-				.then((res) =>
-					console.log(
-						`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
-					)
-				).catch((err) => console.log(`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`));
-		})
-	);
-}
 
 module.exports = router;
