@@ -5,11 +5,9 @@ const favicon = require('serve-favicon');
 const ejs = require('ejs');
 const db = require('./libs/db');
 
-const {
-	CONFIG: { faucet },
-	CONFIG,
-} = require('../blockchain/src/constants');
-console.log({ faucet });
+const { CONFIG } = require('../blockchain/src/constants');
+const faucetWalletInfo = { ...CONFIG.faucet };
+console.log('init:', { faucetWalletInfo });
 
 // const faucetWalletInfo = {
 // 	mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
@@ -17,8 +15,6 @@ console.log({ faucet });
 // 	publicKey: '46da25d657a170c983dc01ce736094ef11f557f8a007e752ac1eb1f705e1b9070',
 // 	address: 'eae972db2776e38a75883aa2c0c3b8cd506b004d',
 // };
-
-const faucetWalletInfo = { ...faucet };
 
 const app = express();
 const port = 3007;
@@ -56,7 +52,8 @@ app.use(express.static('public'));
 	const {
 		default: { decryptAndSign, submitTransaction, verifySignature },
 	} = await import('../walletUtils/index.js');
-	const { default: fetch } = await import('node-fetch');
+	const fetch = (...args) =>
+		import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 	db.init();
 
@@ -93,7 +90,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				address: faucetWalletInfo.address,
 			};
 
-			const getConfirmedBalance = async (nodeUrl, address) => {
+			const fetchConfirmedBalance = async (nodeUrl, address) => {
 				// fetch balance from node!
 				const balances = await fetch(
 					`${nodeUrl}/address/${address}/balance`
@@ -102,10 +99,22 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				console.log('fetched data:', { data });
 
 				return data.confirmedBalance;
-			};
+			}
+
+			// const fetchConfirmedBalance = (nodeUrl, address) => {
+			// 	return fetch(`${nodeUrl}/address/${address}/balance`)
+			// 		.then((res) => res.json())
+			// 		.then((data) => {
+			// 			console.log({ data });
+			// 			return data.confirmedBalance;
+			// 		}).catch(error => {
+			// 			console.log('Error: getConfirmedBalance:', {error})
+			// 			throw new Error('Error: getConfirmedBalance:', {error})
+			// 		});
+			// };
 
 			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
-			const confirmedBalance = await getConfirmedBalance(
+			const confirmedBalance = await fetchConfirmedBalance(
 				nodeUrl,
 				faucetWalletInfo.address
 			);
@@ -125,12 +134,17 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 				amount // amount
 			);
 
-// TESTING VERIFY SIGNATURE
+			// TESTING VERIFY SIGNATURE
 
-			const result_verifySig = verifySignature(signedTransaction.data.transactionDataHash, keys.publicKey, signedTransaction.data.senderSignature)
-			console.log('Signature from transaction just created is valid?', {result_verifySig});
-
-// TESTING VERIFY SIGNATURE END
+			const result_verifySig = verifySignature(
+				signedTransaction.data.transactionDataHash,
+				keys.publicKey,
+				signedTransaction.data.senderSignature
+			);
+			console.log('Signature from transaction just created is valid?', {
+				result_verifySig,
+			});
+			// TESTING VERIFY SIGNATURE END
 
 			if (signedTransaction.error) {
 				console.log('signing error:', signedTransaction.error);

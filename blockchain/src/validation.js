@@ -272,6 +272,7 @@ const validateDateCreated = (
 // validation, utils
 // returns {valid: boolean; errors: array | null}
 const validateFields = (fields, requiredFields) => {
+	console.log('--validateBlockFields');
 	let errors = [];
 	for (const field of requiredFields) {
 		if (!fields.includes(field)) {
@@ -338,7 +339,7 @@ const basicTxValidation = ({ transaction, prevDateParsed }) => {
 
 const validateBlockValues = (block, prevBlock) => {
 	// go thru each entry and make sure the value fits the "requirements"
-	console.log('--validateBlockValues:', { block, prevBlock });
+	console.log('--validateBlockValues');
 	const prevDateParsed = Date.parse(prevBlock.dateCreated) || undefined;
 
 	let errors = [];

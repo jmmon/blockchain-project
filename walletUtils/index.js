@@ -37,7 +37,7 @@ const removeSpaces = ({
 	senderPubKey,
 }) => {
 	// escape spaces in data field
-	data = data.replaceAll(/\s/gm, '\ ');
+	data = data.replaceAll(/\s/gm, ' ');
 
 	// rebuild to make sure order stays the same
 	const txDataJson = JSON.stringify({
@@ -148,7 +148,6 @@ const generateWallet = async () => {
 
 const signTransaction = (privateKey, txDataHashBuffer) => {
 	console.log({ privateKey, txDataHashBuffer });
-	let response = {};
 	try {
 		const splitSignature = (signature) => {
 			return [
@@ -163,14 +162,31 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		);
 		const [r, s] = splitSignature(signature);
 
-		response = { data: [r, s], error: null };
-
+		return { data: [r, s], error: null };
 	} catch (err) {
-		response = { data: null, error: err };
-
-	} finally {
-		return response;
+		return { data: null, error: err };
 	}
+};
+
+const deriveKeysIfWallet = async (walletOrKeys, password) => {
+	if (!walletOrKeys.encryptedMnemonic) {
+		return walletOrKeys;
+	}
+	// decrypt wallet for signing
+	const encrypted = {
+		IV: walletOrKeys.IV,
+		encrypted: walletOrKeys.encryptedMnemonic,
+	};
+	const { data, error } = decrypt(encrypted, password);
+	if (error) {
+		return {
+			data: null,
+			error: 'Error decrypting wallet! Try a different password?',
+		};
+	}
+
+	// derive our keys
+	return await deriveKeysFromMnemonic(data);
 };
 
 const decryptAndSign = async (
@@ -179,31 +195,13 @@ const decryptAndSign = async (
 	value,
 	password = ''
 ) => {
-	let keys;
-	if (walletOrKeys.encryptedMnemonic) {
-		// decrypt wallet for signing
 
-		const encrypted = {
-			IV: walletOrKeys.IV,
-			encrypted: walletOrKeys.encryptedMnemonic,
-		};
-		const response = decrypt(encrypted, password);
-		if (response.error) {
-			return {
-				data: null,
-				error: 'Error decrypting wallet! Try a different password?',
-			};
-		}
-
-		// derive our keys
-		keys = await deriveKeysFromMnemonic(response.data);
-	} else {
-		keys = walletOrKeys;
-	}
+	const keys = await deriveKeysIfWallet(walletOrKeys, password);
 
 	// prepare and hash our transaction data
 	const { privateKey, publicKey, address } = keys;
 	console.log('faucet info:', { privateKey, publicKey, address });
+
 	let txDataToHash = {
 		from: address,
 		to: recipient,
@@ -213,9 +211,8 @@ const decryptAndSign = async (
 		data: '',
 		senderPubKey: publicKey,
 	};
-	console.log('txData:', {txDataToHash});
 	const txDataHashBuffer = hashTransaction(txDataToHash);
-	console.log({ txDataHashBuffer });
+	console.log('txData:', { txDataToHash, txDataHashBuffer });
 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
@@ -229,7 +226,7 @@ const decryptAndSign = async (
 		transactionDataHash: txDataHashBuffer.toString('hex'),
 		senderSignature: signResponse.data,
 		...txDataToHash,
-	}
+	};
 
 	return { data: txData, error: null };
 };
@@ -274,14 +271,18 @@ const fetchAddressBalance = async (nodeUrl, address) => {
 const verifySignature = (txDataHash, publicKey, signature) => {
 	// h == txDataHash
 	// Q == their public key?
-	console.log('walletUtils - verifySignature:', { txDataHash, publicKey, signature });
+	console.log('walletUtils - verifySignature:', {
+		txDataHash,
+		publicKey,
+		signature,
+	});
 	const decompPubKey = decompressThisPubKey(publicKey);
 	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, 'hex'));
 	const publicKeyArray = Uint8Array.from(Buffer.from(decompPubKey, 'hex'));
 	const signatureArray = Uint8Array.from(
 		Buffer.from(signature.join(''), 'hex')
 	);
-	console.log(`--`, {txDataHashArray, publicKeyArray, signatureArray});
+	console.log(`--`, { txDataHashArray, publicKeyArray, signatureArray });
 	//rejoin our signature (r and s?)
 
 	return ecc.verify(txDataHashArray, publicKeyArray, signatureArray);
@@ -298,6 +299,7 @@ const walletUtils = {
 	submitTransaction,
 	fetchAddressBalance,
 	verifySignature,
+	hashTransaction,
 	CONSTANTS,
 };
 
