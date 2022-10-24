@@ -250,11 +250,14 @@ class Blockchain {
 	*/
 
 	clearIncludedPendingTransactions(block) {
-		console.log(`fn clearIncludedPendingTransactions`);
+		console.log(`fn clearIncludedPendingTransactions:`
+		// , {pendingTransactions: this.pendingTransactions}
+		);
 		// filter out transactions in the block
-		const initialPendingCount = this.pendingTransactions.length;
-		const remainingTransactions = this.pendingTransactions.filter(
-			(txn) => !block.transactions.includes(txn)
+		const initialPendingCount = this.pendingTransactions.length;	// pending length
+		const blockTxnDataHashes = block.transactions.map(txn => txn.transactionDataHash);
+		const remainingTransactions = this.pendingTransactions.filter(	// pending keeping 
+			(txn) => !blockTxnDataHashes.includes(txn.transactionDataHash)
 		);
 
 		// const blockTxnHashes = block.transactions.map(txn => txn.transactionDataHash);
@@ -266,6 +269,7 @@ class Blockchain {
 		});
 
 		this.pendingTransactions = remainingTransactions;
+		// console.log({remainingTransactions: this.pendingTransactions})
 	}
 
 	// blocks
@@ -1068,6 +1072,7 @@ class Blockchain {
 			coinbaseTransaction, // prepend
 			...pendingTransactions,
 		];
+		console.log("-- ", {coinbaseShouldBeFirst: allTransactions});
 
 		// STEP 3: build our data needed for blockDataHash;
 		const prevBlockHash = this.lastBlock().blockHash;

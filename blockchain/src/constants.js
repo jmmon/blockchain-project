@@ -35,7 +35,7 @@ const CONFIG = {
 		safeConfirmCount: 6,
 		spendUnconfirmedFunds: false,
 	},
-	genesisBlock: undefined,
+	genesisBlock: {},
 	CHAIN_BIRTHDAY: new Date(2021, 9, 15).toISOString(),
 	chainId: '',
 	nodeInfo: {

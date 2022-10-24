@@ -36,8 +36,8 @@ const removeSpaces = ({
 	data,
 	senderPubKey,
 }) => {
-	// escape data field spaces
-	data = data.replaceAll(/\s/gm, ' ');
+	// escape spaces in data field
+	data = data.replaceAll(/\s/gm, '\ ');
 
 	// rebuild to make sure order stays the same
 	const txDataJson = JSON.stringify({
@@ -68,7 +68,7 @@ const padBuffer = (string, bytes = 32) =>
 
 const encrypt = (toEncrypt, passphrase) => {
 	const IV = crypto.randomBytes(16);
-	let response = { data: null, error: null };
+	let response = {};
 	try {
 		passphrase = padBuffer(passphrase);
 		console.log('encrypting:', { toEncrypt, paddedPassphrase: passphrase });
@@ -148,7 +148,7 @@ const generateWallet = async () => {
 
 const signTransaction = (privateKey, txDataHashBuffer) => {
 	console.log({ privateKey, txDataHashBuffer });
-	let response = { data: null, error: null };
+	let response = {};
 	try {
 		const splitSignature = (signature) => {
 			return [
@@ -281,6 +281,7 @@ const verifySignature = (txDataHash, publicKey, signature) => {
 	const signatureArray = Uint8Array.from(
 		Buffer.from(signature.join(''), 'hex')
 	);
+	console.log(`--`, {txDataHashArray, publicKeyArray, signatureArray});
 	//rejoin our signature (r and s?)
 
 	return ecc.verify(txDataHashArray, publicKeyArray, signatureArray);

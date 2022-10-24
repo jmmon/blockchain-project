@@ -1,7 +1,10 @@
 const crypto = require('crypto');
 
 const SHA256 = (message) =>
-	crypto.createHash('sha256').update((typeof message === 'string') ? message :  JSON.stringify(message)).digest('hex');
+	crypto
+		.createHash('sha256')
+		.update(typeof message === 'string' ? message : JSON.stringify(message))
+		.digest('hex');
 
 // for transactions: removes "data" field if empty, or escapes spaces inside. Next, goes JSON and removes all non-escaped spaces from the JSON.
 const dataPadOrRemove = (obj) => {
