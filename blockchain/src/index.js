@@ -751,7 +751,13 @@ class Blockchain {
 			this.clearMiningJobs();
 			console.log('-- -- Notifying peers of the new chain...');
 
-			this.propagateBlock(this.peers, peerUrl);
+		// prepare data to be sent
+		const data = {
+			blocksCount: this.chain.length,
+			cumulativeDifficulty: this.cumulativeDifficulty,
+			nodeUrl: this.config.node.selfUrl,
+		};
+			this.propagateBlock(data, this.peers, peerUrl);
 		} catch (err) {
 			return console.log(`-- validateChain error:`, {
 				valid: false,
@@ -780,18 +786,11 @@ class Blockchain {
 	}
 
 	// should be run any time the chain changes (when a block is mined)
-	propagateBlock(peers, skipPeer = null) {
+	propagateBlock(data, peers, skipPeer = null) {
 		if (peers.size === 0) {
 			console.log(`fn propagateBlock: No peers`);
 			return;
 		}
-
-		// prepare data to be sent
-		const data = {
-			blocksCount: this.chain.length,
-			cumulativeDifficulty: this.cumulativeDifficulty,
-			nodeUrl: this.config.node.selfUrl,
-		};
 
 		// notify peers of new chain!
 		const peerEntries = peers.entries();
@@ -805,36 +804,12 @@ class Blockchain {
 
 			this.propagateInfo(
 				{
+					selfUrl: this.config.node.selfUrl,
 					url: `${peerUrl}/peers/notify-new-block`,
-					headers: {
-						'Content-Type': 'application/json',
-					},
 					data,
 				},
-				{ peerId, peerUrl }
+				{ peerId, peerUrl },
 			);
-			// fetch(`${peerUrl}/peers/notify-new-block`, {
-			// 	method: 'POST',
-			// 	body: JSON.stringify(data),
-			// 	headers: { 'Content-Type': 'application/json' },
-			// })
-			// 	.then((res) => {
-			// 		// delete peers that don't respond
-			// 		if (res.status !== 200) {
-			// 			this.peers.delete(peerId);
-			// 		}
-			// 		return res.json();
-			// 	})
-			// 	.then((res) =>
-			// 		console.log(
-			// 			`-- peer ${peerId} (${peerUrl}) response:${res}`
-			// 		)
-			// 	)
-			// 	.catch((err) =>
-			// 		console.log(
-			// 			`Error propagating block to Node ${peerId} (${peerUrl}): ${err.message}`
-			// 		)
-			// 	);
 		}
 	}
 
@@ -848,63 +823,35 @@ class Blockchain {
 		console.log(
 			`fn propagateTransaction: Attempting propagation to ${peers.size} peers...`
 		);
-		// Promise.all(
 
 		const peerEntries = peers.entries();
 		for (const [peerId, peerUrl] of peerEntries) {
-			if (sender && peerUrl.includes(sender)) {
-				console.log(`--Skipping peer`, { sender, peerId, peerUrl });
+			if (sender && sender === peerUrl) {
+				console.log(`-- Skipping sender:`, { peerId, peerUrl });
 				return;
 			}
-			console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+
 			this.propagateInfo(
 				{
+					selfUrl: this.config.node.selfUrl,
 					url: `${peerUrl}/transactions/send`,
-					headers: {
-						'Content-Type': 'application/json',
-						'sending-node-url': this.config.selfUrl,
-					},
 					data: signedTransaction,
 				},
-				{ peerId, peerUrl }
+				{ peerId, peerUrl },
+				this.config.node.selfUrl
 			);
-
-			// fetch(`${peerUrl}/transactions/send`, {
-			// 	method: 'POST',
-			// 	headers: {
-			// 		'Content-Type': 'application/json',
-			// 		'sending-node-url': this.config.selfUrl,
-			// 	},
-			// 	body: JSON.stringify(signedTransaction),
-			// })
-			// 	.then((res) => {
-			// 		if (res.status !== 200 && res.status !== 400) {
-			// 			// assuming no response, remove node
-			// 			this.peers.delete(peerId);
-			// 			console.log(
-			// 				`-- deleting peer ${peerId} because of incorrect response`
-			// 			);
-			// 		}
-			// 		return res.json();
-			// 	})
-			// 	.then((res) =>
-			// 		console.log(
-			// 			`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
-			// 		)
-			// 	)
-			// 	.catch((err) =>
-			// 		console.log(
-			// 			`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`
-			// 		)
-			// 	);
 		}
 	}
-	propagateInfo({ url, headers, data }, { peerId, peerUrl }) {
-		console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+
+	propagateInfo({selfUrl, url, data }, { peerId, peerUrl }) {
+		console.log(`-- propagating to: Node ${peerId} (${peerUrl})`);
 
 		fetch(url, {
 			method: 'POST',
-			headers,
+			headers: {
+						'Content-Type': 'application/json',
+						'sending-node-url': selfUrl,
+					},
 			body: JSON.stringify(data),
 		})
 			.then((res) => {
@@ -1269,7 +1216,13 @@ class Blockchain {
 
 		this.adjustDifficulty();
 
-		this.propagateBlock(this.peers);
+		// prepare data to be sent
+		const data = {
+			blocksCount: this.chain.length,
+			cumulativeDifficulty: this.cumulativeDifficulty,
+			nodeUrl: this.config.node.selfUrl,
+		};
+		this.propagateBlock(data, this.peers);
 
 		return {
 			message: `Block accepted, reward paid: ${

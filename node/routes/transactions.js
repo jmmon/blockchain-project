@@ -58,17 +58,17 @@ router.post('/send', async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const sendingNodeUrl = req.get('sending-node-url') || false;
 
+	const signedTransaction = req.body;
+	console.log({ signedTransaction });
+
 	//check for missing data object
-	if (Object.values(req.body).length < 8) {
+	if (Object.values(signedTransaction).length < 8) {
 		return res.status(400).send(
 			JSON.stringify({
 				errorMsg: 'Missing transaction data!',
 			})
 		);
 	}
-
-	const signedTransaction = req.body;
-	console.log({ signedTransaction });
 
 	const {
 		valid,
@@ -77,7 +77,7 @@ router.post('/send', async (req, res) => {
 	} = await blockchain.validateNewTransaction(signedTransaction);
 
 	if (!valid) {
-		console.log({errors});
+		console.log({ errors });
 		return res
 			.status(400)
 			.send(JSON.stringify({ errorMsg: errors.join('\n') }));
@@ -91,10 +91,16 @@ router.post('/send', async (req, res) => {
 	);
 
 	// propagate the transaction to other nodes
-	console.log((sendingNodeUrl) ? `transaction came from node ${sendingNodeUrl}` : `transaction did not come from a node`);
-	blockchain.propagateTransaction(signedTransaction, blockchain.peers, sendingNodeUrl);
+	console.log(
+		sendingNodeUrl
+			? `transaction came from node ${sendingNodeUrl}`
+			: `transaction did not come from a node`
+	);
+	blockchain.propagateTransaction(
+		signedTransaction,
+		blockchain.peers,
+		sendingNodeUrl
+	);
 });
-
-
 
 module.exports = router;
