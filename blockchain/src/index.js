@@ -593,7 +593,7 @@ class Blockchain {
 		} else {
 			// same chain, node added
 			this.peers.set(peerNodeId, peerUrl);
-			console.log(`-- added peer:`, {peers: [...this.peers.entries()]});
+			console.log(`-- added peer:`, { peerUrl });
 			// Send connect request to the new peer to ensure bi-directional connection
 			if (!cameFromNode) {
 				this.tellPeerToFriendUsBack(peerUrl);
@@ -604,10 +604,14 @@ class Blockchain {
 
 		// STEP 4: If their chain is better, check their chain!
 		if (this.isTheirChainBetter(peerInfo.cumulativeDifficulty)) {
-			console.log('-- is their chain better? YES', { cumulativeDifficulty: peerInfo.cumulativeDifficulty });
+			console.log('-- is their chain better? YES', {
+				cumulativeDifficulty: peerInfo.cumulativeDifficulty,
+			});
 			this.checkChainFromPeer(peerUrl);
 		} else {
-			console.log('-- is their chain better? NO', { cumulativeDifficulty: peerInfo.cumulativeDifficulty });
+			console.log('-- is their chain better? NO', {
+				cumulativeDifficulty: peerInfo.cumulativeDifficulty,
+			});
 		}
 
 		console.log(` END fn connectPeer`);
@@ -747,7 +751,7 @@ class Blockchain {
 			this.clearMiningJobs();
 			console.log('-- -- Notifying peers of the new chain...');
 
-			this.propagateBlock(peerUrl);
+			this.propagateBlock(this.peers, peerUrl);
 		} catch (err) {
 			return console.log(`-- validateChain error:`, {
 				valid: false,
@@ -776,49 +780,62 @@ class Blockchain {
 	}
 
 	// should be run any time the chain changes (when a block is mined)
-	propagateBlock(skipPeer = null) {
-		console.log(`fn propagateBlock`, { peers: [...this.peers.entries()] });
+	propagateBlock(peers, skipPeer = null) {
+		if (peers.size === 0) {
+			console.log(`fn propagateBlock: No peers`);
+			return;
+		}
 
-		if (this.peers.size === 0) return;
-
-		// notify peers of new chain!
+		// prepare data to be sent
 		const data = {
 			blocksCount: this.chain.length,
 			cumulativeDifficulty: this.cumulativeDifficulty,
 			nodeUrl: this.config.node.selfUrl,
 		};
 
-		this.peers.entries().map(([peerId, peerUrl]) => {
+		// notify peers of new chain!
+		const peerEntries = peers.entries();
+		for (const [peerId, peerUrl] of peerEntries) {
 			if (skipPeer !== null && skipPeer === peerUrl) {
 				console.log(`Skipping peer ${{ peerId, skipPeer }}`);
 				return;
 			}
 
-			console.log(`Checking Peer ${{ peerId, peerUrl }}`);
+			console.log(`-- Sending data to node: ${{ peerId, peerUrl }}`);
 
-			fetch(`${peerUrl}/peers/notify-new-block`, {
-				method: 'POST',
-				body: JSON.stringify(data),
-				headers: { 'Content-Type': 'application/json' },
-			})
-				.then((res) => {
-					// delete peers that don't respond
-					if (res.status !== 200) {
-						this.peers.delete(id);
-					}
-					return res.json();
-				})
-				.then((res) =>
-					console.log(
-						`-- peer ${peerId} (${peerUrl}) response:${res}`
-					)
-				)
-				.catch((err) =>
-					console.log(
-						`Error propagating block to Node ${peerId} (${peerUrl}): ${err.message}`
-					)
-				);
-		});
+			this.propagateInfo(
+				{
+					url: `${peerUrl}/peers/notify-new-block`,
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					data,
+				},
+				{ peerId, peerUrl }
+			);
+			// fetch(`${peerUrl}/peers/notify-new-block`, {
+			// 	method: 'POST',
+			// 	body: JSON.stringify(data),
+			// 	headers: { 'Content-Type': 'application/json' },
+			// })
+			// 	.then((res) => {
+			// 		// delete peers that don't respond
+			// 		if (res.status !== 200) {
+			// 			this.peers.delete(peerId);
+			// 		}
+			// 		return res.json();
+			// 	})
+			// 	.then((res) =>
+			// 		console.log(
+			// 			`-- peer ${peerId} (${peerUrl}) response:${res}`
+			// 		)
+			// 	)
+			// 	.catch((err) =>
+			// 		console.log(
+			// 			`Error propagating block to Node ${peerId} (${peerUrl}): ${err.message}`
+			// 		)
+			// 	);
+		}
 	}
 
 	// for propagating received transactions after they have been verified and added to the node
@@ -831,43 +848,85 @@ class Blockchain {
 		console.log(
 			`fn propagateTransaction: Attempting propagation to ${peers.size} peers...`
 		);
-		Promise.all(
-			peers.entries().map(([peerId, peerUrl]) => {
-				if (sender && peerUrl.includes(sender)) {
-					console.log(`--Skipping peer`, { sender, peerId, peerUrl });
-					return;
-				}
-				console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
-				return fetch(`${peerUrl}/transactions/send`, {
-					method: 'POST',
+		// Promise.all(
+
+		const peerEntries = peers.entries();
+		for (const [peerId, peerUrl] of peerEntries) {
+			if (sender && peerUrl.includes(sender)) {
+				console.log(`--Skipping peer`, { sender, peerId, peerUrl });
+				return;
+			}
+			console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+			this.propagateInfo(
+				{
+					url: `${peerUrl}/transactions/send`,
 					headers: {
 						'Content-Type': 'application/json',
 						'sending-node-url': this.config.selfUrl,
 					},
-					body: JSON.stringify(signedTransaction),
-				})
-					.then((res) => {
-						if (res.status !== 200 && res.status !== 400) {
-							// assuming no response, remove node
-							this.peers.delete(peerId);
-							console.log(
-								`-- deleting peer ${peerId} because of incorrect response`
-							);
-						}
-						return res.json();
-					})
-					.then((res) =>
-						console.log(
-							`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
-						)
-					)
-					.catch((err) =>
-						console.log(
-							`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`
-						)
+					data: signedTransaction,
+				},
+				{ peerId, peerUrl }
+			);
+
+			// fetch(`${peerUrl}/transactions/send`, {
+			// 	method: 'POST',
+			// 	headers: {
+			// 		'Content-Type': 'application/json',
+			// 		'sending-node-url': this.config.selfUrl,
+			// 	},
+			// 	body: JSON.stringify(signedTransaction),
+			// })
+			// 	.then((res) => {
+			// 		if (res.status !== 200 && res.status !== 400) {
+			// 			// assuming no response, remove node
+			// 			this.peers.delete(peerId);
+			// 			console.log(
+			// 				`-- deleting peer ${peerId} because of incorrect response`
+			// 			);
+			// 		}
+			// 		return res.json();
+			// 	})
+			// 	.then((res) =>
+			// 		console.log(
+			// 			`-- response from: Node ${peerId} (${peerUrl}) response:\n----${res}`
+			// 		)
+			// 	)
+			// 	.catch((err) =>
+			// 		console.log(
+			// 			`Error propagating transactions to Node ${peerId} (${peerUrl}): ${err.message}`
+			// 		)
+			// 	);
+		}
+	}
+	propagateInfo({ url, headers, data }, { peerId, peerUrl }) {
+		console.log(`-- sending to: Node ${peerId} (${peerUrl})`);
+
+		fetch(url, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify(data),
+		})
+			.then((res) => {
+				if (res.status !== 200 && res.status !== 400) {
+					// assuming no response, remove node
+					this.peers.delete(peerId);
+					console.log(
+						`-- deleting peer ${peerId} because of incorrect response`
 					);
+				}
+				return res.json();
 			})
-		);
+			.then((res) =>
+				console.log(
+					`-- response from: Node ${peerId} (${url}) response:\n----${res}`
+				)
+			)
+			.catch((err) =>
+				console.log(
+					`Error propagating to Node ${peerId} (${url}): ${err.message}`
+				)
+			);
 	}
 
 	isTheirChainBetter(theirCumulativeDifficulty) {
@@ -1210,7 +1269,7 @@ class Blockchain {
 
 		this.adjustDifficulty();
 
-		this.propagateBlock();
+		this.propagateBlock(this.peers);
 
 		return {
 			message: `Block accepted, reward paid: ${
