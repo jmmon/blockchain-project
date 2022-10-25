@@ -577,9 +577,9 @@ class Blockchain {
 	}
 	// connect peer if not connected
 	async connectAndSyncPeer(peerUrl, needToReciprocate) {
+		console.log('fn connectAndSyncPeer', { connectingTo: peerUrl });
 		// try to fetch info
 		const response = await fetch(`${peerUrl}/info`);
-		console.log('fn connectPeer', { connectingTo: peerUrl });
 		if (response.status !== 200) {
 			console.log(`-- fetch peer info`);
 			return {
