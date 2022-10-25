@@ -41,7 +41,7 @@ const typeCheck = ({ label, value, type }) => {
 const patternCheck = ({ label, value, pattern, expected, actual }) => {
 	const isValid = pattern.test(value);
 	if (!isValid) {
-		console.log('failed pattern.test(value)', { isValid });
+		// console.log('failed pattern.test(value)', { isValid });
 		return invalidStringGen({
 			label,
 			expected,
@@ -190,10 +190,10 @@ const validateData = (data) => {
 // i.e. blockDataHash, blockHash, prevBlockHash* (only basic), transactionDataHash
 const validateHash = (hash, label, length) => {
 	// type length pattern value
-	console.log(
-		{ hashLength: hash.length, type: typeof hash.length },
-		{ expectedLength: length, type: typeof length }
-	);
+	// console.log(
+	// 	{ hashLength: hash.length, type: typeof hash.length },
+	// 	{ expectedLength: length, type: typeof length }
+	// );
 
 	const results = [
 		typeCheck({
@@ -368,8 +368,8 @@ const validateBlockValues = (block, prevBlock) => {
 	field = 'transactions';
 	label = upperFirstLetter(field);
 	currentValue = block[field];
-	console.log({ transactions: currentValue });
-	console.log('keys:', Object.keys(currentValue));
+	// console.log({ transactions: currentValue });
+	// console.log('keys:', Object.keys(currentValue));
 	const transactionsTypeError = typeCheck({
 		label,
 		value: currentValue,

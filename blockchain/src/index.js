@@ -71,7 +71,7 @@ class Blockchain {
 		return 16 ** difficulty;
 	}
 
-	updateDifficulty() {
+	adjustDifficulty() {
 		if (this.config.difficulty.dynamic) {
 			const newDifficulty = this.darkGravityWave();
 
@@ -265,8 +265,6 @@ class Blockchain {
 			(txn) => !blockTxnDataHashes.includes(txn.transactionDataHash)
 		);
 
-		// const blockTxnHashes = block.transactions.map(txn => txn.transactionDataHash);
-		// const remainingTransactions = this.pendingTransactions.filter(txn => !blockTxnHashes.includes(txn.transactionDataHash));
 		console.log({
 			initialPendingCount,
 			blockTxnCount: block.transactions.length,
@@ -274,14 +272,12 @@ class Blockchain {
 		});
 
 		this.pendingTransactions = remainingTransactions;
-		// console.log({remainingTransactions: this.pendingTransactions})
 	}
 
 	// blocks
 	async createGenesisBlock() {
 		console.log('fn createGenesisBlock');
-		const coinbaseTransaction =
-			await this.createFaucetGenesisTransaction();
+		const coinbaseTransaction = await this.createFaucetGenesisTransaction();
 
 		const transactions = [coinbaseTransaction];
 		console.log('should be array with one object', { transactions });
@@ -292,14 +288,13 @@ class Blockchain {
 			0,
 			'1',
 			this.config.coinbase.address
-		)
+		);
 		genesisBlock.hashData();
-		
+
 		// next should "mine" the genesis block (hash it)
 		const genesisCandidate = genesisBlock.prepareMiningJobResponse(true);
-		const {nonce, dateCreated, blockHash} = this.mineGenesisBlock(
-			genesisCandidate
-		);
+		const { nonce, dateCreated, blockHash } =
+			this.mineGenesisBlock(genesisCandidate);
 
 		// then we can build our final block with all the info, and push it to the chain
 		genesisBlock.nonce = nonce;
@@ -759,7 +754,7 @@ class Blockchain {
 
 			// replace chain,
 			this.chain = theirChain;
-			this.updateDifficulty();
+			this.adjustDifficulty();
 
 			// clear mining jobs (they are invalid)
 			this.clearMiningJobs();
@@ -1138,7 +1133,7 @@ class Blockchain {
 			...pendingTransactions,
 		];
 
-		console.log('-- ', {shouldBeCoinbaseTx: allTransactions[0]});
+		console.log('-- ', { shouldBeCoinbaseTx: allTransactions[0] });
 
 		// STEP 3: build our data needed for blockDataHash;
 		const prevBlockHash = this.lastBlock().blockHash;
@@ -1151,21 +1146,12 @@ class Blockchain {
 		);
 		blockCandidate.hashData();
 
-
 		// STEP 5: prepare final response to send back to the miner
 		this.saveMiningJob(blockCandidate);
 		return blockCandidate.prepareMiningJobResponse();
-
 	}
 
-	// step 1: find block candidate by its blockDataHash
-	// step 2: verify hash and difficulty
-	// step 3: if valid, add the new info to the block
-	// step 4: check if block (index?) is not yet mined;
-	// if not, we add our new verified block and propagate it! (notify other nodes so they may request it?)
-	// if block is already mined, we were too slow so we return a sad error message!
-	// mining
-	validateMinedBlock({ blockDataHash, dateCreated, nonce, blockHash }) {
+	validateMinedBlock(minedBlockData) {
 		console.log(`fn validateMinedBlock`);
 		if (this.miningJobs.size === 0) {
 			return {
@@ -1174,36 +1160,50 @@ class Blockchain {
 			};
 		}
 
-		const foundBlockCandidate = this.miningJobs.get(blockDataHash) ?? null;
+		// STEP 1: find saved block candidate
+		const foundBlockCandidate =
+			this.miningJobs.get(minedBlockData.blockDataHash) ?? null;
 		if (!foundBlockCandidate) {
 			return { status: 400, message: 'Mining job missing!' };
 		}
 
-		const blockHashIsValid = this.isValidBlockHash(
+		const {
+			index,
+			transactions,
+			difficulty,
+			prevBlockHash,
+			minedBy,
 			blockDataHash,
-			dateCreated,
-			nonce,
-			foundBlockCandidate.difficulty,
-			blockHash
+		} = foundBlockCandidate;
+
+		// STEP 2: build block from data
+		const completeBlock = new Block(
+			index,
+			transactions,
+			difficulty,
+			prevBlockHash,
+			minedBy,
+			blockDataHash,
+			minedBlockData.nonce,
+			minedBlockData.dateCreated,
+			minedBlockData.blockHash
 		);
+
+		// STEP 3: check if block hash is valid
+		const blockHashIsValid = completeBlock.hasValidProof();
 		if (!blockHashIsValid) {
 			return { status: 400, message: 'Block hash is not valid!' };
 		}
 
-		const completeBlock = {
-			...foundBlockCandidate,
-			nonce,
-			dateCreated,
-			blockHash,
-		};
-
-		if (completeBlock.index < this.chain.length) {
+		// STEP 3.B: make sure index is correct
+		if (completeBlock.index !== this.chain.length) {
 			return {
 				errorMsg: `Block not found or already mined`,
 				message: `...Too slow! Block not accepted. Better luck next time!`,
 				status: 404,
 			};
 		}
+
 		return {
 			status: 200,
 			message: 'Block is valid!',
@@ -1221,7 +1221,7 @@ class Blockchain {
 		this.cumulateDifficultyFromLastBlock();
 		this.clearMiningJobs();
 
-		this.updateDifficulty();
+		this.adjustDifficulty();
 
 		this.propagateBlock();
 
@@ -1452,7 +1452,7 @@ async function executeIncomingChain(chain) {
 			instance.difficulty = incomingBlock.difficulty;
 
 			// STEP 1: validate block
-			const { valid, errors, } = await instance.validateBlock(
+			const { valid, errors } = await instance.validateBlock(
 				incomingBlock,
 				previousBlock
 			);
@@ -1498,7 +1498,9 @@ async function executeIncomingChain(chain) {
 			);
 			console.log({
 				allTransactions,
-				is0Coinbase: allTransactions[0].from === instance.config.coinbase.address
+				is0Coinbase:
+					allTransactions[0].from ===
+					instance.config.coinbase.address,
 			});
 
 			const coinbaseTx = instance.findCoinbaseTransaction(
@@ -1522,8 +1524,8 @@ async function executeIncomingChain(chain) {
 				'', // blockDataHash
 				incomingBlock.nonce,
 				incomingBlock.dateCreated,
-				''	// blockHash
-			)
+				'' // blockHash
+			);
 			blockCandidate.hashData();
 
 			// logging...
@@ -1551,7 +1553,10 @@ async function executeIncomingChain(chain) {
 			const theirBlockHash = SHA256(
 				`${incomingBlock.blockDataHash}|${incomingBlock.dateCreated}|${incomingBlock.nonce}`
 			);
-			console.log({ theirs: incomingBlock.blockHash, ours: blockCandidate.blockHash });
+			console.log({
+				theirs: incomingBlock.blockHash,
+				ours: blockCandidate.blockHash,
+			});
 
 			if (!blockHashIsValid) {
 				throw new Error(`Calculated blockHash is not valid!`);
@@ -1572,7 +1577,6 @@ async function executeIncomingChain(chain) {
 			cumulativeDifficulty: instance.cumulativeDifficulty,
 			errors: null,
 		};
-
 	} catch (error) {
 		// if something fails during the chain execution, return false
 		return { valid: false, cumulativeDifficulty: null, error: error };
