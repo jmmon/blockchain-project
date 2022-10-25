@@ -511,9 +511,9 @@ class Blockchain {
 		console.log('fn getConfirmedTransactions');
 		let transactions = [];
 		for (const block of this.chain) {
-			console.log('for', { block }, 'searching transactions:', {
-				transactions: block.transactions,
-			});
+			// console.log('for', { block }, 'searching transactions:', {
+			// 	transactions: block.transactions,
+			// });
 			if (block.transactions)
 				if (!address) {
 					for (const transaction of block.transactions) {
@@ -531,26 +531,6 @@ class Blockchain {
 					];
 				}
 		}
-		// if (!address) {
-		// 	for (const block of this.chain) {
-		// 		for (const transaction of block.transactions) {
-		// 			transactions.push(transaction);
-		// 		}
-		// 	}
-		// } else {
-		// 	for (const block of this.chain) {
-		// 		console.log('for', {block}, 'transactions:', {transactions: block.transactions})
-		// 		transactions = [
-		// 			...transactions, // keep previous ones
-		// 			...block.transactions.filter(
-		// 				(transaction) =>
-		// 					transaction?.to === address ||
-		// 					transaction?.from === address
-		// 			), // add new ones
-		// 		];
-		// 	}
-		// }
-
 		return transactions; // returns empty array if none found
 	}
 
@@ -576,9 +556,9 @@ class Blockchain {
 		return this.config.chainId !== theirId;
 	}
 	// connect peer if not connected
-	async connectAndSyncPeer(peerUrl, needToReciprocate) {
+	async connectAndSyncPeer(peerUrl, cameFromNode) {
 		console.log('fn connectAndSyncPeer', { connectingTo: peerUrl });
-		// try to fetch info
+		// STEP 1: try to fetch info from target node
 		const response = await fetch(`${peerUrl}/info`);
 		if (response.status !== 200) {
 			console.log(`-- fetch peer info`);
@@ -592,9 +572,10 @@ class Blockchain {
 		const peerNodeId = peerInfo.nodeId;
 		console.log(`-- fetched info from peer node:`, { peerInfo });
 
-		// check chainId
+		// STEP 2: validate the node is the same chain
 		if (this.isDifferentChain(peerInfo.chainId)) {
 			console.log('-- Other node is not on same chain');
+
 			return {
 				status: 400,
 				errorMsg: `Chain ID does not match!`,
@@ -603,8 +584,8 @@ class Blockchain {
 			};
 		}
 
-		// if nodeId is already connected, don't try to connect again
-		if (!needToReciprocate || this.peers.get(peerNodeId)) {
+		// STEP 3: skip if already a peer. Otherwise, add peer, and if request came from a node, do not tell it to friend us back (because the node should already have us added)
+		if (this.peers.get(peerNodeId)) {
 			console.log(`-- check nodeId`, {
 				status: 409,
 				errorMsg: `Already connected to peer ${peerUrl}`,
@@ -612,18 +593,21 @@ class Blockchain {
 		} else {
 			// same chain, node added
 			this.peers.set(peerNodeId, peerUrl);
-			console.log(`-- added peer:`, { peerNodeId, peerUrl });
+			console.log(`-- added peer:`, {peers: [...this.peers.entries()]});
 			// Send connect request to the new peer to ensure bi-directional connection
-			tellPeerToFriendUsBack(peerUrl);
+			if (!cameFromNode) {
+				this.tellPeerToFriendUsBack(peerUrl);
+			}
 		}
 
 		//synchronize chain AND pending transactions
 
+		// STEP 4: If their chain is better, check their chain!
 		if (this.isTheirChainBetter(peerInfo.cumulativeDifficulty)) {
-			console.log('-- is their chain better? YES', { peerInfo });
+			console.log('-- is their chain better? YES', { cumulativeDifficulty: peerInfo.cumulativeDifficulty });
 			this.checkChainFromPeer(peerUrl);
 		} else {
-			console.log('-- is their chain better? NO', { peerInfo });
+			console.log('-- is their chain better? NO', { cumulativeDifficulty: peerInfo.cumulativeDifficulty });
 		}
 
 		console.log(` END fn connectPeer`);
@@ -634,26 +618,30 @@ class Blockchain {
 	}
 
 	// tell them to add us
-	async tellPeerToFriendUsBack(peerUrl) {
+	tellPeerToFriendUsBack(peerUrl) {
 		console.log(`-- tellPeerToFriendUsBack ( ${peerUrl} )`);
-		try {
-			const response = await (
-				await fetch(`${peerUrl}/peers/connect`, {
-					method: 'POST',
-					body: JSON.stringify({
-						peerUrl: this.config.node.selfUrl,
-					}),
-					headers: {
-						'Content-Type': 'application/json',
-						'need-to-reciprocate': 'false',
-					},
-				})
-			).json();
-			console.log(`-- friend's response:`, { response });
-			return response;
-		} catch (err) {
-			console.log('Error friending back the peer!', err.message);
-		}
+		fetch(`${peerUrl}/peers/connect`, {
+			method: 'POST',
+			body: JSON.stringify({
+				peerUrl: this.config.node.selfUrl,
+			}),
+			headers: {
+				'Content-Type': 'application/json',
+				'from-node': 'true',
+			},
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				console.log(`-- friend's response:`, {
+					responseFromNode: data,
+				});
+			})
+			.catch((err) => {
+				console.log(
+					`Error friending back peer @ ${peerUrl}! :`,
+					err.message
+				);
+			});
 	}
 
 	// transactionsWeHaveNotSeen
@@ -712,8 +700,8 @@ class Blockchain {
 	// async historyFrom(peerUrl) {
 	async checkChainFromPeer(peerUrl) {
 		console.log(`-- fn checkChainFromPeer`);
-		// let theirChain, theirPending;
-		console.log({ peerUrl });
+
+		// STEP 1: fetch blocks and pending transactions
 		const theirChain = await fetch(`${peerUrl}/blocks`).then(
 			async (res) => await res.json()
 		);
@@ -721,7 +709,6 @@ class Blockchain {
 			`${peerUrl}/transactions/pending`
 		).then(async (res) => await res.json());
 
-		// async validateChain(theirChain, peerUrl) {
 		console.log('-- Validating chain');
 		try {
 			// execute the whole chain in a new blockchain
@@ -790,7 +777,7 @@ class Blockchain {
 
 	// should be run any time the chain changes (when a block is mined)
 	propagateBlock(skipPeer = null) {
-		console.log(`fn propagateBlock`, { peers: this.peers });
+		console.log(`fn propagateBlock`, { peers: [...this.peers.entries()] });
 
 		if (this.peers.size === 0) return;
 
@@ -1133,7 +1120,7 @@ class Blockchain {
 			...pendingTransactions,
 		];
 
-		console.log('-- ', { shouldBeCoinbaseTx: allTransactions[0] });
+		// console.log('-- ', { shouldBeCoinbaseTx: allTransactions[0] });
 
 		// STEP 3: build our data needed for blockDataHash;
 		const prevBlockHash = this.lastBlock().blockHash;
@@ -1436,7 +1423,11 @@ class Blockchain {
 // 1. "Mine the block" or fake-mine the block. Need to basically calculate and check the hashes to make sure the nonce results in the difficulty.
 
 async function executeIncomingChain(chain) {
-	console.log(`fn executeIncomingChain`, { incomingChain: chain });
+	console.log(`fn executeIncomingChain`);
+	const counter = {
+		incoming: { blocks: 1, transactions: 1 },
+		ours: { blocks: 1, transactions: 1 },
+	};
 
 	// create new chain (and creates the matching genesis block)
 	let instance = new Blockchain({ defaultServerPort: 5554, ...CONFIG });
@@ -1447,6 +1438,7 @@ async function executeIncomingChain(chain) {
 		let blockIndex = 1;
 
 		while (blockIndex < chain.length) {
+			counter.incoming.blocks++;
 			const previousBlock = chain[blockIndex - 1];
 			const incomingBlock = chain[blockIndex];
 			instance.difficulty = incomingBlock.difficulty;
@@ -1468,6 +1460,7 @@ async function executeIncomingChain(chain) {
 			// STEP 2: validate these transactions, add them to pending
 			let txIndex = 0;
 			while (txIndex < incomingBlock.transactions.length) {
+				counter.incoming.transactions++;
 				const thisTransaction = incomingBlock.transactions[txIndex];
 				const {
 					valid,
@@ -1486,6 +1479,7 @@ async function executeIncomingChain(chain) {
 					);
 
 				txIndex++;
+				counter.ours.transactions++;
 			}
 
 			// STEP 2.B. collect all transactions, and identify coinbase tx
@@ -1568,7 +1562,18 @@ async function executeIncomingChain(chain) {
 			instance.cumulateDifficultyFromLastBlock();
 
 			blockIndex++;
+			counter.ours.blocks++;
 		}
+		console.log('-- Done executing chain:', {
+			incomingChain: {
+				blocks: counter.incoming.blocks,
+				transactions: counter.incoming.transactions,
+			},
+			ours: {
+				blocks: counter.ours.blocks,
+				transactions: counter.ours.transactions,
+			},
+		});
 
 		// after all validation
 		// Time to compare cumulative difficulties!

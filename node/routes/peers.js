@@ -12,7 +12,7 @@ router.get('/', (req, res) => {
 router.post('/connect', async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { peerUrl } = req.body;
-	const needToReciprocate = req.get('need-to-reciprocate');
+	const cameFromNode = req.get('from-node');
 	// takes peerUrl and adds it to our list of nodes
 	if (!peerUrl || peerUrl === null) {
 		return res.status(404).send('Error: Missing Peer Node URL');
@@ -20,17 +20,24 @@ router.post('/connect', async (req, res) => {
 
 	const response = await blockchain.connectAndSyncPeer(
 		peerUrl,
-		needToReciprocate
+		cameFromNode
 	); // add it to the list
 
 	return res.status(response.status).send(JSON.stringify(response));
 });
 /* 
 Connecting peers:
-When #1 is told to connect to #2, it should connect and then fetch the blockchain if it is better
-It should also tell node #2 to connect to #1, with a {need-to-reciprocate: false} header
+When #1 is told to connect to #2,
+	It needs to get info, check that chain is the same,
+Then it should tell the node to connect back to us (and tell the node it came from us, so it can skip asking us to add it back)
+Then it should ask for new chain
+	 it should connect and then fetch the blockchain if it is better
+
+
+
+It should also tell node #2 to connect to #1, with a {header} header
 Node #2 then connects to #1 and then fetches the blockchain if it is better.
-Then since it received need-to-reciprocate: false, it should not tell node #1 to connect to #2
+Then since it received {header}, it should not tell node #1 to connect to #2
 */
 
 router.post('/notify-new-block', (req, res) => {
