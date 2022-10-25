@@ -1,5 +1,6 @@
-import { component$ } from '@builder.io/qwik';
+import { component$, useServerMount$, useStore } from '@builder.io/qwik';
 import { Link, useLocation } from '@builder.io/qwik-city';
+import fromBuffer from '~/libs/fromBuffer';
 
 export default component$(
 	({
@@ -13,6 +14,13 @@ export default component$(
 	}) => {
 		const { pathname } = useLocation();
 
+		const store = useStore({
+			txDataHash: '',
+		});
+
+		useServerMount$(async () => {
+			store.txDataHash = await fromBuffer(transaction.transactionDataHash)
+		})
 		const paths = pathname.split('/');
 		console.log({ paths });
 		const isTransactionsPath =
@@ -52,16 +60,13 @@ export default component$(
 						);
 					}
 					if (txKey === 'transactionDataHash') {
+						const path = isTransactionsPath
+							? '#'
+							: `/transactions/${store.txDataHash}`;
 						return (
 							<li class="ml-4">
-								<Link
-									href={
-										isTransactionsPath
-											? '#'
-											: `/transactions/${transaction[txKey]}`
-									}
-								>
-									{txKey}: {transaction[txKey]}
+								<Link href={path}>
+									{txKey}: {store.txDataHash}
 								</Link>
 								,
 							</li>

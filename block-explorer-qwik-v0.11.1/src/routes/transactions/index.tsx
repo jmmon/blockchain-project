@@ -6,8 +6,8 @@ export default component$(() => {
 		<div>
 			<h1>Transactions</h1>
 			<div class="ml-4 mt-4 flex flex-col">
-				<Link href="/transactions/pending">Pending Transactions</Link>
-				<Link href="/transactions/confirmed">Confirmed Transactions</Link>
+				<a href="/transactions/pending">Pending Transactions</a>
+				<a href="/transactions/confirmed">Confirmed Transactions</a>
 			</div>
 		</div>
 	);

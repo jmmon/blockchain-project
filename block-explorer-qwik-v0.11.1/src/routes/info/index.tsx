@@ -74,14 +74,14 @@ export default component$(() => {
 													</Link>
 												) : key ===
 												  'pendingTransactions' ? (
-													<Link href="/transactions/pending">
+													<a href="/transactions/pending">
 														{data}
-													</Link>
+													</a>
 												) : key ===
 												  'confirmedTransactions' ? (
-													<Link href="/transactions/confirmed">
+													<a href="/transactions/confirmed">
 														{data}
-													</Link>
+													</a>
 												) : (
 													<>{data}</>
 												)}
