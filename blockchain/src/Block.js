@@ -34,7 +34,10 @@ class Block {
 		difficulty,
 		prevBlockHash,
 		minedBy,
-		blockDataHash = ''
+		blockDataHash = '',
+		nonce = undefined,
+		dateCreated = undefined,
+		blockHash = undefined
 	) {
 		// constructor(
 		// 	index: number,
@@ -56,9 +59,9 @@ class Block {
 		this.minedBy = minedBy;
 		this.blockDataHash = blockDataHash;
 
-		this.nonce = undefined;
-		this.dateCreated = undefined;
-		this.blockHash = undefined;
+		this.nonce = nonce;
+		this.dateCreated = dateCreated;
+		this.blockHash = blockHash;
 	}
 
 	// What can block do?
@@ -72,8 +75,9 @@ class Block {
 		return this.blockHash;
 	}
 
-	coinbaseTransaction = () =>
-		this.transactions.filter((txn) => txn.data !== 'coinbase tx')[0];
+	coinbaseTransaction() {
+		return this.transactions.filter((txn) => txn.data === 'coinbase tx')[0];
+	}
 
 	hashData() {
 		this.blockDataHash = SHA256(this.dataForHashing());
@@ -97,6 +101,7 @@ class Block {
 					to: null,
 			  }
 			: this.coinbaseTransaction();
+		console.log({ coinbaseTx });
 		return {
 			index: this.index,
 			transactionsIncluded: this.transactions.length,
@@ -108,6 +113,10 @@ class Block {
 	}
 
 	hasValidProof(difficulty = this.difficulty) {
+		if (this.blockHash)
+			return (
+				this.blockHash.slice(0, difficulty) === '0'.repeat(difficulty)
+			);
 		return this.hash().slice(0, difficulty) === '0'.repeat(difficulty);
 	}
 }

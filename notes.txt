@@ -143,3 +143,28 @@ Data propagation:
 	Transactions should propagate to connected nodes
 
 	new blocks should trigger communication between nodes so they can fetch the block
+
+
+
+
+
+
+
+
+
+
+
+Other TODOs:
+
+	Faucet captcha?
+
+	Change wording from coins to microcoins? (faucet, balances, wallet, more?)
+
+	Add links from faucet to block explorer (address, transactionDataHash)
+
+	Clean up block explorer (list style type)
+
+	Add block explorer search bar?
+
+	segregate logic: node, transaction, block, blockchain
+
