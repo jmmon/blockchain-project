@@ -1,29 +1,36 @@
 const express = require('express');
-const crypto = require('node:crypto');
 const cors = require('cors');
-const { SHA256 } = require( '../blockchain/src/hashing.js' );
+const { SHA256 } = require('../libs/hashing.js');
 
 (async function () {
 	const { Blockchain } = require('../blockchain/src/index.js');
 
 	const blockchain = new Blockchain();
+	await blockchain.createGenesisBlock();
 
-	const port = +( process.argv[2] ?? blockchain.config.defaultServerPort);
+	const port = +(process.argv[2] ?? blockchain.config.defaultServerPort);
 	const host = blockchain.config.defaultServerHost;
-	const selfUrl =  `http://${host}:${port}`;
+	const url = `http://${host}:${port}`;
+	const selfUrl = url;
 
 	// const randomNodeId = crypto.randomUUID().replaceAll('-', '');
 	const stableNodeId = SHA256(selfUrl).slice(0, 20);
-	const nodeIdentifier = stableNodeId;
+	const nodeId = stableNodeId;
 
-	const nodeInfo = {
-		nodeId: nodeIdentifier,
+	const about = `Kingsland Blockchain Node ${nodeId.slice(0, 8)}`;
+
+	// const blockchain = new Blockchain();
+	// await blockchain.createGenesisBlock();
+	// const node = new Node({host: someHost, port: somePort, blockchain});
+	const node = {
+		nodeId,
 		host,
 		port,
 		selfUrl,
-		about: `Kingsland Blockchain Node ${nodeIdentifier.slice(0, 8)}`,
+		about,
 	};
-	blockchain.config.nodeInfo = nodeInfo;
+
+	blockchain.config.node = node;
 
 	console.log(blockchain);
 
@@ -32,8 +39,7 @@ const { SHA256 } = require( '../blockchain/src/hashing.js' );
 	app.use(express.json());
 
 	app.set('blockchain', blockchain);
-	app.set('nodeInfo', nodeInfo);
-
+	app.set('node', node);
 
 	/* 
 NODE:
@@ -66,10 +72,10 @@ POST {
 
 	app.get('/info', (req, res) => {
 		const data = {
-			about: nodeInfo.about,
-			nodeId: nodeInfo.nodeId,
+			about: node.about,
+			nodeId: node.nodeId,
 			chainId: blockchain.config.genesisBlock.blockHash,
-			nodeUrl: nodeInfo.selfUrl,
+			nodeUrl: node.selfUrl,
 			peers: blockchain.peers.size,
 			currentDifficulty: blockchain.difficulty,
 			blocksCount: blockchain.chain.length,
@@ -81,7 +87,7 @@ POST {
 		console.log('(get info called)');
 		res.status(200).send(JSON.stringify(data));
 	});
-	
+
 	// return ALL balances in the network
 	//non-zero + confirmed (in blocks)
 	app.get('/balances', (req, res) => {
@@ -92,25 +98,23 @@ POST {
 	});
 
 	const getDateString = () => {
-		let date = Date().toString().split(' ').slice(0,5).join(' ');
+		let date = Date().toString().split(' ').slice(0, 5).join(' ');
 		let front = true;
 		while (date.length < 34) {
-			date = (front)? ' ' + date : date + ' ';
+			date = front ? ' ' + date : date + ' ';
 			front = !front;
 		}
 		return date;
-	}
+	};
 
-	app.listen(nodeInfo.port, () => {
+	app.listen(node.port, () => {
 		console.log(
-			`****************************************\n~~~                                  ~~~\n~~~   node listening on port: ${nodeInfo.port}   ~~~\n~~~                                  ~~~\n~~~${getDateString()}~~~\n~~~                                  ~~~\n****************************************\n`
+			`****************************************\n~~~                                  ~~~\n~~~   node listening on port: ${
+				node.port
+			}   ~~~\n~~~                                  ~~~\n~~~${getDateString()}~~~\n~~~                                  ~~~\n****************************************\n`
 		);
 	});
 })();
-
-
-
-
 
 // connecting a peer:
 /*

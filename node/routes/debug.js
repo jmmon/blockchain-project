@@ -6,13 +6,13 @@ const router = express.Router();
 
 router.get("/", (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	const nodeInfo = req.app.get('nodeInfo');
+	const node = req.app.get('node');
 
-	const node = {
-		nodeId: nodeInfo.nodeId,
-		host: nodeInfo.host,
-		port: nodeInfo.port,
-		selfUrl: nodeInfo.selfUrl,
+	const nodeInfo = {
+		nodeId: node.nodeId,
+		host: node.host,
+		port: node.port,
+		selfUrl: node.selfUrl,
 		peers: blockchain.peers(),
 		chain: blockchain.chain,
 		chainId: blockchain.config.genesisBlock.blockHash,
@@ -31,7 +31,7 @@ router.get("/", (req, res) => {
 	const confirmedBalances = blockchain.allConfirmedAccountBalances();
 
 	const debugInfo = {
-		node,
+		node: nodeInfo,
 		config: blockchain.config,
 		confirmedBalances
 	};
