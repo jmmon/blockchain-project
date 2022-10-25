@@ -47,10 +47,9 @@ router.post('/notify-new-block', (req, res) => {
 
 	blockchain.handleIncomingBlock(data);
 
-	const response = {
+	res.status(200).send(JSON.stringify({
 		message: `Thank you for the notification.`,
-	};
-	res.status(200).send(JSON.stringify(response));
+	}));
 });
 
 module.exports = router;
