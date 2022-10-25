@@ -50,9 +50,13 @@ const newWorkerPromise = (index) =>
 		});
 	});
 
-const mineMany = async (newJob) => {
+const mineMany = async ({ blockDataHash, difficulty, index }) => {
 	workers.splice(0, workers.length); // clear all workers
-	setEnvironmentData('newJob', newJob);
+	setEnvironmentData('newJob', {
+		blockDataHash,
+		difficulty,
+		index,
+	});
 
 	process.stdout.write('Starting workers ');
 
@@ -67,7 +71,6 @@ const mineMany = async (newJob) => {
 		`. . . ${i} Worker threads Started:`
 		// , JSON.stringify(workers)
 	);
-
 	process.stdout.write('Mining . . . \033[0G');
 
 	return await Promise.race(workerPromiseArray).then(
@@ -117,7 +120,7 @@ const run = async () => {
 			console.log('Error fetching block candidate:', err.message);
 
 			if (timer) clearTimeout(timer);
-			timer = setTimeout( run, 5000);
+			timer = setTimeout(run, 5000);
 
 			console.log('Retrying in 5 seconds...');
 			return;

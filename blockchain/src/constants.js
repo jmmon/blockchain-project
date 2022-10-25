@@ -1,6 +1,5 @@
 const CONFIG = {
-	defaultServerHost: 'localhost',
-	defaultServerPort: 5555,
+	// blockchain
 	difficulty: {
 		dynamic: false,
 		starting: 4,
@@ -9,16 +8,6 @@ const CONFIG = {
 		targetBlockSeconds: 4,
 		averageOverBlocks: 96,
 		adjustmentRatio: 3,
-	},
-	faucet: {
-		mnemonic: 'flame renew maze sun piano sentence poet metal text name toast situate',
-		privateKey:
-			'1516726651051106b89d093cca3e887303610ac491b6c9a19a70fe5329fe57ab',
-		publicKey:
-			'cfe8495e9e582ec5c834bfd37e5f1ebc1559440558c74068513da1a64ff377b30',
-		address: '00a5d9bf2555dfffc45f64386d612b46fce92dea',
-		valueToGenerate: 1000000000000, // 1,000,000,000,000
-		valuePerTransaction: 1000000,
 	},
 	coinbase: {
 		blockReward: 5000000,
@@ -37,8 +26,26 @@ const CONFIG = {
 	},
 	genesisBlock: {},
 	CHAIN_BIRTHDAY: new Date(2021, 9, 15).toISOString(),
+
+	// blockchain??
+	faucet: {
+		mnemonic: 'flame renew maze sun piano sentence poet metal text name toast situate',
+		privateKey:
+			'1516726651051106b89d093cca3e887303610ac491b6c9a19a70fe5329fe57ab',
+		publicKey:
+			'cfe8495e9e582ec5c834bfd37e5f1ebc1559440558c74068513da1a64ff377b30',
+		address: '00a5d9bf2555dfffc45f64386d612b46fce92dea',
+		valueToGenerate: 1000000000000, // 1,000,000,000,000
+		valuePerTransaction: 1000000,
+	},
+
+	//blockchain and node??
 	chainId: '',
-	nodeInfo: {
+
+	// node
+	defaultServerHost: 'localhost',
+	defaultServerPort: 5555,
+	node: {
 				nodeId: '',
 		host: '',
 		port: 0,

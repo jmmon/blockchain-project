@@ -3,11 +3,11 @@ const router = express.Router();
 
 // prepare block candidate and send to miner
 // (miner then finds nonce and sends it back)
-router.get('/get-mining-job/:address', (req, res) => {
+router.get('/get-mining-job/:minerAddress', async (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	const { address: minerAddress } = req.params;
+	const { minerAddress } = req.params;
 
-	const blockCandidate = blockchain.prepareBlockCandidate(minerAddress);
+	const blockCandidate = await blockchain.prepareBlockCandidate(minerAddress);
 
 	res.status(200).send(JSON.stringify(blockCandidate));
 });

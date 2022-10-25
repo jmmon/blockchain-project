@@ -6,6 +6,8 @@
 // 	minedBy: string;
 // 	blockDataHash: string;
 
+const { SHA256 } = require('../../libs/hashing.js');
+
 const walletUtils = import('../../walletUtils/index.js');
 
 // 	nonce: number | undefined;
@@ -32,7 +34,7 @@ class Block {
 		difficulty,
 		prevBlockHash,
 		minedBy,
-		blockDataHash
+		blockDataHash = ''
 	) {
 		// constructor(
 		// 	index: number,
@@ -63,12 +65,19 @@ class Block {
 	/* 
 		Validate itself?
 	*/
-	hashMe() {
-		return walletUtils.sha256Hash(this);
+	hash() {
+		this.blockHash = SHA256(
+			`${this.blockDataHash}|${this.dateCreated}|${this.nonce}`
+		);
+		return this.blockHash;
 	}
 
-	dataHash() {
-		return walletUtils.sha256Hash(this.dataForHashing());
+	coinbaseTransaction = () =>
+		this.transactions.filter((txn) => txn.data !== 'coinbase tx')[0];
+
+	hashData() {
+		this.blockDataHash = SHA256(this.dataForHashing());
+		return this.blockDataHash;
 	}
 
 	dataForHashing() {
@@ -81,10 +90,26 @@ class Block {
 		};
 	}
 
-	hasValidProof(difficulty = this.difficulty) {
-		return  this.hashMe().slice(0, difficulty) === '0'.repeat(difficulty);
+	prepareMiningJobResponse(genesis = false) {
+		const coinbaseTx = genesis
+			? {
+					value: 0,
+					to: null,
+			  }
+			: this.coinbaseTransaction();
+		return {
+			index: this.index,
+			transactionsIncluded: this.transactions.length,
+			difficulty: this.difficulty,
+			expectedReward: coinbaseTx.value,
+			rewardAddress: coinbaseTx.to,
+			blockDataHash: this.blockDataHash,
+		};
 	}
 
+	hasValidProof(difficulty = this.difficulty) {
+		return this.hash().slice(0, difficulty) === '0'.repeat(difficulty);
+	}
 }
 
 module.exports = Block;

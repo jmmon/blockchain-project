@@ -1,4 +1,4 @@
-const { trimAndSha256Hash } = require( './hashing.js' );
+const { trimAndSha256Hash } = require( '../../libs/hashing.js' );
 
 // export interface ITransaction {
 // 		from: string;

@@ -3,49 +3,36 @@ const {
 	parentPort,
 	getEnvironmentData,
 } = require('node:worker_threads');
-const { SHA256 } = require('../blockchain/src/hashing.js');
+const { SHA256, isValidProof } = require('../libs/hashing.js');
 
-const isValidProof = (hash, difficulty) => {
-	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
-};
-
-const {
-	blockDataHash,
-	difficulty,
-	index: blockIndex,
-} = getEnvironmentData('newJob');
-
-let nonce = 0;
+const { blockDataHash, difficulty, index } = getEnvironmentData('newJob');
 
 process.stdout.write('(' + workerIndex + ') ');
+// process.stdout.write("Mining . . . " + nonce + " \033[0G");
 
-while (true) {
-	const dateCreated = new Date().toISOString();
-	const blockHash = SHA256(`${blockDataHash}|${dateCreated}|${nonce}`);
-	// process.stdout.write("Mining . . . " + nonce + " \033[0G");
+let nonce = 0;
+let dateCreated = new Date().toISOString();
+let blockHash = SHA256(`${blockDataHash}|${dateCreated}|${nonce}`);
 
-	if (isValidProof(blockHash, difficulty)) {
-		const workerInfo = {
-			workerIndex,
-			pid: process.pid,
-			hashedBlockCandidate: {
-				blockDataHash,
-				dateCreated,
-				nonce,
-				blockHash,
-			},
-		};
+while (!isValidProof(blockHash, difficulty)) {
+	nonce++; // increment for next loop!
+	dateCreated = new Date().toISOString();
+	blockHash = SHA256(`${blockDataHash}|${dateCreated}|${nonce}`);
 
-		parentPort.postMessage(workerInfo);
-		break;
-	}
-	
 	// loading indicator
-	// const occurrence = Math.round(16 ** difficulty / 100);
 	const occurrence = Math.round(16 ** difficulty);
 	if (nonce % occurrence == 0) {
 		process.stdout.write('. ');
 	}
-
-	nonce++; // increment for next loop!
 }
+
+parentPort.postMessage({
+	workerIndex,
+	pid: process.pid,
+	hashedBlockCandidate: {
+		blockDataHash,
+		dateCreated,
+		nonce,
+		blockHash,
+	},
+});

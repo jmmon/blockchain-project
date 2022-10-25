@@ -29,7 +29,7 @@ const removeSpaces = (obj) => {
 
 const trimAndSha256Hash = (obj) => Buffer.from(SHA256(removeSpaces(obj)));
 
-const isValidProof = (_hash, difficulty = 1) => {
+const isValidProof = (_hash, difficulty = 0) => {
 	return _hash.slice(0, difficulty) === '0'.repeat(difficulty);
 };
 module.exports = { SHA256, trimAndSha256Hash, isValidProof };
