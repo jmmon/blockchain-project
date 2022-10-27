@@ -22,19 +22,9 @@ const compressThisPubKey = (compactPubKey) =>
 
 // convert our ...1 or ...0 address into address with 03... or 02... (prepended to front):
 const decompressThisPubKey = (compressedPubKey) =>
-	(compressedPubKey.slice(-1) % 2 === 0 ? '02' : '03').concat(
-		compressedPubKey.slice(0, -1)
-	);
+	(compressedPubKey.slice(-1) % 2 === 0 ? '02' : '03').concat(compressedPubKey.slice(0, -1));
 
-const removeSpaces = ({
-	from,
-	to,
-	value,
-	fee,
-	dateCreated,
-	data,
-	senderPubKey,
-}) => {
+const removeSpaces = ({ from, to, value, fee, dateCreated, data, senderPubKey }) => {
 	// escape spaces in data field
 	data = data.replaceAll(/\s/gm, ' ');
 
@@ -62,8 +52,7 @@ const hashTransaction = (tx) =>
 const addressFromCompressedPubKey = (compressedPubKey) =>
 	crypto.createHash('ripemd160').update(compressedPubKey).digest('hex');
 
-const padBuffer = (string, bytes = 32) =>
-	Buffer.concat([Buffer.from(string)], bytes);
+const padBuffer = (string, bytes = 32) => Buffer.concat([Buffer.from(string)], bytes);
 
 const encrypt = (toEncrypt, passphrase) => {
 	const IV = crypto.randomBytes(16);
@@ -123,10 +112,7 @@ const deriveKeysFromMnemonic = async (mnemonic) => {
 
 	const hexPublicKeyCompressed = compressThisPubKey(hexPublicKeyCompact);
 	const testingDecompress = decompressThisPubKey(hexPublicKeyCompressed);
-	console.log(
-		'compress and decompress works?',
-		hexPublicKeyCompact === testingDecompress
-	);
+	console.log('compress and decompress works?', hexPublicKeyCompact === testingDecompress);
 
 	const hexAddress = addressFromCompressedPubKey(hexPublicKeyCompressed);
 
@@ -149,16 +135,11 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 	console.log({ privateKey, txDataHashBuffer });
 	try {
 		const splitSignature = (signature) => {
-			return [
-				signature.toString('hex').slice(0, 64),
-				signature.toString('hex').slice(64),
-			];
+			return [signature.toString('hex').slice(0, 64), signature.toString('hex').slice(64)];
 		};
 
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const signature = Buffer.from(
-			ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray)
-		);
+		const signature = Buffer.from(ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray));
 		const [r, s] = splitSignature(signature);
 
 		return { data: [r, s], error: null };
@@ -188,13 +169,7 @@ const deriveKeysIfWallet = async (walletOrKeys, password) => {
 	return await deriveKeysFromMnemonic(data);
 };
 
-const decryptAndSign = async (
-	walletOrKeys,
-	recipient,
-	value,
-	password = ''
-) => {
-
+const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => {
 	const keys = await deriveKeysIfWallet(walletOrKeys, password);
 
 	// prepare and hash our transaction data
@@ -268,23 +243,22 @@ const fetchAddressBalance = async (nodeUrl, address) => {
 };
 
 const verifySignature = (txDataHash, publicKey, signature) => {
-	// h == txDataHash
-	// Q == their public key?
-	console.log('walletUtils - verifySignature:', {
-		txDataHash,
-		publicKey,
-		signature,
-	});
+	// console.log('walletUtils - verifySignature:', {
+	// 	txDataHash,
+	// 	publicKey,
+	// 	signature,
+	// });
 	const decompPubKey = decompressThisPubKey(publicKey);
 	const txDataHashArray = Uint8Array.from(Buffer.from(txDataHash, 'hex'));
 	const publicKeyArray = Uint8Array.from(Buffer.from(decompPubKey, 'hex'));
-	const signatureArray = Uint8Array.from(
-		Buffer.from(signature.join(''), 'hex')
-	);
-	console.log(`--`, { txDataHashArray, publicKeyArray, signatureArray });
-	//rejoin our signature (r and s?)
+	const signatureArray = Uint8Array.from(Buffer.from(signature.join(''), 'hex'));
+	// console.log(`--`, { txDataHashArray, publicKeyArray, signatureArray });
 
-	return ecc.verify(txDataHashArray, publicKeyArray, signatureArray);
+	// h == txDataHash
+	// Q == their public key?
+	const isValid = ecc.verify(txDataHashArray, publicKeyArray, signatureArray);
+	console.log(`walletUtils - verifySignature: isValid? ${isValid ? 'YES' : 'NO'}`);
+	return isValid;
 };
 
 const walletUtils = {
@@ -303,11 +277,3 @@ const walletUtils = {
 };
 
 export default walletUtils;
-
-// const isValidProof = (hash, difficulty) => {
-// 	return hash.slice(0, difficulty) === '0'.repeat(difficulty);
-// };
-
-// export const hashUtils = {
-// 	isValidProof,
-// };

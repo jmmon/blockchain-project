@@ -8,7 +8,6 @@
 
 const { SHA256 } = require('../../libs/hashing.js');
 
-const walletUtils = import('../../walletUtils/index.js');
 
 // 	nonce: number | undefined;
 // 	dateCreated: number | undefined;
@@ -101,7 +100,7 @@ class Block {
 					to: null,
 			  }
 			: this.coinbaseTransaction();
-		console.log({ coinbaseTx });
+		// console.log({ coinbaseTx });
 		return {
 			index: this.index,
 			transactionsIncluded: this.transactions.length,

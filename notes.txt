@@ -153,10 +153,9 @@ Data propagation:
 
 
 
-
 Other TODOs:
 
-	Test new chain syncing and block propagation logic,
+(DONE)	Test new chain syncing and block propagation logic,
 		test different scenarios??? Would be fun
 
 	Faucet captcha?

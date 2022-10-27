@@ -68,8 +68,7 @@ const authChecker = (req, res, next) => {
 			submitTransaction,
 			fetchAddressBalance,
 		},
-	} = await import("../walletUtils/index.js");
-	// const { default: fetch } = await import("node-fetch");
+	} = await import("../libs/walletUtils/dist/index.js");
 
 	app.get("/", async (req, res) => {
 		const active = "index";

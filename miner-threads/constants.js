@@ -46,4 +46,6 @@ const HARD_CODED_WALLET_INFOS = [
 	},
 ];
 
-module.exports = HARD_CODED_WALLET_INFOS;
+const DEFAULT_CPU_CORES = 1;
+
+module.exports = {HARD_CODED_WALLET_INFOS, DEFAULT_CPU_CORES};

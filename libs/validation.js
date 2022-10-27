@@ -1,9 +1,11 @@
-const { hexPattern, CONFIG } = require('./constants');
+const { hexPattern, CONFIG } = require('../blockchain/src/constants');
 
 const invalidStringGen = ({ label, expected, actual }) =>
 	`${label} invalid. Expected ${expected} / Actually ${actual}`;
+
 const upperFirstLetter = (string) =>
 	string.substring(0, 1).toUpperCase() + string.substring(1);
+
 const failingCondition = ({ value, expected, type }) => {
 	value = String(value);
 	expected = String(expected);
@@ -272,7 +274,7 @@ const validateDateCreated = (
 // validation, utils
 // returns {valid: boolean; errors: array | null}
 const validateFields = (fields, requiredFields) => {
-	console.log('--validateBlockFields');
+	console.log('-- validateFields');
 	let errors = [];
 	for (const field of requiredFields) {
 		if (!fields.includes(field)) {
@@ -464,6 +466,17 @@ const validateBlockValues = (block, prevBlock) => {
 	return { valid: true, errors: null };
 }; // validateBlockValues
 
+	const isValidUrl = (_url) => {
+		let url;
+		try {
+			url = new URL(_url);
+		} catch(err) {
+			console.log('url not valid');
+			return false;
+		}
+		return url.protocol === "http:" || url.protocol === "https:";
+	}
+
 module.exports = {
 	invalidStringGen,
 	upperFirstLetter,
@@ -480,4 +493,5 @@ module.exports = {
 	validateFields,
 	basicTxValidation,
 	validateBlockValues,
+	isValidUrl,
 };

@@ -51,7 +51,7 @@ app.use(express.static('public'));
 (async () => {
 	const {
 		default: { decryptAndSign, submitTransaction, verifySignature },
-	} = await import('../walletUtils/index.js');
+	} = await import('../libs/walletUtils/dist/index.js');
 	const fetch = (...args) =>
 		import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
