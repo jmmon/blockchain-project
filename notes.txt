@@ -162,7 +162,7 @@ Other TODOs:
 
 	Change wording from coins to microcoins? (faucet, balances, wallet, more?)
 
-	Add links from faucet to block explorer (address, transactionDataHash)
+(DONE?)	Add links from faucet to block explorer (address, transactionDataHash)
 
 	Clean up block explorer (list style type)
 

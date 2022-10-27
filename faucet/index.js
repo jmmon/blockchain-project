@@ -9,6 +9,17 @@ const { CONFIG } = require('../blockchain/src/constants');
 const faucetWalletInfo = { ...CONFIG.faucet };
 console.log('init:', { faucetWalletInfo });
 
+// const captchaUrl = '/captcha.jpg';
+// const captchaMathUrl = '/captcha_math.jpg';
+// const captchaSessionId = 'captcha';
+// const captchaFieldName = 'captcha';
+
+// const captcha = require('svg-captcha-express').create({
+// 	cookie: captchaSessionId,
+// });
+
+
+
 // const faucetWalletInfo = {
 // 	mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
 // 	privateKey: '51a8bbf1192e434f8ff2761f95ddf1ba553447d2c1decd92cca2f43cd8609574',
@@ -39,6 +50,11 @@ app.set('view engine', 'ejs');
 app.engine('html', ejs.renderFile);
 app.use(express.static('public'));
 
+// app.get(captchaUrl, captcha.image());
+// app.get(captchaMathUrl, captcha.math());
+
+// app.get()
+
 // We have an address. We need to check if it exists in our database (could use it as a key)
 // if it exists,
 //		we need to check the timestamp (the value) and make sure that one hour has passed.
@@ -52,8 +68,7 @@ app.use(express.static('public'));
 	const {
 		default: { decryptAndSign, submitTransaction, verifySignature },
 	} = await import('../libs/walletUtils/dist/index.js');
-	const fetch = (...args) =>
-		import('node-fetch').then(({ default: fetch }) => fetch(...args));
+	const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 	db.init();
 
@@ -65,17 +80,10 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 	
 	*/
 
-	const signAndSend = async (
-		success,
-		newDatabase = undefined,
-		address = '',
-		nodeUrl = ''
-	) => {
+	const signAndSend = async (success, newDatabase = undefined, address = '', nodeUrl = '') => {
 		// error saving, do not send transaction
 		if (!success) {
-			console.error(
-				'Error: Try waiting an hour before requesting more funds!'
-			);
+			console.error('Error: Try waiting an hour before requesting more funds!');
 			return {
 				data: null,
 				error: 'Error: Try waiting an hour before requesting more funds!',
@@ -92,14 +100,12 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 
 			const fetchConfirmedBalance = async (nodeUrl, address) => {
 				// fetch balance from node!
-				const balances = await fetch(
-					`${nodeUrl}/address/${address}/balance`
-				);
+				const balances = await fetch(`${nodeUrl}/address/${address}/balance`);
 				const data = await balances.json();
 				console.log('fetched data:', { data });
 
 				return data.confirmedBalance;
-			}
+			};
 
 			// const fetchConfirmedBalance = (nodeUrl, address) => {
 			// 	return fetch(`${nodeUrl}/address/${address}/balance`)
@@ -114,14 +120,10 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 			// };
 
 			// const nodeUrlShouldComeFromHtml = 'http://localhost:5555';
-			const confirmedBalance = await fetchConfirmedBalance(
-				nodeUrl,
-				faucetWalletInfo.address
-			);
+			const confirmedBalance = await fetchConfirmedBalance(nodeUrl, faucetWalletInfo.address);
 			const enoughFundsRemaining =
 				confirmedBalance >=
-				faucetWalletInfo.valuePerTransaction +
-					CONFIG.transactions.minFee;
+				faucetWalletInfo.valuePerTransaction + CONFIG.transactions.minFee;
 			const amount = enoughFundsRemaining
 				? faucetWalletInfo.valuePerTransaction
 				: confirmedBalance - CONFIG.transactions.minFee;
@@ -153,10 +155,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 
 			console.log('attempting submit');
 			console.log({ keys, address });
-			const submitResponse = await submitTransaction(
-				nodeUrl,
-				signedTransaction.data
-			);
+			const submitResponse = await submitTransaction(nodeUrl, signedTransaction.data);
 
 			if (submitResponse.error) {
 				console.log('submit error:', submitResponse.error);
@@ -166,8 +165,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 			//transaction was signed and sent! draw success view:
 			return {
 				data: {
-					transactionDataHash:
-						signedTransaction.data.transactionDataHash,
+					transactionDataHash: signedTransaction.data.transactionDataHash,
 					amount,
 				},
 				error: null,
@@ -197,16 +195,13 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 	});
 
 	app.post('/', async (req, res) => {
+		console.log('post works');
 		const active = 'index';
 		const address = req.body.address;
 		const nodeUrl = req.body.nodeUrl;
 		const captcha = req.body.captcha;
 
-		if (
-			address === '' ||
-			(address === undefined && nodeUrl === '') ||
-			nodeUrl === undefined
-		) {
+		if (address === '' || (address === undefined && nodeUrl === '') || nodeUrl === undefined) {
 			drawView(res, active, {
 				transactionData: undefined,
 				error: 'Please be sure boxes are filled correctly!',
@@ -225,10 +220,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 		// else we try sending a transaction to the recipient
 		const response = await db.findAndSave(address, nodeUrl, signAndSend);
 		if (response.error) {
-			console.log(
-				'Error signing and sending transaction:',
-				response.error
-			);
+			console.log('Error signing and sending transaction:', response.error);
 			drawView(res, active, {
 				transactionData: undefined,
 				error: response.error,

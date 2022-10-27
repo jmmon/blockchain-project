@@ -3,7 +3,7 @@
 <head>
 	<title>Faucet | Welcome!</title>
 	<link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" href="../css/stylesheet.css">
+	<link rel="stylesheet" type="text/css" href="/css/stylesheet.css">
   <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body>
@@ -21,7 +21,7 @@
 					<form
 						method="post"
 						action="/"
-						class="row"
+						class="form row"
 						enctype="application/x-www-form-urlencoded"
 					>
 						<div class="col-md-4 mb-3">
@@ -45,18 +45,17 @@
 								/>
 							</div>
 			
-							<div class="form-group">
+			
+							<div class="form-group" style="display: flex; flex-direction: column;">
 								<label>Are you human?</label>
 								<input
-									type="checkbox"
+									type="text"
 									name="captcha"
-									class="form-control"
+									class="jCaptcha"
 									required
+									placeholder="Type in result here"
 								/>
-							</div>
-			
-							<div class="form-group">
-								<input type="submit" class="btn btn-defautl" />
+								<input type="submit" class="btn btn-default" id="submitBtn" />
 							</div>
 						</div>
 					</form>
@@ -73,7 +72,9 @@
 						<strong>tx:</strong><a target="blank" href="http://127.0.0.1:5173/transactions/<%= transactionData.transactionDataHash %>" class="alert-link"><%= transactionData.transactionDataHash %></a><small></small></a>
 					</div>
 					
-					<a href="/" class="btn btn-defaultl"><input class="btn btn-defaultl" value="Back"></a>
+					<a href="/" class="btn btn-defaultl">
+						<input class="btn btn-defaultl" value="Back">
+					</a>
 				<% } %>
 			</div>
 		</div>
@@ -84,5 +85,6 @@
 
 		<div class="credits">Icon made by [author link] from www.flaticon.com </div>
 	</div>
+	<script src="/dist/bundle.js"></script>
 </body>
 </html>
