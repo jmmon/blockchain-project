@@ -3,6 +3,7 @@ console.log('client js is connected!');
 const jCaptcha = require('js-captcha');
 
 const formEl = document.querySelector('form');
+
 const maxCaptchaAttempts = 5;
 const myCaptcha = new jCaptcha({
 	el: '.jCaptcha',
@@ -52,7 +53,6 @@ function formSubmit(e) {
 }
 
 formEl.addEventListener('submit', formSubmit);
-
 },{"js-captcha":2}],2:[function(require,module,exports){
 (function (root, factory) {
   if (root === undefined && window !== undefined) root = window;
@@ -90,10 +90,8 @@ formEl.addEventListener('submit', formSubmit);
     if (!shouldReset) {
       $el.insertAdjacentHTML('beforebegin', "<canvas class=\"".concat(options.canvasClass, "\"\n                    width=\"").concat(options.canvasStyle.width, "\" height=\"").concat(options.canvasStyle.height, "\">\n                </canvas>\n            "));
       this.$captchaEl = document.querySelector(".".concat(options.canvasClass));
-	console.log({canvas: this.$captchaEl});
       this.$captchaTextContext = this.$captchaEl.getContext('2d');
       this.$captchaTextContext = Object.assign(this.$captchaTextContext, options.canvasStyle);
-	  console.log('context is assigned');
     }
 
     this.$captchaTextContext.clearRect(0, 0, options.canvasStyle.width, options.canvasStyle.height);
@@ -134,7 +132,6 @@ formEl.addEventListener('submit', formSubmit);
       this.callbackReceived = this.callbackReceived || typeof this.options.callback == 'function';
 
       if (this.$el.value != sumNum) {
-		console.log('invalid');
         this.callbackReceived && this.options.callback('error', this.$el, numberOfTries);
         this.options.resetOnError === true && this.reset();
         this.options.focusOnError === true && this.$el.focus();

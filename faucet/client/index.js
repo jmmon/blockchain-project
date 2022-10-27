@@ -35,7 +35,7 @@ const myCaptcha = new jCaptcha({
 
 			console.log('success, attempting fetch');
 			// continue with submit
-			formEl.requestSubmit();
+			formEl.submit();
 		}
 
 		if (response == 'error') {
