@@ -1,4 +1,5 @@
 const express = require('express');
+const { isValidUrl } = require( '../../libs/validation' );
 const router = express.Router();
 
 // responds with map object holding {nodeId1: nodeUrl1, ...}
@@ -7,15 +8,20 @@ router.get('/', (req, res) => {
 	res.status(200).send(JSON.stringify(Array.from(blockchain.peers)));
 });
 
-// takes {peerUrl: "http://host:port"}
+// takes {nodeIdentifier: "someNodeId", peerUrl: "http://host:port"}
 // Connect this node to a given peer
 router.post('/connect', async (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { peerUrl } = req.body;
-	const cameFromNode = req.get('from-node');
-	// takes peerUrl and adds it to our list of nodes
-	if (!peerUrl || peerUrl === null) {
+	// check for header
+	const cameFromNode = req.get('from-node') || false;
+
+	if (!peerUrl || peerUrl === null ) {
 		return res.status(404).send('Error: Missing Peer Node URL');
+	}
+
+	if (!isValidUrl(peerUrl)) {
+		return res.status(404).send('Error: URL is invalid!');
 	}
 
 	const response = await blockchain.connectAndSyncPeer(
@@ -42,10 +48,10 @@ Then since it received {header}, it should not tell node #1 to connect to #2
 
 router.post('/notify-new-block', (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	const data = req.body;
-	console.log('Block notification received!', { data });
+	const {blocksCount, cumulativeDifficulty, nodeUrl} = req.body;
+	console.log('Block notification received!', { blocksCount, cumulativeDifficulty, nodeUrl});
 
-	blockchain.handleIncomingBlock(data);
+	blockchain.handleIncomingBlock({blocksCount, cumulativeDifficulty, nodeUrl});
 
 	res.status(200).send(JSON.stringify({
 		message: `Thank you for the notification.`,
@@ -53,3 +59,16 @@ router.post('/notify-new-block', (req, res) => {
 });
 
 module.exports = router;
+
+
+
+
+
+/*
+Actual flow of peer sync: (Tell node 5554(13 blocks) to connect to 5555(1400 blocks, much better))
+	fn connectAndSyncPeer
+	fetch info, add peer (same chain ID), tell them to friend us back
+	Their chain is better
+	fn checkChainFromPeer
+		validating chain, (executing incoming chain), genesisBlock (and transaction)
+*/

@@ -1,5 +1,5 @@
 const express = require("express");
-const { validateAddress } = require( "../../blockchain/src/validation" );
+const { validateAddress } = require( "../../libs/validation" );
 const router = express.Router();
 
 

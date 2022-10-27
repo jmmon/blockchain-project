@@ -1,16 +1,21 @@
 const express = require('express');
 const cors = require('cors');
+const { Blockchain } = require('../blockchain/src/index.js');
 const { SHA256 } = require('../libs/hashing.js');
+const CONFIG = require('./constants.js');
+
+// npm start --- (-p/--port) 5556
+const argv = require('minimist')(process.argv.slice(2));
+const PORT = argv.p ?? argv.port ?? CONFIG.defaultServerPort;
+const HOST = CONFIG.defaultServerHost;
+// const WALLET_INDEX = argv.w ?? argv.i ?? argv.wallet ?? argv.index ?? 0;
 
 (async function () {
-	const { Blockchain } = require('../blockchain/src/index.js');
 
 	const blockchain = new Blockchain();
 	await blockchain.createGenesisBlock();
 
-	const port = +(process.argv[2] ?? blockchain.config.defaultServerPort);
-	const host = blockchain.config.defaultServerHost;
-	const url = `http://${host}:${port}`;
+	const url = `http://${HOST}:${PORT}`;
 	const selfUrl = url;
 
 	// const randomNodeId = crypto.randomUUID().replaceAll('-', '');
@@ -24,8 +29,8 @@ const { SHA256 } = require('../libs/hashing.js');
 	// const node = new Node({host: someHost, port: somePort, blockchain});
 	const node = {
 		nodeId,
-		host,
-		port,
+		host: HOST,
+		port: PORT,
 		selfUrl,
 		about,
 	};
@@ -38,6 +43,21 @@ const { SHA256 } = require('../libs/hashing.js');
 	app.use(cors());
 	app.use(express.json());
 
+	const sendError = (error, req, res, message) => {
+		const response = `Caught a request error! ${message}: ${error.message}`;
+		console.log(response);
+	}
+
+	app.use((error, req, res, next) => {
+		if (error instanceof SyntaxError) {
+			sendError(error, req, res, 'Syntax error in the request');
+		} else if (error instanceof Error) {
+			sendError(error, req, res, 'General error in the request');
+		} else {
+			next();
+		}
+	})
+
 	app.set('blockchain', blockchain);
 	app.set('node', node);
 
@@ -48,21 +68,7 @@ The node should hold:
 the Chain,
 the Peers, and
 the REST endpoints (to access node functionality)
-
-
-REQUIRED ROUTES:
-
-GET {
-	"/", 				?? homepage for api?
-	"/info", 		started
-	"/debug",		started
-}
-
-POST {
-	"/peers/notify-new-block", started
-}
 */
-
 	app.use('/debug', require('./routes/debug'));
 	app.use('/peers', require('./routes/peers'));
 	app.use('/blocks', require('./routes/blocks'));

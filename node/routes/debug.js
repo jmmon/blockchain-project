@@ -1,8 +1,5 @@
 const express = require("express");
 const router = express.Router();
-// const crypto = require("node:crypto");
-// const app = express();
-// app.use(express.json());
 
 router.get("/", (req, res) => {
 	const blockchain = req.app.get('blockchain');
@@ -17,16 +14,6 @@ router.get("/", (req, res) => {
 		chain: blockchain.chain,
 		chainId: blockchain.config.genesisBlock.blockHash,
 	};
-
-
-	// const confirmedBalances = {
-	// 	'example': 9001,
-	// 	'00000...0000': -10000000000,
-	// 	'...addr 1...': 123456,
-	// 	'...addr 2...': 23456,
-	// 	'...addr 3...': 3456,
-	// 	'...addr 4...': 0,
-	// };
 
 	const confirmedBalances = blockchain.allConfirmedAccountBalances();
 
