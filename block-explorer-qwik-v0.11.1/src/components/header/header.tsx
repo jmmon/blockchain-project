@@ -8,6 +8,7 @@ import {
 } from '@builder.io/qwik';
 import { Link, useLocation } from '@builder.io/qwik-city';
 import { SessionContext } from '~/libs/context';
+import SearchBar from '../searchBar/searchBar';
 import styles from './header.css?inline';
 
 export default component$(() => {
@@ -58,7 +59,7 @@ export default component$(() => {
 						Blocks
 					</Link>
 					|
-					<Link
+					{/* <Link
 						href="/blog"
 						class={{ active: pathname.startsWith('/blog') }}
 					>
@@ -87,8 +88,9 @@ export default component$(() => {
 						class={{ active: pathname.startsWith('/about-us') }}
 					>
 						About Us
-					</Link>
+					</Link> */}
 				</nav>
+				<SearchBar />
 			</div>
 		</header>
 	);
