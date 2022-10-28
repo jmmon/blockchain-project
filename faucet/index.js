@@ -6,6 +6,7 @@ const ejs = require('ejs');
 const db = require('./libs/db');
 
 const { CONFIG } = require('../blockchain/src/constants');
+const convert = require('../libs/conversion');
 const faucetWalletInfo = { ...CONFIG.faucet };
 console.log('init:', { faucetWalletInfo });
 
@@ -17,8 +18,6 @@ console.log('init:', { faucetWalletInfo });
 // const captcha = require('svg-captcha-express').create({
 // 	cookie: captchaSessionId,
 // });
-
-
 
 // const faucetWalletInfo = {
 // 	mnemonic: 'bright pledge fan pet mesh crisp ecology luxury bulb horror vacuum brown',
@@ -232,7 +231,11 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 			{ response }
 		);
 
-		const transactionData = { ...response.data, address }; // transactionDataHash, amount
+		const transactionData = {
+			transactionDataHash: response.data.transactionDataHash,
+			amount: convert.toWholeCoins(response.data.amount).amount,
+			address,
+		}; // transactionDataHash, amount
 
 		// on success:
 		// const transactionData = {amount: 'some amount', address: 'some address', transactionDataHash: 'some transaction data hash'};
