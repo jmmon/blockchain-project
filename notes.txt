@@ -158,15 +158,69 @@ Other TODOs:
 (DONE)	Test new chain syncing and block propagation logic,
 		test different scenarios??? Would be fun
 
-	Faucet captcha?
+(DONE)	Faucet captcha?
 
-	Change wording from coins to microcoins? (faucet, balances, wallet, more?)
+	Change wording from coins to microcoins? 
+(DONE)	(faucet, 
+	balances, 
+	wallet, 
+	 	send amount needs conversion and currency dropdown
+		pendingBalance is incorrect!
+		balance display should not be a text box
+	more?)
+
 
 (DONE?)	Add links from faucet to block explorer (address, transactionDataHash)
 
+explorer:
 	Clean up block explorer (list style type)
 
 	Add block explorer search bar?
+		Input box (on header?)
+		Take input and "parse?" to decide if it's:
+			(transactions:)
+				// address,
+				// transactionDataHash,
+				// senderPubKey 65chars
+				// senderSignature? a or b? (or both?),
+				// block index,
+				// data ('genesis tx', 'coinbase tx'),
+				// dateCreated - year, month, day, hour,
+			(blocks:)
+				// index,
+				transactions count? meh,
+				// blockHash,
+				// prevBlockHash,
+				// blockDataHash,
+				// address (minedBy)
+				// dateCreated?,
+		(Figure out a priority for those search terms)
+		So:
+			address:
+				to, from, (transactions),
+				minedBy, (blocks),
+			hash:
+				blockDataHash: 64chars: 
+				blockHash: 64chars: 
+				prevBlockHash: 1char || 64chars: 
 
+				txDataHash: 64chars: 
+
+			index / minedInBlockIndex, (blocks, transactions)
+			senderPubKey, (transactions) 65chars
+			data, (transactions)
+			dateCreated, (blocks, transactions)
+			senderSignature, (transaction: 64 chars (a|b) or 128 chars)
+
+
+		Then pull up a search page showing two sections:
+			Transactions, and
+			Blocks?
+		Whichever is first depends on what is more relavent
+
+Block Explorer: "Get a Block" page seems to stick in "LOADING" phase?
+
+
+blockchain/node:
 	segregate logic: node, transaction, block, blockchain
 

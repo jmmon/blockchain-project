@@ -18,6 +18,7 @@ const CONFIG = {
 			'0000000000000000000000000000000000000000000000000000000000000000',
 			'0000000000000000000000000000000000000000000000000000000000000000',
 		],
+		microcoinsPerCoin: 1000000,//1_000_000
 	},
 	transactions: {
 		minFee: 10,
@@ -35,8 +36,8 @@ const CONFIG = {
 		publicKey:
 			'cfe8495e9e582ec5c834bfd37e5f1ebc1559440558c74068513da1a64ff377b30',
 		address: '00a5d9bf2555dfffc45f64386d612b46fce92dea',
-		valueToGenerate: 1000000000000, // 1,000,000,000,000
-		valuePerTransaction: 1000000,
+		valueToGenerate: 1000000000000, // 1_000_000_000_000 === 1_000_000 * 1_000_000
+		valuePerTransaction: 1000000, // 1_000_000
 	},
 
 	//blockchain and node??

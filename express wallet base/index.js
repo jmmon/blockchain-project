@@ -1,35 +1,37 @@
-const path = require("path");
-const express = require("express");
-const ejsLayouts = require("express-ejs-layouts");
-const session = require("express-session");
-const favicon = require("serve-favicon");
-const ejs = require("ejs");
-const URL = require("url").URL;
+const path = require('path');
+const express = require('express');
+const ejsLayouts = require('express-ejs-layouts');
+const session = require('express-session');
+const favicon = require('serve-favicon');
+const ejs = require('ejs');
+const URL = require('url').URL;
+const { convert } = require('../libs/conversion');
 
 const app = express();
 const PORT = 3003;
 
 app.use(
-	favicon(path.join(__dirname, "public", "images", "favicon.ico"), {
+	favicon(path.join(__dirname, 'public', 'images', 'favicon.ico'), {
 		maxAge: 0,
 	})
 );
 
 app.use(
 	session({
-		secret: "keyboard cat",
+		secret: 'keyboard cat',
 		resave: false,
 		saveUninitialized: true,
+		
 	})
 );
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.set("view engine", "ejs");
-app.engine("html", ejs.renderFile);
-app.use(express.static("public"));
+app.set('view engine', 'ejs');
+app.engine('html', ejs.renderFile);
+app.use(express.static('public'));
 app.use(ejsLayouts);
-app.set("layout", "layouts/layout");
+app.set('layout', 'layouts/layout');
 
 // app.use((req, res, next) => {
 // 	if (!req.session.wallet) {
@@ -54,7 +56,7 @@ const authChecker = (req, res, next) => {
 	if (req.session.wallet) {
 		return next();
 	}
-	res.redirect("/create");
+	res.redirect('/create');
 };
 
 (async () => {
@@ -68,10 +70,10 @@ const authChecker = (req, res, next) => {
 			submitTransaction,
 			fetchAddressBalance,
 		},
-	} = await import("../libs/walletUtils/dist/index.js");
+	} = await import('../libs/walletUtils/dist/index.js');
 
-	app.get("/", async (req, res) => {
-		const active = "index";
+	app.get('/', async (req, res) => {
+		const active = 'index';
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
@@ -79,8 +81,8 @@ const authChecker = (req, res, next) => {
 	});
 
 	// logout simply removes wallet from session and loads index page
-	app.get("/logout", authChecker, (req, res) => {
-		const active = "index";
+	app.get('/logout', authChecker, (req, res) => {
+		const active = 'index';
 		req.session.wallet = undefined;
 		drawView(res, active, {
 			active,
@@ -88,24 +90,24 @@ const authChecker = (req, res, next) => {
 	});
 
 	//  Create
-	app.get("/create", (req, res) => {
-		const active = "create";
+	app.get('/create', (req, res) => {
+		const active = 'create';
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
 		});
 	});
 
-	app.get("/recover", (req, res) => {
-		const active = "recover";
+	app.get('/recover', (req, res) => {
+		const active = 'recover';
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
 		});
 	});
 
-	app.get("/balance", authChecker, (req, res) => {
-		const active = "balance";
+	app.get('/balance', authChecker, (req, res) => {
+		const active = 'balance';
 		const wallet = req.session.wallet;
 		console.log(req.session.wallet);
 		drawView(res, active, {
@@ -114,8 +116,8 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.get("/send", authChecker, (req, res) => {
-		const active = "send";
+	app.get('/send', authChecker, (req, res) => {
+		const active = 'send';
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
@@ -124,9 +126,9 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.post("/create", async (req, res) => {
-		const active = "create";
-		console.log("~req", req.body);
+	app.post('/create', async (req, res) => {
+		const active = 'create';
+		console.log('~req', req.body);
 		const password = req.body.password;
 		const repeatPassword = req.body.confirmPassword;
 
@@ -144,7 +146,7 @@ const authChecker = (req, res, next) => {
 		if (response.error) {
 			drawView(res, active, {
 				active,
-				error: "Error encrypting wallet! Try again?",
+				error: 'Error encrypting wallet! Try again?',
 			});
 			return;
 		}
@@ -161,7 +163,7 @@ const authChecker = (req, res, next) => {
 			if (err) {
 				drawView(res, active, {
 					active,
-					error: "Error saving session!",
+					error: 'Error saving session!',
 				});
 				return;
 			}
@@ -178,25 +180,17 @@ const authChecker = (req, res, next) => {
 	});
 
 	//recover wallet
-	app.post("/recover", async (req, res) => {
-		const active = "recover";
+	app.post('/recover', async (req, res) => {
+		const active = 'recover';
 		// fetch user data (mnemonic and password)
 		const mnemonic = req.body.mnemonic;
 		const password = req.body.password;
 		const repeatPassword = req.body.confirmPassword;
 
 		// Make simple validation
-		redrawForInvalidPasswords(
-			password,
-			repeatPassword,
-			res,
-			active,
-			mnemonic
-		);
+		redrawForInvalidPasswords(password, repeatPassword, res, active, mnemonic);
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
-			mnemonic
-		);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(mnemonic);
 		console.log({ privateKey, publicKey, address });
 
 		// encrypt mnemonic with password
@@ -205,7 +199,7 @@ const authChecker = (req, res, next) => {
 		if (response.error) {
 			drawView(res, active, {
 				active,
-				error: "Error encrypting wallet! Try again?",
+				error: 'Error encrypting wallet! Try again?',
 			});
 			return;
 		}
@@ -223,7 +217,7 @@ const authChecker = (req, res, next) => {
 				drawView(res, active, {
 					active,
 					mnemonic,
-					error: "Error saving session!",
+					error: 'Error saving session!',
 				});
 				return;
 			}
@@ -239,8 +233,8 @@ const authChecker = (req, res, next) => {
 		});
 	});
 
-	app.post("/balance", async (req, res) => {
-		const active = "balance";
+	app.post('/balance', async (req, res) => {
+		const active = 'balance';
 		const password = req.body.password;
 		const nodeUrl = req.body.nodeUrl;
 		console.log(req.session.wallet);
@@ -248,7 +242,7 @@ const authChecker = (req, res, next) => {
 		if (!req.session.wallet) {
 			drawView(res, active, {
 				active,
-				error: "Please load wallet from mnemonic, or create one.",
+				error: 'Please load wallet from mnemonic, or create one.',
 			});
 			return;
 		}
@@ -259,24 +253,22 @@ const authChecker = (req, res, next) => {
 			encrypted: req.session.wallet.encryptedMnemonic,
 		};
 		const { data, error } = decrypt(encrypted, password);
-		console.log("balance decrypted wallet:", data);
+		console.log('balance decrypted wallet:', data);
 		if (error) {
 			drawView(res, active, {
 				wallet: req.session.wallet,
 				active,
-				error: "Error decrypting wallet! Try a different password?",
+				error: 'Error decrypting wallet! Try a different password?',
 			});
 			return;
 		}
 
-		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(
-			data
-		);
+		const { privateKey, publicKey, address } = await deriveKeysFromMnemonic(data);
 		console.log({ privateKey, publicKey, address });
 
 		// fetch balance from node!
 		const balances = await fetchAddressBalance(nodeUrl, address);
-		console.log("fetched data json:", { balances });
+		console.log('fetched data json:', { balances });
 
 		drawView(res, active, {
 			wallet: req.session.wallet,
@@ -289,8 +281,8 @@ const authChecker = (req, res, next) => {
 	// if we have signed transaction, we attempt the send;
 	// otherwise we sign transaction and reload the send view with the signed data
 
-	app.post("/send", async (req, res) => {
-		const active = "send";
+	app.post('/send', async (req, res) => {
+		const active = 'send';
 		const wallet = req.session.wallet;
 		const nodeUrl = req.body.nodeUrl;
 
@@ -308,8 +300,8 @@ const authChecker = (req, res, next) => {
 
 			//validation errors
 			if (
-				recipient === "" ||
-				(recipient === undefined && amount === "") ||
+				recipient === '' ||
+				(recipient === undefined && amount === '') ||
 				amount === undefined ||
 				amount <= 0 ||
 				!wallet
@@ -318,19 +310,14 @@ const authChecker = (req, res, next) => {
 					wallet,
 					active,
 
-					error: "Please be sure boxes are filled correctly!",
+					error: 'Please be sure boxes are filled correctly!',
 				});
 				return;
 			}
 
 			// decrypt and sign errors
-			const { data, error } = await decryptAndSign(
-				wallet,
-				recipient,
-				amount,
-				password
-			);
-			console.log("decryptAndSign:", { data, error });
+			const { data, error } = await decryptAndSign(wallet, recipient, amount, password);
+			console.log('decryptAndSign:', { data, error });
 			if (error) {
 				drawView(res, active, {
 					wallet,
@@ -342,12 +329,12 @@ const authChecker = (req, res, next) => {
 
 			// fetch balance to see if the transaction will work
 			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
-			console.log("fetched data json:", { balances });
+			console.log('fetched data json:', { balances });
 			if (balances.confirmedBalance < amount) {
 				drawView(res, active, {
 					wallet,
 					active,
-					error: "Your account does not have enough funds!",
+					error: 'Your account does not have enough funds!',
 				});
 				return;
 			}
@@ -382,16 +369,13 @@ const authChecker = (req, res, next) => {
 					wallet,
 					active,
 					signedTransaction,
-					error: "Please use a valid Node URL",
+					error: 'Please use a valid Node URL',
 				});
 				return;
 			}
 
 			//submit transaction error
-			const { data, error } = await submitTransaction(
-				nodeUrl,
-				signedTransaction
-			);
+			const { data, error } = await submitTransaction(nodeUrl, signedTransaction);
 			req.session.signedTransaction = undefined;
 			if (error) {
 				drawView(res, active, {
@@ -416,7 +400,7 @@ const authChecker = (req, res, next) => {
 		}
 	});
 
-	// Helper functions 
+	// Helper functions
 
 	const redrawForInvalidPasswords = (
 		password,
@@ -429,13 +413,12 @@ const authChecker = (req, res, next) => {
 			drawView(res, active, {
 				active,
 				mnemonic,
-				error: "Passwords do not match",
+				error: 'Passwords do not match',
 			});
 		}
 	};
 
-	const drawView = (res, view, data) =>
-		res.render(__dirname + "/views/" + view + ".html", data);
+	const drawView = (res, view, data) => res.render(__dirname + '/views/' + view + '.html', data);
 
 	app.listen(PORT, () => {
 		console.log(`Wallet running on http://localhost:${PORT}`);

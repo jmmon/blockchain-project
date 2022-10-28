@@ -1228,9 +1228,12 @@ class Blockchain {
 		const confirmedTransactions = this.getConfirmedTransactions(address);
 		const pendingTransactions = this.getPendingTransactions(address);
 
+		console.log({confirmedTransactions, pendingTransactions});
+
 		if (confirmedTransactions.length === 0 && pendingTransactions.length === 0) {
 			return balances; // return 0s balance object
 		}
+
 
 		if (confirmedTransactions.length > 0) {
 			balances.confirmedBalance += this.confirmedBalanceOfAddress(
@@ -1242,13 +1245,14 @@ class Blockchain {
 		}
 
 		// pending balance also includes confirmed balance
-		balances.pendingBalance += +balances.confirmedBalance;
+		// balances.pendingBalance += +balances.confirmedBalance;
 
 		if (pendingTransactions.length > 0) {
 			const [receivedTotal, sentTotal] = this.pendingBalancesOfAddress(
 				address,
 				pendingTransactions
 			);
+			console.log({receivedTotal, sentTotal});
 
 			balances.confirmedBalance -= sentTotal;
 
