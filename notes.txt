@@ -42,6 +42,8 @@ Other TODOs:
 
 Block Explorer: "Get a Block" page seems to stick in "LOADING" phase?
 
+	Should use port # as param in URL, i.e. /5555/addresses or /5558/transactions/{someHash}
+
 explorer:
 	Clean up block explorer (list style type)
 

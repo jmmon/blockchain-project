@@ -1289,69 +1289,6 @@ class Blockchain {
 		return balances;
 	}
 
-	// balancesOfAddress(address) {
-	// 	console.log('fn balancesOfAddress', { address });
-	// 	const balances = {
-	// 		safeBalance: 0,
-	// 		confirmedBalance: 0,
-	// 		pendingBalance: 0,
-	// 	};
-
-	// 	const confirmedTransactions = this.getConfirmedTransactions(address);
-	// 	const pendingTransactions = this.getPendingTransactions(address);
-
-	// 	console.log({ confirmedTransactions, pendingTransactions });
-
-	// 	if (confirmedTransactions.length === 0 && pendingTransactions.length === 0) {
-	// 		return balances; // return 0s balance object
-	// 	}
-
-	// 	if (confirmedTransactions.length > 0) {
-	// 		balances.safeBalance += this.safeBalanceOfAddress(address, confirmedTransactions);
-
-	// 		balances.confirmedBalance += this.confirmedBalanceOfAddress(
-	// 			address,
-	// 			confirmedTransactions
-	// 		);
-	// 	}
-
-	// 	// pending balance is "expected balance", so ALL transactions; should be >= confirmed balance
-	// 	balances.pendingBalance += +balances.confirmedBalance;
-
-	// 	if (pendingTransactions.length > 0) {
-	// 		const [receivedTotal, sentTotal] = this.pendingBalancesOfAddress(
-	// 			address,
-	// 			pendingTransactions
-	// 		);
-	// 		console.log({ receivedTotal, sentTotal });
-
-	// 		balances.safeBalance -= sentTotal; // safe txs - spent pending
-	// 		balances.confirmedBalance -= sentTotal; // confirmed txs - spent pending
-
-	// 		balances.pendingBalance += receivedTotal - sentTotal; // pending + confirmed balance
-	// 	}
-
-	// 	console.log(`balances (v2) for address ${address}:\n`, balances);
-
-	// 	return balances;
-	// }
-
-	// list all accounts that have non-zero CONFIRMED balance (in blocks)
-	// (The all-0's address - genesis address - will have a NEGATIVE balance)
-	/**
-	{
-		00000...: -9999999,
-		address1: 12345,
-		address2: 1234,
-		address3: 123, 
-	}
-	*/
-	// for each block, go through each transaction
-	// 	save addresses and balances in an array of objects; no need to sort
-	// received coins: add value to {to: address} balance
-	// sent coins: subtract value+fee from {from: address} balance
-
-	// balances, addresses
 	allConfirmedAccountBalances() {
 		console.log('---Getting all confirmed account balances...');
 		let balances = {};
@@ -1375,6 +1312,19 @@ class Blockchain {
 				}
 			}
 		}
+
+		for (const transaction of this.pendingTransactions) {
+				const { from, value, fee } = transaction;
+				// subtracting spent Pending funds, assuming people can spend unconfirmed funds
+				if (from in balances) {
+					// adding to existing entry for sent transaction
+					balances[from] -= (fee + value);
+				} else {
+					// creating new entry for sent transaction
+					balances[from] = 0 - (fee + value);
+				}
+		}
+		
 		console.log('---done collecting balances');
 		return balances;
 	}
