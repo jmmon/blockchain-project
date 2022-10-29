@@ -38,6 +38,7 @@ const HOST = CONFIG.defaultServerHost;
 	blockchain.config.node = node;
 
 	console.log(blockchain);
+	console.log({genesisTransactions: blockchain.chain[0].transactions});
 
 	const app = express();
 	app.use(cors());
@@ -88,6 +89,7 @@ the REST endpoints (to access node functionality)
 			cumulativeDifficulty: blockchain.cumulativeDifficulty,
 			confirmedTransactions: blockchain.getConfirmedTransactions().length,
 			pendingTransactions: blockchain.pendingTransactions.length,
+			config: blockchain.config,
 		};
 
 		console.log('(get info called)');
