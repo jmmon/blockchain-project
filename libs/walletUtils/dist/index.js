@@ -237,10 +237,8 @@ const submitTransaction = async (nodeUrl, signedTransaction) => {
 	}
 };
 
-const fetchAddressBalance = async (nodeUrl, address) => {
-	const response = await fetch(`${nodeUrl}/address/${address}/balance`);
-	return await response.json();
-};
+const fetchAddressBalance = (nodeUrl, address) =>
+	fetch(`${nodeUrl}/address/${address}/balance`).then((res) => res.json());
 
 const verifySignature = (txDataHash, publicKey, signature) => {
 	// console.log('walletUtils - verifySignature:', {
