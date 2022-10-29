@@ -33,9 +33,65 @@
 					</label>
 				</div>
 
+				<div class="checkboxes">
+					<label class="checkbox-label">
+						<input type="checkbox" name="subtractFee" class="checkbox" />
+						Subtract fee from amount?
+					</label>
+
+					<label class="checkbox-label">
+						<input type="checkbox" name="subtractFee" class="checkbox" />
+						Send entire available balance? (Ignores Amount box)
+					</label>
+				</div>
+
+						<!-- <details>
+							<summary
+								style={{
+									cursor: 'pointer',
+									listStyle: 'none',
+								}}
+							>
+								Transactions: {'['}
+								<br />
+								<span class="extra">.{" "}.{" "}.</span>
+							</summary>
+
+							<ul class="ml-2">
+								{transactions.map((transaction, index) => (
+									<li>
+										<Transaction
+											transaction={transaction}
+											index={index}
+											totalTransactions={
+												totalTransactions
+											}
+										/>
+									</li>
+								))}
+							</ul>
+						</details> -->
+				<!-- <details open class="details">
+					<summary class="details-button">
+						<input type="checkbox" name="details-button-checkbox" />
+						<span class="details-button-no">testing NO</span>
+						<span class="details-button-yes">testing YES</span>
+					</summary>
+					<ul class="amount-container">
+						<li>Amount ...</li>
+						<li>Units ...</li>
+						<li>Subtract fee from amount? ...</li>
+					</ul>
+				</details> -->
+					<input type="checkbox" name="amount-toggle" class="details-button-checkbox" />
+					<ul class="amount-container">
+						<li>Amount ...</li>
+						<li>Units ...</li>
+						<li>Subtract fee from amount? ...</li>
+					</ul>
+					
 				<div
-					class="form-group"
-					style="display: flex; gap: 1rem"
+					class="flex-gap-1 form-group"
 				>
 					<div style="flex-grow: 1">
 						<label class="form-input">
@@ -152,10 +208,16 @@
 
 	<br /><br />
 	<div style="width: 400px; display: flex; flex-direction: column">
-		<%= JSON.stringify(previousTransaction) %>
-		<p>New below:</p>
 		<% Object.keys(previousTransaction).forEach(key => { %>
-		<div><%= key %>: <%= previousTransaction[key] %></div>
+			<% if (key === 'senderSignature') { %>
+				<div><%= key %>:</div>
+				<div> <%= previousTransaction[key][0] %></div>
+				<div> <%= previousTransaction[key][1] %></div>
+			<% } else if (key === 'value' || key === 'fee') { %>
+				<div><%= key %>: <%= previousTransaction[key] %> (<%= coins[key].amount %> <%= coins[key].type %>)</div>
+			<% } else { %>
+				<div><%= key %>: <%= previousTransaction[key] %></div>
+			<% } %>
 		<% }) %>
 	</div>
 </div>

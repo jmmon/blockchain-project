@@ -270,11 +270,15 @@ const authChecker = (req, res, next) => {
 		// fetch balance from node!
 		const balances = await fetchAddressBalance(nodeUrl, address);
 		console.log('fetched data json:', { balances });
+		const safe = convert.toCoins(balances.safeBalance);
+		const conf = convert.toCoins(balances.confirmedBalance);
+		const pending = convert.toCoins(balances.pendingBalance);
+
 
 		drawView(res, active, {
 			wallet: req.session.wallet,
 			active,
-			balances: `Safe Balance: ${balances.safeBalance}\nConfirmed Balance: ${balances.confirmedBalance}\nPending Balance: ${balances.pendingBalance}`,
+			balances: {safe, confirmed: conf, pending} ,
 		});
 	});
 
@@ -422,8 +426,15 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			}
-
 			//success:
+			console.log('Success sending transaction!');
+
+			console.log({value: signedTransaction.value, fee: signedTransaction.fee});
+			// convert units 
+			const valCoins = +convert.toCoins(+signedTransaction.value);
+			const feeCoins = +convert.toCoins(+signedTransaction.fee);
+			console.log({valCoins, feeCoins});
+
 			const previousTransaction = data;
 			req.session.signedTransaction = undefined;
 			req.session.transactionInfo = undefined;
@@ -432,6 +443,7 @@ const authChecker = (req, res, next) => {
 				active,
 				transactionHash: data.transactionDataHash ?? undefined,
 				previousTransaction,
+				coins: {value: valCoins, fee: feeCoins},
 			});
 		}
 	});

@@ -25,10 +25,27 @@
 </div>
 
 <!-- create gap: -->
-<div class="row"></div> 
+<!-- <div class="row"></div>  -->
 
 <% if (typeof balances !== "undefined") { %>
-<div class="row" >
-	<textarea class="col mx-5" style="margin-left: 2rem; width: 400px; height: 100px;"><%= balances %></textarea>
+
+<div class="alert alert-dismissible alert-success">
+	<strong>Balances found for address:</strong><br />
+	<a
+		target="blank"
+		href="http://127.0.0.1:5173/addresses/<%= wallet?.address %>"
+		class="alert-link"
+		><%= wallet?.address %></a
+	>
+
+	<br /><br />
+	<div style="width: 400px; display: flex; flex-direction: column">
+		<div>Safe Balance: <%= balances.safe.amount %> <%= balances.safe.type %></div>
+		<div>Confirmed Balance: <%= balances.confirmed.amount %> <%= balances.confirmed.type %></div>
+		<div>Pending Balance: <%= balances.pending.amount %> <%= balances.pending.type %></div>
+	</div>
 </div>
+<!-- <div class="row" >
+	<textarea class="col mx-5" style="margin-left: 2rem; width: 400px; height: 100px;"><%= balances %></textarea>
+</div> -->
 <% } %>

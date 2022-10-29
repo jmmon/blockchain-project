@@ -20,3 +20,49 @@ textarea.form-control {
 .form-input {
 	width: 100%;
 }
+
+.checkbox {
+	width: 0.7em; 
+	height: 0.7em;
+	display: inline-block;
+	/* padding-top: 0.1rem; */
+}
+.checkbox-label {
+align-items: center;
+text-align: center;
+font-size: 0.7em;
+}
+
+.flex-gap-1 {
+	display: flex;
+	gap: 1rem;
+}
+
+.checkboxes {
+	display: flex;
+	gap: 3rem;
+}
+
+
+/* details[open] span.extra {
+	display: none;
+}
+
+details[closed]  span.extra {
+	display: initial;
+}
+details[closed] ul.amount-container {
+	display: none;
+}
+
+details[open] ul.amount-container {
+	display: initial;
+} */
+input.details-button-checkbox:checked + ul.amount-container {
+	display: none;
+}
+
+input.details-button-checkbox + ul.amount-container {
+	display: initial;
+}
+
