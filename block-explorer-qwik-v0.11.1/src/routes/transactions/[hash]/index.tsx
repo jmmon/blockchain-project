@@ -54,5 +54,5 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Confirmed Transactions',
+	title: 'Find Transaction By Hash',
 };
