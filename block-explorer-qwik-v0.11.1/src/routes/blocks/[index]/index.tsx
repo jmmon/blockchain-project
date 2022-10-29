@@ -25,7 +25,7 @@ export default component$(() => {
 
 	return (
 		<div>
-			<h1>Get A Block:</h1>
+			<h1>Block #{params.index}:</h1>
 			<Resource
 				value={blockResource}
 				onPending={() => (

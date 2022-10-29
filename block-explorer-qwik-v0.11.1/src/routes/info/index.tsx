@@ -65,9 +65,9 @@ export default component$(() => {
 														{data}
 													</Link>
 												) : key === 'chainId' ? (
-													<Link href="/blocks/0">
+													<a href="/blocks/0">
 														{data}
-													</Link>
+													</a>
 												) : key === 'peers' ? (
 													<Link href="/info/peers">
 														{data}

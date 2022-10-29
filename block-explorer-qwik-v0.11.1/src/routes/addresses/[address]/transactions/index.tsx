@@ -47,6 +47,10 @@ export default component$(() => {
 							<ul>
 								{transactions.map((transaction, index) => (
 									<li>
+										{/* <a href={`/transactions/${transaction.transactionDataHash}`} >
+											{}
+										</a> */}
+										Tx #{index}:
 										<Transaction
 											transaction={transaction}
 											index={index}

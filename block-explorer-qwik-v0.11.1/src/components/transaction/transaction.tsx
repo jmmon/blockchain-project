@@ -52,9 +52,9 @@ export default component$(
 					if (txKey === 'minedInBlockIndex') {
 						return (
 							<li class="ml-4">
-								<Link href={`/blocks/${transaction[txKey]}`}>
+								<a href={`/blocks/${transaction[txKey]}`}>
 									{txKey}: {transaction[txKey]}
-								</Link>
+								</a>
 								,
 							</li>
 						);
@@ -65,9 +65,9 @@ export default component$(
 							: `/transactions/${store.txDataHash}`;
 						return (
 							<li class="ml-4">
-								<Link href={path}>
+								<a href={path}>
 									{txKey}: {store.txDataHash}
-								</Link>
+								</a>
 								,
 							</li>
 						);

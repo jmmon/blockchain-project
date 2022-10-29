@@ -12,9 +12,9 @@ export default component$(({ block }: { block: IBlock }) => {
 				if (key === 'index') {
 					return (
 						<li class="ml-2">
-							<Link href={`#`}>
+							<a href={`#`}>
 								{key}: {block[key]}
-							</Link>
+							</a>
 							,
 						</li>
 					);

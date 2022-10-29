@@ -64,9 +64,9 @@ export default component$(() => {
 					);
 				}}
 			/>
-			<Link href={`/addresses/${params.address}/transactions`}>
+			<a href={`/addresses/${params.address}/transactions`}>
 				View Transactions...
-			</Link>
+			</a>
 		</div>
 	);
 });

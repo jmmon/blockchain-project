@@ -23,7 +23,7 @@ export default component$((props) => {
 	});
 	return (
 		<div>
-			<label>
+			{/* <label>
 				Search Blockchain
 				<input
 					type="text"
@@ -32,7 +32,11 @@ export default component$((props) => {
 					placeholder="What are you looking for?"
 				/>
 			</label>
-			<Link href={`http://127.0.0.1:5173/search/${store.query}`}>Search</Link>
+			<Link href={`http://127.0.0.1:5173/search/${store.query}`}>Search</Link> */}
+			<form action="/search" method="GET" >
+				<input type="text" name="text" placeholder="What are you looking for?" />
+				<input type="submit" value="Search"/>
+			</form>
 		</div>
 	);
 });
