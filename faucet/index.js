@@ -233,7 +233,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 
 		const transactionData = {
 			transactionDataHash: response.data.transactionDataHash,
-			amount: convert.toWholeCoins(response.data.amount).amount,
+			amount: convert.toCoins(response.data.amount).amount,
 			address,
 		}; // transactionDataHash, amount
 
