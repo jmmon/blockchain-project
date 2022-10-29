@@ -455,6 +455,7 @@ class Blockchain {
 
 	// transactions
 	getPendingTransactions(address = null) {
+		console.log('fn getPendingTransactions');
 		if (!address) return this.pendingTransactions;
 
 		return this.pendingTransactions.filter(
@@ -1175,37 +1176,53 @@ class Blockchain {
 	// (for pending transactions) if {from: ourAddress}:
 	//    subtract (fee + value) from pendingBalance
 	// balances, address
+
+	//
 	confirmedBalanceOfAddress(address, confirmedTransactions) {
 		return confirmedTransactions.reduce((sum, tx) => {
+			// incoming, receives value
 			if (tx.to === address && tx.transferSuccessful === true) {
 				return sum + +tx.value;
 			}
+			// outgoing, sends value + fee (regardless of if successful?
+			// Should mark down funds that were sent immediately)
 			if (tx.from === address) {
-				return sum - (+tx.fee + (tx.transferSuccessful === true) ? +tx.value : 0);
+				return sum - (+tx.fee + +tx.value);
+				// return sum - (+tx.fee + (tx.transferSuccessful === true) ? +tx.value : 0);
 			}
 		}, 0);
 	}
 
+	// should represent confirmedBalance but only if tx has >= 6 confirmations
 	safeBalanceOfAddress(address, confirmedTransactions) {
+		// chain tip so we can count how many confirmations
 		const chainTipIndex = this.lastBlock().index;
 		return confirmedTransactions.reduce((sum, tx) => {
+			// if >= 6 confs:
 			if (
 				this.transactionConfirmations(tx, chainTipIndex) >=
 				this.config.transactions.safeConfirmCount
 			) {
+				// incoming, >= 6 confs
 				if (tx.to === address && tx.transferSuccessful === true) {
 					return sum + +tx.value;
 				}
-				if (tx.from === address) {
-					return sum - (+tx.fee + (tx.transferSuccessful === true) ? tx.value : 0);
-				}
+			}
+			// outgoing, all confirmed (and pending) txs count against safe balance
+			if (tx.from === address) {
+				return sum - (+tx.fee + +tx.value);
+				// return sum - (+tx.fee + (tx.transferSuccessful === true) ? tx.value : 0);
 			}
 			return sum;
 		}, 0);
 	}
+
+	//
 	pendingBalancesOfAddress(address, pendingTransactions) {
+		// sentSum should be subtracted from confirmed? and safe? if they had 6+ confs
 		return pendingTransactions.reduce(
 			([receivedSum, sentSum], tx) => {
+				//
 				if (tx.to === address) {
 					receivedSum += +tx.value;
 				}
@@ -1217,6 +1234,14 @@ class Blockchain {
 			[0, 0]
 		);
 	}
+
+	// alternately: could group all transactions together, then go through all txs and calculate balances based on whatever factors.
+
+	// for each transaction,
+	// All sent transactions should subtract val+fee from safe, conf, & pending
+	// Received transactions should be sorted:
+	//	pending: add to pending;	1 conf: add to conf;	6 conf: add to safe
+
 	balancesOfAddress(address) {
 		console.log('fn balancesOfAddress', { address });
 		const balances = {
@@ -1225,44 +1250,91 @@ class Blockchain {
 			pendingBalance: 0,
 		};
 
-		const confirmedTransactions = this.getConfirmedTransactions(address);
-		const pendingTransactions = this.getPendingTransactions(address);
+		const allTransactions = this.getTransactionsByAddress(address);
 
-		console.log({confirmedTransactions, pendingTransactions});
-
-		if (confirmedTransactions.length === 0 && pendingTransactions.length === 0) {
+		if (allTransactions.length === 0) {
 			return balances; // return 0s balance object
 		}
 
+		const [pending, confirmed, safe] = allTransactions.reduce(
+			([pending, confirmed, safe], tx) => {
+				const { to, from, minedInBlockIndex, transferSuccessful, value, fee } = tx;
+				if (from === address) {
+					const amount = +value + +fee;
+					pending -= amount;
+					confirmed -= amount;
+					safe -= amount;
+				}
+				if (to === address) {
+					const isSafe =
+						this.transactionConfirmations(tx) >=
+						this.config.transactions.safeConfirmCount;
+					const isInBlock = typeof minedInBlockIndex !== 'undefined';
+					const amount = +value;
+					pending += amount;
+					confirmed += isInBlock && transferSuccessful ? amount : 0;
+					safe += isInBlock && transferSuccessful && isSafe ? amount : 0;
+				}
+				return [pending, confirmed, safe];
+			},
+			[0, 0, 0]
+		);
 
-		if (confirmedTransactions.length > 0) {
-			balances.confirmedBalance += this.confirmedBalanceOfAddress(
-				address,
-				confirmedTransactions
-			);
+		balances.safeBalance = safe;
+		balances.confirmedBalance = confirmed;
+		balances.pendingBalance = pending;
 
-			balances.safeBalance += this.safeBalanceOfAddress(address, confirmedTransactions);
-		}
-
-		// pending balance also includes confirmed balance
-		// balances.pendingBalance += +balances.confirmedBalance;
-
-		if (pendingTransactions.length > 0) {
-			const [receivedTotal, sentTotal] = this.pendingBalancesOfAddress(
-				address,
-				pendingTransactions
-			);
-			console.log({receivedTotal, sentTotal});
-
-			balances.confirmedBalance -= sentTotal;
-
-			balances.pendingBalance += receivedTotal - sentTotal;
-		}
-
-		console.log(`balances (v2) for address ${address}:\n`, balances);
+		console.log(`balances (new and improved!) for address ${address}:\n`, balances);
 
 		return balances;
 	}
+
+	// balancesOfAddress(address) {
+	// 	console.log('fn balancesOfAddress', { address });
+	// 	const balances = {
+	// 		safeBalance: 0,
+	// 		confirmedBalance: 0,
+	// 		pendingBalance: 0,
+	// 	};
+
+	// 	const confirmedTransactions = this.getConfirmedTransactions(address);
+	// 	const pendingTransactions = this.getPendingTransactions(address);
+
+	// 	console.log({ confirmedTransactions, pendingTransactions });
+
+	// 	if (confirmedTransactions.length === 0 && pendingTransactions.length === 0) {
+	// 		return balances; // return 0s balance object
+	// 	}
+
+	// 	if (confirmedTransactions.length > 0) {
+	// 		balances.safeBalance += this.safeBalanceOfAddress(address, confirmedTransactions);
+
+	// 		balances.confirmedBalance += this.confirmedBalanceOfAddress(
+	// 			address,
+	// 			confirmedTransactions
+	// 		);
+	// 	}
+
+	// 	// pending balance is "expected balance", so ALL transactions; should be >= confirmed balance
+	// 	balances.pendingBalance += +balances.confirmedBalance;
+
+	// 	if (pendingTransactions.length > 0) {
+	// 		const [receivedTotal, sentTotal] = this.pendingBalancesOfAddress(
+	// 			address,
+	// 			pendingTransactions
+	// 		);
+	// 		console.log({ receivedTotal, sentTotal });
+
+	// 		balances.safeBalance -= sentTotal; // safe txs - spent pending
+	// 		balances.confirmedBalance -= sentTotal; // confirmed txs - spent pending
+
+	// 		balances.pendingBalance += receivedTotal - sentTotal; // pending + confirmed balance
+	// 	}
+
+	// 	console.log(`balances (v2) for address ${address}:\n`, balances);
+
+	// 	return balances;
+	// }
 
 	// list all accounts that have non-zero CONFIRMED balance (in blocks)
 	// (The all-0's address - genesis address - will have a NEGATIVE balance)
@@ -1284,7 +1356,6 @@ class Blockchain {
 		console.log('---Getting all confirmed account balances...');
 		let balances = {};
 		for (const block of this.chain) {
-			// console.log('scanning block', block.index);
 			for (const transaction of block.transactions) {
 				const { from, to, value, fee } = transaction;
 				if (to in balances) {
