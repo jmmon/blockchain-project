@@ -1,7 +1,7 @@
 <div class="jumbotron col-sm-12">
 	<div class="col-sm-12">
 		<h1 class="display-3">Send a transaction!</h1>
-		<p class="lead">Fill the form to send money</p>
+		<p class="lead">Fill the form to send coins</p>
 
 		<hr class="my-4" />
 		<% if (typeof signedTransaction !== 'object') { %>
@@ -14,58 +14,69 @@
 		>
 			<div class="col-md-6 mb-3">
 				<div class="form-group">
-					<label>From Address</label>
-					<input
-						type="text"
-						class="form-control"
-						name="fromAddress"
-						required
-						disabled
-						value="<%= wallet.address %>"
-					/>
+					<label class="form-input"
+						>From Address
+						<input
+							type="text"
+							class="form-control"
+							name="fromAddress"
+							required
+							disabled <%- typeof wallet !== 'undefined' ? 'value="' + wallet.address + '"' : '' %> />
+						</label>
 				</div>
 
 				<div class="form-group">
-					<label>Recipient Address</label>
-					<input
-						type="text"
-						class="form-control"
-						name="recipient"
-						required
-						<%- typeof recipient !== 'undefined' ? 'value="' + recipient + '"' : '' %>
-					/>
+					<label class="form-input"
+						>Recipient Address <input type="text" class="form-control" name="recipient"
+						required <%- typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.recipient + '"'
+						: '' %> />
+					</label>
+				</div>
+
+				<div
+					class="form-group"
+					style="display: flex; gap: 1rem"
+				>
+					<div style="flex-grow: 1">
+						<label class="form-input">
+							Amount <input type="number" class="form-control" name="amount" required step="any" 
+							<%- typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.amount + '"' : '' %> />
+						</label>
+					</div>
+
+					<div>
+						<label
+							>Units
+							<select
+								name="units"
+								class="form-control"
+							<%- typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.units + '"' : '' %> />
+							>
+								<option value="coins">Coins</option>
+								<option value="microcoins">Microcoins</option>
+							</select></label
+						>
+					</div>
 				</div>
 
 				<div class="form-group">
-					<label>Amount</label>
-					<input
-						type="number"
-						class="form-control"
-						name="amount"
-						required
-						<%- typeof amount !== 'undefined' ? 'value="' + amount + '"' : '' %>
-					/>
+					<label class="form-input"
+						>Password
+						<input
+							type="password"
+							class="form-control"
+							name="password"
+							required
+					/></label>
 				</div>
 
 				<div class="form-group">
-					<label>Password</label>
-					<input
-						type="password"
-						class="form-control"
-						name="password"
-						required
-					/>
-				</div>
-
-				<div class="form-group">
-					<label>Blockchain Node URL</label>
-					<input
-						type="text"
-						class="form-control"
-						name="nodeUrl"
-						required
-						<%- typeof nodeUrl !== 'undefined' ? 'value="' + nodeUrl + '"' : typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl + '"': '' %>
-					/>
+					<label class="form-input"
+						>Blockchain Node URL <input type="text" class="form-control" name="nodeUrl"
+						required <%- typeof nodeUrl !== 'undefined' ? 'value="' + nodeUrl + '"' :
+						typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl
+						+ '"': '' %> />
+					</label>
 				</div>
 
 				<div class="form-group">
@@ -103,17 +114,17 @@
 
 				<div class="form-group">
 					<label>Blockchain Node URL</label>
-					<input
-						type="text"
-						class="form-control"
-						name="nodeUrl"
-						required
-						<%- typeof transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl + '"' : '' %>
-					/>
+					<input type="text" class="form-control" name="nodeUrl" required <%- typeof
+					transactionInfo !== 'undefined' ? 'value="' + transactionInfo.nodeUrl + '"' : ''
+					%> />
 				</div>
 
 				<div class="form-group">
-					<input type="submit" class="btn btn-defautl" value="Send" />
+					<input
+						type="submit"
+						class="btn btn-defautl"
+						value="Send"
+					/>
 				</div>
 			</div>
 		</form>
@@ -121,24 +132,44 @@
 	</div>
 </div>
 
-<% if (typeof previousTransaction == 'object' && previousTransaction !==
-undefined) { %>
-	<div class="alert alert-dismissible alert-success">
-		<button type="button" class="close" data-dismiss="alert">&times;</button>
-		<strong>Transaction successful!</strong><br />
-		<strong>Transaction Hash:</strong><br />
-		<a target="blank" href="http://127.0.0.1:5173/transactions/<%= transactionHash %>" class="alert-link"><%= transactionHash %></a>
+<% if (typeof previousTransaction == 'object' && previousTransaction !== undefined) { %>
+<div class="alert alert-dismissible alert-success">
+	<button
+		type="button"
+		class="close"
+		data-dismiss="alert"
+	>
+		&times;
+	</button>
+	<strong>Transaction successful!</strong><br />
+	<strong>Transaction Hash:</strong><br />
+	<a
+		target="blank"
+		href="http://127.0.0.1:5173/transactions/<%= transactionHash %>"
+		class="alert-link"
+		><%= transactionHash %></a
+	>
 
-		<br /><br />
-		<textarea
-			required
-			disabled
-			name="previousTransaction"
-			cols="100"
-			rows="15"
-			class="form-control"
-		>
-	<%= JSON.stringify(previousTransaction)%></textarea
-		>
+	<br /><br />
+	<div style="width: 400px; display: flex; flex-direction: column">
+		<%= JSON.stringify(previousTransaction) %>
+		<p>New below:</p>
+		<% Object.keys(previousTransaction).forEach(key => { %>
+		<div><%= key %>: <%= previousTransaction[key] %></div>
+		<% }) %>
 	</div>
+</div>
 <% } %>
+
+<!-- {
+		from: address,
+		to: recipient,
+		value,
+		fee: CONSTANTS.defaultFee,
+		dateCreated: new Date().toISOString(),
+		data: '',
+		senderPubKey: publicKey,
+		transactionDataHash: txDataHashBuffer.toString('hex'),
+		senderSignature: signResponse.data,
+
+	} -->

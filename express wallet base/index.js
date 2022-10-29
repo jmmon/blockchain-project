@@ -5,10 +5,12 @@ const session = require('express-session');
 const favicon = require('serve-favicon');
 const ejs = require('ejs');
 const URL = require('url').URL;
-const { convert } = require('../libs/conversion');
+const convert = require('../libs/conversion');
 
 const app = express();
 const PORT = 3003;
+
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 app.use(
 	favicon(path.join(__dirname, 'public', 'images', 'favicon.ico'), {
@@ -21,7 +23,6 @@ app.use(
 		secret: 'keyboard cat',
 		resave: false,
 		saveUninitialized: true,
-		
 	})
 );
 
@@ -291,10 +292,13 @@ const authChecker = (req, res, next) => {
 			// save it to session
 			// redraw this page with signed transaction
 
-			const recipient = req.body.recipient;
-			const amount = req.body.amount;
-			const password = req.body.password;
 			const addressFromForm = req.body.fromAddress;
+			const recipient = req.body.recipient ?? '';
+			const amount = req.body.amount ?? '';
+			const units = req.body.units ?? 'coins';
+			const password = req.body.password ?? '';
+
+			const txInputsInfo = { fromAddress: addressFromForm, recipient, amount, units, nodeUrl };
 
 			console.log('testing "value" fromAddress:', addressFromForm);
 
@@ -309,32 +313,63 @@ const authChecker = (req, res, next) => {
 				drawView(res, active, {
 					wallet,
 					active,
+					transactionInfo: txInputsInfo,
 
 					error: 'Please be sure boxes are filled correctly!',
 				});
 				return;
 			}
+			
+			// nodeUrl validation
+			try {
+				new URL(nodeUrl);
+			} catch (err) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: 'Please use a valid Node URL',
+					transactionInfo: txInputsInfo,
+				});
+				return;
+			}
+
+			// convert units if necessary
+			const micros = +convert.toMicros(+amount).amount;
+			const microcoins = units === 'microcoins' ? +amount : micros;
+			const testCoins = +convert.toCoins(+micros).amount;
+			console.log({original: amount, units, micros, reverted: testCoins});
 
 			// decrypt and sign errors
-			const { data, error } = await decryptAndSign(wallet, recipient, amount, password);
+			const { data, error } = await decryptAndSign(wallet, recipient, microcoins, password);
 			console.log('decryptAndSign:', { data, error });
 			if (error) {
 				drawView(res, active, {
 					wallet,
 					active,
 					error: error,
+					transactionInfo: txInputsInfo,
 				});
 				return;
 			}
+			const totalValue = microcoins + data.fee;
 
 			// fetch balance to see if the transaction will work
 			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
 			console.log('fetched data json:', { balances });
-			if (balances.confirmedBalance < amount) {
+
+			// check if we can spend unconfirmed funds, according to the blockchain config
+			const info = await fetch(`${nodeUrl}/info`).then((res) => res.json());
+			const spendingBalance = info.config.transactions.spendUnconfirmedFunds
+				? balances.pendingBalance
+				: balances.confirmedBalance;
+
+			// balance check
+			if (spendingBalance < totalValue) {
 				drawView(res, active, {
 					wallet,
 					active,
-					error: 'Your account does not have enough funds!',
+					error: `Your account does not have enough funds! Available funds: ${convert.toCoins(spendingBalance).amount} coins (${spendingBalance} microcoins)`,
+					transactionInfo: txInputsInfo,
 				});
 				return;
 			}
@@ -343,6 +378,7 @@ const authChecker = (req, res, next) => {
 				hash: data.transactionDataHash ?? undefined,
 				signedTransaction: data,
 				nodeUrl,
+				units,
 			};
 
 			// success
