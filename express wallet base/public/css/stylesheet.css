@@ -58,11 +58,12 @@ details[closed] ul.amount-container {
 details[open] ul.amount-container {
 	display: initial;
 } */
-input.details-button-checkbox:checked + ul.amount-container {
+
+/* input.details-button-checkbox:checked + ul.amount-container {
 	display: none;
 }
 
 input.details-button-checkbox + ul.amount-container {
 	display: initial;
-}
+} */
 
