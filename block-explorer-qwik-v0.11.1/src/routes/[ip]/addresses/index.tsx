@@ -4,20 +4,28 @@ import {
 	Link,
 	RequestHandler,
 	useEndpoint,
+	useLocation,
 } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
+
+export interface iAllBalances {
+	[key: string]: number;
+}
+
 export default component$(() => {
 	const session = useContext(SessionContext);
+	const location = useLocation();
+	console.log({location})
 
-	const resource = useResource$(({ track, cleanup }) => {
+	const resource = useResource$<iAllBalances>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/balances`;
+		const urlString = `${constants.host}${session.port}/balances`;
 		console.log({ urlString });
 		return getAllBalances(urlString, controller);
 	});
@@ -40,7 +48,7 @@ export default component$(() => {
 							<ul>
 								{Object.keys(balances).map((address) => (
 									<li class="ml-4">
-										<Link href={`/addresses/${address}`} >{address}</Link>: {balances[address]}
+										<Link href={`/${session.port}/addresses/${address}`} >{address}</Link>: {balances[address]}
 									</li>
 								))}
 							</ul>
@@ -59,7 +67,7 @@ export const head: DocumentHead = {
 export async function getAllBalances(
 	urlString: String,
 	controller?: AbortController
-): Promise<Object> {
+): Promise<iAllBalances> {
 	console.log('fetching ALL balances...');
 	const response = await fetch(urlString, {
 		signal: controller?.signal,

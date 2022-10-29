@@ -5,19 +5,21 @@ import {
 	useResource$,
 } from '@builder.io/qwik';
 import { DocumentHead, Link } from '@builder.io/qwik-city';
+import { iTransaction } from '~/components/transaction/transaction';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
+
 export default component$(() => {
 	const session = useContext(SessionContext);
-	const blocksResource = useResource$(({ track, cleanup }) => {
+	const blocksResource = useResource$<Array<string>>(({ track, cleanup }) => {
 		// track(session, "port");
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/blocks`;
+		const urlString = `${constants.host}${session.port}/blocks`;
 		console.log({ urlString });
 		return getBlocks(urlString, controller);
 	});
@@ -38,7 +40,7 @@ export default component$(() => {
 					<ul>
 						{blocks.map((block, index) => (
 							<li>
-								<a href={`/blocks/${index}`}>Block #{index}</a>
+								<a href={`/${session.port}/blocks/${index}`}>Block #{index}</a>
 							</li>
 						))}
 					</ul>
@@ -55,7 +57,7 @@ export const head: DocumentHead = {
 export async function getBlocks(
 	urlString: String,
 	controller?: AbortController
-): Promise<string[]> {
+): Promise<Array<string>> {
 	console.log(`Fetching blocks from ${urlString}...`);
 	const response = await fetch(urlString, {
 		signal: controller?.signal,

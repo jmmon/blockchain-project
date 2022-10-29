@@ -21,7 +21,7 @@ export default component$(() => {
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/info`;
+		const urlString = `${constants.host}${session.port}/info`;
 		console.log({ urlString });
 		return getInfo(urlString, controller);
 	});
@@ -30,7 +30,7 @@ export default component$(() => {
 		<div>
 			<h1>Blockchain Info</h1>
 			<p>
-				<Link href="/info/peers">Peers</Link> and difficulty, etc
+				<Link href={ `/${session.port}/info/peers` } >Peers</Link> and difficulty, etc
 			</p>
 			<Resource
 				value={resource}
@@ -61,25 +61,25 @@ export default component$(() => {
 										return (
 											<li class="ml-4">
 												{key === 'blocksCount' ? (
-													<Link href="/blocks">
+													<Link href={ `/${session.port}/blocks` } >
 														{data}
 													</Link>
 												) : key === 'chainId' ? (
-													<a href="/blocks/0">
+													<a href={ `/${session.port}/blocks/0` } >
 														{data}
 													</a>
 												) : key === 'peers' ? (
-													<Link href="/info/peers">
+													<Link href={ `/${session.port}/info/peers` } >
 														{data}
 													</Link>
 												) : key ===
 												  'pendingTransactions' ? (
-													<a href="/transactions/pending">
+													<a href={ `/${session.port}/transactions/pending` } >
 														{data}
 													</a>
 												) : key ===
 												  'confirmedTransactions' ? (
-													<a href="/transactions/confirmed">
+													<a href={ `/${session.port}/transactions/confirmed` } >
 														{data}
 													</a>
 												) : (

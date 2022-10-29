@@ -9,17 +9,30 @@ import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 import Block from '../../../components/block/block';
 
+export interface iBlock {
+	index: number;
+	transactions: iTransaction[];
+	difficulty: number;
+	prevBlockHash: string;
+	minedBy: string;
+	blockDataHash: string;
+
+	nonce: number | undefined;
+	dateCreated: number | undefined;
+	blockDataHash: string | undefined;
+}
+
 export default component$(() => {
 	const { params } = useLocation();
 	const session = useContext(SessionContext);
 
-	const blockResource = useResource$(({ track, cleanup }) => {
+	const blockResource = useResource$<iBlock>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/blocks/${params.index}`;
+		const urlString = `${constants.host}${session.port}/blocks/${params.index}`;
 		return getBlock(urlString, controller);
 	});
 
@@ -43,7 +56,7 @@ export default component$(() => {
 export async function getBlock(
 	urlString: String,
 	controller?: AbortController
-): Promise<Object> {
+): Promise<iBlock> {
 	console.log('Fetching block...');
 	const response = await fetch(urlString, {
 		signal: controller?.signal,

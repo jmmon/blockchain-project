@@ -23,7 +23,7 @@ export default component$(({ block }: { block: IBlock }) => {
 				if (key === 'minedBy') {
 					return (
 						<li class="ml-2">
-							<Link href={`/addresses/${block[key]}`}>
+							<Link href={`/${session.port}/addresses/${block[key]}`}>
 								{key}: {block[key]}
 							</Link>
 							,

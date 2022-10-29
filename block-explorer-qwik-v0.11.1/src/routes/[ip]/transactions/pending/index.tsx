@@ -9,16 +9,17 @@ import Transaction from '../../../components/transaction/transaction';
 import { SessionContext } from '~/libs/context';
 import constants from '~/libs/constants';
 import { getTransactions } from '~/routes/transactions/index';
+import { iTransaction } from '~/components/transaction/transaction';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
-	const pendingTransactionsResource = useResource$(({ track, cleanup }) => {
+	const pendingTransactionsResource = useResource$<Array<iTransaction>>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/transactions/pending`;
+		const urlString = `${constants.host}${session.port}/transactions/pending`;
 		return getTransactions(urlString, controller);
 	});
 	return (

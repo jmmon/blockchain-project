@@ -5,6 +5,7 @@ import {
 	useResource$,
 } from '@builder.io/qwik';
 import { DocumentHead } from '@builder.io/qwik-city';
+import { iTransaction } from '~/components/transaction/transaction';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 import { getTransactions } from '~/routes/transactions/index';
@@ -13,13 +14,13 @@ import Transaction from '../../../components/transaction/transaction';
 export default component$(() => {
 	const session = useContext(SessionContext);
 
-	const confirmedTransactionsResource = useResource$(({ track, cleanup }) => {
+	const confirmedTransactionsResource = useResource$<Array<iTransaction>>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/transactions/confirmed`;
+		const urlString = `${constants.host}${session.port}/transactions/confirmed`;
 		return getTransactions(urlString, controller);
 	});
 	return (

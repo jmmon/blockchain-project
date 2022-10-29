@@ -1,3 +1,8 @@
+
+const { SHA256 } = require('../../libs/hashing.js');
+
+
+
 // export interface IBlock {
 // 	index: number;
 // 	transactions: ITransaction[];
@@ -5,9 +10,6 @@
 // 	prevBlockHash: string;
 // 	minedBy: string;
 // 	blockDataHash: string;
-
-const { SHA256 } = require('../../libs/hashing.js');
-
 
 // 	nonce: number | undefined;
 // 	dateCreated: number | undefined;

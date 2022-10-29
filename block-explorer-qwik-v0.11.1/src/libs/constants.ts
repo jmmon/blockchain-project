@@ -1,4 +1,4 @@
 export default {
-	baseUrl: `http://localhost:`,
+	host: `http://localhost:`,
 	defaultPort: 5555,
 }

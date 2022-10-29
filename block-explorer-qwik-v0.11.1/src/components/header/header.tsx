@@ -8,13 +8,13 @@ export default component$(() => {
 	const session = useContext(SessionContext);
 	useStyles$(styles);
 
-	const {pathname} = useLocation();
+	const { pathname } = useLocation();
 
 	return (
 		<header>
 			<div class="header-inner">
 				<section class="logo">
-					<Link href="/">Qwik City 🏙</Link>
+					<Link href={`/${session.port}/`}>Qwik City 🏙</Link>
 
 					<select
 						onChange$={(ev) => {
@@ -31,26 +31,26 @@ export default component$(() => {
 				</section>
 				<nav>
 					<Link
-						href="/info"
-						class={{ active: pathname.startsWith('/info') }}
+						href={`/${session.port}/info`}
+						class={{ active: pathname.startsWith(`/${session.port}/info`) }}
 					>
 						Blockchain Info
 					</Link>
 					<Link
-						href="/addresses"
-						class={{ active: pathname.startsWith('/addresses') }}
+						href={`/${session.port}/addresses`}
+						class={{ active: pathname.startsWith(`/${session.port}/addresses`) }}
 					>
 						Addresses
 					</Link>
 					<Link
-						href="/transactions"
-						class={{ active: pathname.startsWith('/transactions') }}
+						href={`/${session.port}/transactions`}
+						class={{ active: pathname.startsWith(`/${session.port}/transactions`) }}
 					>
 						Transactions
 					</Link>
 					<a
-						href="/blocks"
-						class={{ active: pathname.startsWith('/blocks') }}
+						href={`/${session.port}/blocks`}
+						class={{ active: pathname.startsWith(`/${session.port}/blocks`) }}
 					>
 						Blocks
 					</a>

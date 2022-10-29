@@ -19,13 +19,13 @@ export default component$(() => {
 	const session = useContext(SessionContext);
 	console.log('rendering addresses/[address]')
 
-	const resource = useResource$(({ track, cleanup }) => {
+	const resource = useResource$<iBalance>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/address/${params.address}/balance`;
+		const urlString = `${constants.host}${session.port}/address/${params.address}/balance`;
 		console.log({urlString});
 		return getBalance(urlString, controller);
 	});
@@ -64,7 +64,7 @@ export default component$(() => {
 					);
 				}}
 			/>
-			<a href={`/addresses/${params.address}/transactions`}>
+			<a href={`/${session.port}/addresses/${params.address}/transactions`}>
 				View Transactions...
 			</a>
 		</div>
@@ -78,7 +78,7 @@ export const head: DocumentHead = {
 export async function getBalance(
 	urlString: String,
 	controller?: AbortController
-): Promise<object> {
+): Promise<iBalance> {
 	console.log('fetching balances from', urlString);
 	const response = await fetch(urlString, {
 		signal: controller?.signal,
@@ -90,4 +90,10 @@ export async function getBalance(
 		return Promise.reject(responseJson);
 	}
 	return responseJson;
+}
+
+export interface iBalance {
+	pendingBalance: number;
+	confirmedBalance: number;
+	safeBalance: number;
 }

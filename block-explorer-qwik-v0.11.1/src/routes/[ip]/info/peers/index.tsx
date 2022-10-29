@@ -14,13 +14,13 @@ import { SessionContext } from '~/libs/context';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
-	const resource = useResource$(({ track, cleanup }) => {
+	const resource = useResource$<Array<iPeer>>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/peers`;
+		const urlString = `${constants.host}${session.port}/peers`;
 		return getPeers(urlString, controller);
 	});
 
@@ -57,8 +57,8 @@ export default component$(() => {
 							<h4>Peers:</h4>
 							<ul class="ml-2">
 								[
-								{peers.map((peer) => (
-									<li>{peer}</li>
+								{peers.map(([id, url]) => (
+									<li>{id}: {url}</li>
 								))}
 								]
 							</ul>
@@ -79,7 +79,7 @@ export const head: DocumentHead = {
 export async function getPeers(
 	urlString: String,
 	controller?: AbortController
-): Promise<Object> {
+): Promise<Array<iPeer>> {
 	console.log('fetching peers...', { urlString });
 	try {
 		const response = await fetch(urlString, {
@@ -96,4 +96,9 @@ export async function getPeers(
 		console.log('error caught');
 		return Promise.reject(error);
 	}
+}
+
+export interface iPeer {
+	id: string;
+	url: string;
 }

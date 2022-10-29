@@ -1,13 +1,16 @@
-import { component$ } from '@builder.io/qwik';
+import { component$, useContext } from '@builder.io/qwik';
 import { DocumentHead, Link } from '@builder.io/qwik-city';
+import { iTransaction } from '~/components/transaction/transaction';
+import { SessionContext } from '~/libs/context';
 
 export default component$(() => {
+	const session = useContext(SessionContext);
 	return (
 		<div>
 			<h1>Transactions</h1>
 			<div class="ml-4 mt-4 flex flex-col">
-				<a href="/transactions/pending">Pending Transactions</a>
-				<a href="/transactions/confirmed">Confirmed Transactions</a>
+				<a href={ `/${session.port}/transactions/pending` } >Pending Transactions</a>
+				<a href={ `/${session.port}/transactions/confirmed` } >Confirmed Transactions</a>
 			</div>
 		</div>
 	);
@@ -20,7 +23,7 @@ export const head: DocumentHead = {
 export async function getTransactions(
 	urlString: String,
 	controller?: AbortController
-): Promise<Object> {
+): Promise<iTransaction|Array<iTransaction>> {
 	console.log(`Fetching transactions from ${urlString}...`);
 	const response = await fetch(urlString, {
 		signal: controller?.signal,

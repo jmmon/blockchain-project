@@ -1,11 +1,13 @@
-import { $, component$, useStore } from '@builder.io/qwik';
+import { $, component$, useContext, useStore } from '@builder.io/qwik';
 import { Link, useLocation } from '@builder.io/qwik-city';
+import { SessionContext } from '~/libs/context';
 
 interface IStore {
 	query: string;
 }
 
 export default component$((props) => {
+	const session = useContext(SessionContext);
 	const store = useStore<IStore>({
 		query: '',
 	});
@@ -33,7 +35,8 @@ export default component$((props) => {
 				/>
 			</label>
 			<Link href={`http://127.0.0.1:5173/search/${store.query}`}>Search</Link> */}
-			<form action="/search" method="GET" >
+
+			<form action={ `/${session.port}/search` } method="GET" >
 				<input type="text" name="text" placeholder="What are you looking for?" />
 				<input type="submit" value="Search"/>
 			</form>

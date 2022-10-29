@@ -1314,19 +1314,32 @@ class Blockchain {
 		}
 
 		for (const transaction of this.pendingTransactions) {
-				const { from, value, fee } = transaction;
-				// subtracting spent Pending funds, assuming people can spend unconfirmed funds
-				if (from in balances) {
-					// adding to existing entry for sent transaction
-					balances[from] -= (fee + value);
-				} else {
-					// creating new entry for sent transaction
-					balances[from] = 0 - (fee + value);
-				}
+			const { from, value, fee } = transaction;
+			// subtracting spent Pending funds, assuming people can spend unconfirmed funds
+			if (from in balances) {
+				// adding to existing entry for sent transaction
+				balances[from] -= fee + value;
+			} else {
+				// creating new entry for sent transaction
+				balances[from] = 0 - (fee + value);
+			}
 		}
-		
 		console.log('---done collecting balances');
-		return balances;
+
+		const entries = Object.entries(balances);
+		if (entries.length <= 1) {
+			return balances;
+		}
+
+		// highest to lowest (balance)
+		const sorted = entries.sort(([, bal1], [, bal2]) => bal2 - bal1);
+		console.log({ sorted });
+
+		// move last item to front (the all 0's address)
+		sorted.unshift(sorted.pop());
+		console.log({sorted});
+
+		return Object.fromEntries(sorted);
 	}
 
 	// balances, addresses

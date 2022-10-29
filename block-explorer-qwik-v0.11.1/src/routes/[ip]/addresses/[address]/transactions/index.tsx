@@ -1,25 +1,23 @@
-import { component$, Resource, useContext, useResource$, } from '@builder.io/qwik';
-import {
-	DocumentHead,
-	RequestHandler,
-	useEndpoint,
-	useLocation,
-} from '@builder.io/qwik-city';
+import { component$, Resource, useContext, useResource$, useStylesScoped$ } from '@builder.io/qwik';
+import { DocumentHead, RequestHandler, useEndpoint, useLocation } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
-import Transaction from '../../../../components/transaction/transaction';
+import Transaction from '~/components/transaction/transaction';
+import type { iTransaction } from '~/components/transaction/transaction';
+import Styles from './styles.css';
 
 export default component$(() => {
+	useStylesScoped$(Styles);
 	const { params } = useLocation();
 	const session = useContext(SessionContext);
 
-	const resource = useResource$(({ track, cleanup }) => {
+	const resource = useResource$<iAddressTransactions>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
 		cleanup(() => controller.abort());
 
-		const urlString = `${constants.baseUrl}${session.port}/address/${params.address}/transactions`;
+		const urlString = `${constants.host}${session.port}/address/${params.address}/transactions`;
 		return getAddressTransactions(urlString, params.address, controller);
 	});
 
@@ -46,18 +44,18 @@ export default component$(() => {
 							<h4>Transactions:</h4>
 							<ul>
 								{transactions.map((transaction, index) => (
-									<li>
-										{/* <a href={`/transactions/${transaction.transactionDataHash}`} >
-											{}
-										</a> */}
-										Tx #{index}:
-										<Transaction
-											transaction={transaction}
-											index={index}
-											totalTransactions={
-												totalTransactions
-											}
-										/>
+									<li class="transactionsMap">
+										<details class="transactionsMap">
+											<summary>
+												Tx #{index}
+												<span>. . .</span>
+											</summary>
+
+											<Transaction
+												transaction={transaction}
+												totalTransactions={totalTransactions}
+											/>
+										</details>
 									</li>
 								))}
 							</ul>
@@ -77,7 +75,7 @@ export async function getAddressTransactions(
 	urlString: string,
 	address: string,
 	controller?: AbortController
-): Promise<Object> {
+): Promise<iAddressTransactions> {
 	console.log('fetching transactions of address', address + '...');
 	const response = await fetch(urlString, {
 		signal: controller?.signal,
@@ -90,4 +88,9 @@ export async function getAddressTransactions(
 		return Promise.reject(responseJson);
 	}
 	return responseJson;
+}
+
+export interface iAddressTransactions {
+	address: string;
+	transactions: Array<iTransaction>;
 }
