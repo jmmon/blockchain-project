@@ -1,10 +1,8 @@
 import { component$, useStylesScoped$ } from '@builder.io/qwik';
 import { Link } from '@builder.io/qwik-city';
 import Transaction from '../transaction/transaction';
-import Styles from './style.css';
 
 export default component$(({ block }: { block: IBlock }) => {
-	useStylesScoped$(Styles);
 	return (
 		<ul>
 			{'{'}
@@ -44,8 +42,7 @@ export default component$(({ block }: { block: IBlock }) => {
 									}}
 								>
 									Transactions: {'['}
-									<br />
-									<span class="extra">.{" "}.{" "}.</span>
+									<span class="extra"><br />.{" "}.{" "}.<br/>{']'}</span>
 								</summary>
 
 								<ul class="ml-2">

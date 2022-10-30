@@ -1,7 +1,14 @@
 import { createContext } from "@builder.io/qwik";
 
-export interface ISessionContext {
+export interface iSessionContext {
 	port: number;
+	peers: Array<iPeer>;
+	searchForPeers: boolean;
 }
 
-export const SessionContext = createContext<ISessionContext>("port-context");
+export interface iPeer {
+	id: string;
+	url: string;
+}
+
+export const SessionContext = createContext<iSessionContext>("port-context");

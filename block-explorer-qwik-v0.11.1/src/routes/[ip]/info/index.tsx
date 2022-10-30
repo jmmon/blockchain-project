@@ -1,17 +1,30 @@
-import {
-	component$,
-	Resource,
-	useContext,
-	useResource$,
-} from '@builder.io/qwik';
-import {
-	DocumentHead,
-	Link,
-	RequestHandler,
-	useEndpoint,
-} from '@builder.io/qwik-city';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
+import { DocumentHead, Link, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
+
+export const RenderObject = component$((obj) => {
+	const keysArr = Object.keys(obj);
+	return (
+		<ul>
+			{keysArr.map((key, index) => {
+				return (
+					<li>
+						{key}:{' '}
+						{typeof obj[key] === 'object' ? (
+							<>
+								{'{'} {RenderObject(obj[key])}{' '}
+								{`}${keysArr.indexOf(key) !== keysArr.length - 1 ? ',' : ''}`}
+							</>
+						) : (
+							obj[key]
+						)}
+					</li>
+				);
+			})}
+		</ul>
+	);
+});
 
 export default component$(() => {
 	const session = useContext(SessionContext);
@@ -30,7 +43,7 @@ export default component$(() => {
 		<div>
 			<h1>Blockchain Info</h1>
 			<p>
-				<Link href={ `/${session.port}/info/peers` } >Peers</Link> and difficulty, etc
+				<Link href={`/${session.port}/info/peers`}>Peers</Link> and difficulty, etc
 			</p>
 			<Resource
 				value={resource}
@@ -61,27 +74,43 @@ export default component$(() => {
 										return (
 											<li class="ml-4">
 												{key === 'blocksCount' ? (
-													<Link href={ `/${session.port}/blocks` } >
+													<Link href={`/${session.port}/blocks`}>
 														{data}
 													</Link>
 												) : key === 'chainId' ? (
-													<a href={ `/${session.port}/blocks/0` } >
-														{data}
-													</a>
+													<a href={`/${session.port}/blocks/0`}>{data}</a>
 												) : key === 'peers' ? (
-													<Link href={ `/${session.port}/info/peers` } >
+													<Link href={`/${session.port}/info/peers`}>
 														{data}
 													</Link>
-												) : key ===
-												  'pendingTransactions' ? (
-													<a href={ `/${session.port}/transactions/pending` } >
+												) : key === 'pendingTransactions' ? (
+													<a
+														href={`/${session.port}/transactions/pending`}
+													>
 														{data}
 													</a>
-												) : key ===
-												  'confirmedTransactions' ? (
-													<a href={ `/${session.port}/transactions/confirmed` } >
+												) : key === 'confirmedTransactions' ? (
+													<a
+														href={`/${session.port}/transactions/confirmed`}
+													>
 														{data}
 													</a>
+												) : key === 'config' ? (
+													<details>
+														<summary
+															style={{
+																cursor: 'pointer',
+																listStyle: 'none',
+															}}
+														>
+															{key}:{' {'}
+															<span class="extra">
+																<br />. . .<br />{'}'}
+																
+															</span>
+														</summary>{' '}
+														{RenderObject(info[key])} {'}'}
+													</details>
 												) : (
 													<>{data}</>
 												)}
@@ -103,10 +132,7 @@ export const head: DocumentHead = {
 	title: 'Blockchain Info',
 };
 
-export async function getInfo(
-	urlString: String,
-	controller?: AbortController
-): Promise<Object> {
+export async function getInfo(urlString: String, controller?: AbortController): Promise<Object> {
 	console.log('Fetching info...');
 	const response = await fetch(urlString, { signal: controller?.signal });
 	const responseJson = await response.json();

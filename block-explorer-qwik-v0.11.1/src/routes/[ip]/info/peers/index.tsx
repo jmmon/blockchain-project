@@ -1,16 +1,7 @@
-import {
-	component$,
-	Resource,
-	useContext,
-	useResource$,
-} from '@builder.io/qwik';
-import {
-	DocumentHead,
-	RequestHandler,
-	useEndpoint,
-} from '@builder.io/qwik-city';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
+import { DocumentHead, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
-import { SessionContext } from '~/libs/context';
+import { iPeer, SessionContext } from '~/libs/context';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
@@ -55,13 +46,22 @@ export default component$(() => {
 					return (
 						<>
 							<h4>Peers:</h4>
-							<ul class="ml-2">
+							<ol class="ml-2">
 								[
-								{peers.map(([id, url]) => (
-									<li>{id}: {url}</li>
-								))}
+								{peers.map(([id, url]) => {
+									// get url
+									const port = url.split(':')[2];
+									console.log({ url, port });
+									return (
+										<li>
+											<a href={`/${port}/info/peers`}>
+												{id}: {url}
+											</a>
+										</li>
+									);
+								})}
 								]
-							</ul>
+							</ol>
 						</>
 					);
 				}}
@@ -96,9 +96,4 @@ export async function getPeers(
 		console.log('error caught');
 		return Promise.reject(error);
 	}
-}
-
-export interface iPeer {
-	id: string;
-	url: string;
 }

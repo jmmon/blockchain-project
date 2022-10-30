@@ -28,6 +28,18 @@ main {
   overflow: hidden;
 }
 
+details[open] span.extra {
+	display: none;
+}
+
+details[closed]  span.extra {
+	display: initial;
+}
+
+ul>li {
+	list-style-type: none;
+}
+
 h1,
 h2 {
   margin: 0 0 5px 0;
@@ -43,18 +55,19 @@ section {
 }
 
 ul {
-  list-style-type: square;
+  /* list-style-type: square; */
   margin: 5px 0 30px 0;
   padding-left: 25px;
 }
 
 li {
   padding: 5px 0;
+	margin-left: 1rem;
 }
 
-li::marker {
+/* li::marker {
   color: var(--qwik-light-blue);
-}
+} */
 
 a,
 a:visited {

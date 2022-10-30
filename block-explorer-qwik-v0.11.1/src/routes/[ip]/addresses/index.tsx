@@ -45,13 +45,13 @@ export default component$(() => {
 					return (
 						<>
 							<h4>Balances:</h4>
-							<ul>
+							<ol>
 								{Object.keys(balances).map((address) => (
 									<li class="ml-4">
 										<Link href={`/${session.port}/addresses/${address}`} >{address}</Link>: {balances[address]}
 									</li>
 								))}
-							</ul>
+							</ol>
 						</>
 					);
 				}}

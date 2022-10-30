@@ -42,7 +42,9 @@ Other TODOs:
 
 Block Explorer: "Get a Block" page seems to stick in "LOADING" phase?
 
-	Should use port # as param in URL, i.e. /5555/addresses or /5558/transactions/{someHash}
+	On peers page, could have each peer link to their block explorer port!
+		Click to view the network from this node
+
 
 explorer:
 	Clean up block explorer (list style type)
