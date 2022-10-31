@@ -10,6 +10,9 @@ const coinType = '7789';
 const CONSTANTS = {
 	defaultFee: 10,
 };
+const CONFIG = {
+	coinbase: { microcoinsPerCoin: 1000000 },
+}
 
 const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	`m/${purpose}'/${coinType}'/${account}'${
@@ -259,6 +262,19 @@ const verifySignature = (txDataHash, publicKey, signature) => {
 	return isValid;
 };
 
+const convert = {
+	toCoins: (micros) => ({
+		amount: (+micros / CONFIG.coinbase.microcoinsPerCoin).toFixed(
+			String(CONFIG.coinbase.microcoinsPerCoin).length - 1
+		),
+		type: 'coins',
+	}),
+	toMicros: (wholes) => ({
+		amount: wholes * CONFIG.coinbase.microcoinsPerCoin,
+		type: 'microcoins',
+	}),
+};
+
 const walletUtils = {
 	generateWallet,
 	encrypt,
@@ -272,6 +288,7 @@ const walletUtils = {
 	verifySignature,
 	hashTransaction,
 	CONSTANTS,
+	convert,
 };
 
 export default walletUtils;

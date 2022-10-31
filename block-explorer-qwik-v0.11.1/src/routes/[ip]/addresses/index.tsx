@@ -7,7 +7,7 @@ import {
 	useLocation,
 } from '@builder.io/qwik-city';
 import { Loading } from '~/components/loading/loading';
-import constants from '~/libs/constants';
+import constants, {convert} from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
 export interface iAllBalances {
@@ -32,8 +32,8 @@ export default component$(() => {
 
 	return (
 		<div>
-			<h1>Addresses</h1>
-			<p>fetch all (confirmed, non-zero) address balances</p>
+			<h1>Addresses And Balances</h1>
+			<p>A list of account balances that are non-zero amounts:</p>
 			<Resource
 				value={resource}
 				onPending={() => (
@@ -45,24 +45,27 @@ export default component$(() => {
 					if (!balances) {
 						return <p>Should never show</p>;
 					}
-
-					return (
-						<>
+					return (<>
 							<h4>Balances:</h4>
 							<ol>
-								{Object.keys(balances).map((address) => (
+								{Object.keys(balances).map((address) => {
+									const balance = balances[address];
+									const converted = convert.toCoins(balance);
+/* 									console.log({balance, converted: {converted}}); */
+									return (
 									<li class="ml-4">
 										<Link href={`/${session.port}/addresses/${address}`}>
 											{address}
 										</Link>
-										: {balances[address]}
+										: {converted.amount} {converted.type}
 									</li>
-								))}
+									);
+								})}
 							</ol>
 						</>
 					);
 				}}
-			/>
+			/> 
 		</div>
 	);
 });

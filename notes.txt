@@ -31,24 +31,10 @@ October 8th:
 
 
 Other TODOs:
- 
-	Change wording from coins to microcoins? 
-		balances page (get route),
-		(send results page)
 
-	wallet, 
-		balance display should not be a text box
-	more?)
-
-Block Explorer: "Get a Block" page seems to stick in "LOADING" phase?
-
-	On peers page, could have each peer link to their block explorer port!
-		Click to view the network from this node
-
+Block Explorer: "Get a Block" page seems to stick in "LOADING" phase? ???
 
 explorer:
-	Clean up block explorer (list style type)
-
 	Add block explorer search bar?
 		Input box (on header?)
 		Take input and "parse?" to decide if it's: (Figure out a priority for those search terms)

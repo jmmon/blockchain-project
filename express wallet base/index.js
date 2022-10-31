@@ -429,11 +429,11 @@ const authChecker = (req, res, next) => {
 			//success:
 			console.log('Success sending transaction!');
 
-			console.log({value: signedTransaction.value, fee: signedTransaction.fee});
+/* 			console.log({value: signedTransaction.value, fee: signedTransaction.fee}); */
 			// convert units 
-			const valCoins = +convert.toCoins(+signedTransaction.value);
-			const feeCoins = +convert.toCoins(+signedTransaction.fee);
-			console.log({valCoins, feeCoins});
+			const valCoins = convert.toCoins(signedTransaction.value);
+			const feeCoins = convert.toCoins(signedTransaction.fee);
+/* 			console.log({valCoins, feeCoins}); */
 
 			const previousTransaction = data;
 			req.session.signedTransaction = undefined;
