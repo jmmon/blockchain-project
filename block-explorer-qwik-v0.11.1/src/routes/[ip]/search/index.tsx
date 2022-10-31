@@ -1,51 +1,52 @@
 import { component$, Resource } from '@builder.io/qwik';
 import { useEndpoint, useLocation } from '@builder.io/qwik-city';
 
-interface IEndpoint {
+interface iEndpoint {
 	value: Boolean;
+	results: Object;
 }
 
 export default component$(() => {
 	const location = useLocation();
-	// const searchTerms = location.params.query.replaceAll('+', ' ');
-	const searchData = useEndpoint<IEndpoint>();
+	const searchTerms = location.query.query;
 
-	console.log({ searchData });
-
-	console.log('inside component:', { location });
+	console.log('inside component:', { searchTerms });
+	const searchResults = useEndpoint<iEndpoint>();
+	// What to do:
 	return (
 		<div>
 			<h1>Search Results</h1>
 			<Resource
-				value={searchData}
+				value={searchResults}
 				onPending={() => <div>Loading...</div>}
 				onRejected={() => <div>Error</div>}
-				onResolved={(data) => (
+				onResolved={(results) => {
+					console.log({results});
+					return (
 					<div>
-						{data && Object.entries(data).map(([key, val]) => (
-							<div>
-								{key}: {val}
-							</div>
-						))}
+						{results &&
+							Object.entries(results).map(([key, val]) => (
+								<div>
+									{key}: {(typeof val === "object") ? Object.entries(val).join(', ') : val}
+									
+								</div>
+							))}
 					</div>
-				)}
+				)}}
 			/>
-			{/* {searchTerms} */}
 		</div>
 	);
 });
 
-export const onGet: RequestHandler<IEndpoint> = async ({ request, params }) => {
+export const onGet: RequestHandler<iEndpoint> = async ({ request, response, url, params }) => {
+	const query = url.searchParams.get("query");
+	console.log('query:', query);
 	// do some sorting and fetching of the data?
-	console.log('onGet:', { request, params });
-	// console.log('onGet:', {
-	// 	// params: await request.formData(),
-	// 	// json: await request.json(),
-	// 	// text: await request.text(),
-	// });
 
+
+	const results = {item1: `results for term: ${query}`}
 	return {
 		value: true,
-		params,
+		results,
 	};
 };

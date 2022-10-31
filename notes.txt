@@ -38,21 +38,20 @@ explorer:
 	Add block explorer search bar?
 		Input box (on header?)
 		Take input and "parse?" to decide if it's: (Figure out a priority for those search terms)
-			address:
+			address: (40 chars, hex)
 				to, from, (transactions),
 				minedBy, (blocks),
-			hash:
+			hash: (64 chars (or 1 char for genesis), hex)
 				blockDataHash: 64chars: 
 				blockHash: 64chars: 
 				prevBlockHash: 1char || 64chars: 
-
 				txDataHash: 64chars: 
 
-			index / minedInBlockIndex, (blocks, transactions)
-			senderPubKey, (transactions) 65chars
-			data, (transactions)
-			dateCreated, (blocks, transactions)
-			senderSignature, (transaction: 64 chars (a|b) or 128 chars)
+			index / minedInBlockIndex, (blocks, transactions) (shoud be typeof Number)
+			senderPubKey, (transactions) 65chars (65chars, hex)
+			data, (transactions) (string?)
+			dateCreated, (blocks, transactions) (parses to date?)
+			senderSignature, (transaction: 64 chars, hex,  (a|b|a+b)
 
 
 		Then pull up a search page showing two sections:
