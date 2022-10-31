@@ -40,7 +40,7 @@ const typeCheck = ({ label, value, type }) => {
 	return false;
 };
 
-const patternCheck = ({ label, value, pattern, expected, actual }) => {
+const patternCheck = ({ label, value, pattern = hexPattern, expected, actual }) => {
 	const isValid = pattern.test(value);
 	if (!isValid) {
 		// console.log('failed pattern.test(value)', { isValid });
