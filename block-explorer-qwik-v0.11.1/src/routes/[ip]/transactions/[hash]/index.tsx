@@ -1,16 +1,12 @@
-import {
-	component$,
-	Resource,
-	useContext,
-	useResource$,
-} from '@builder.io/qwik';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import { DocumentHead, useLocation } from '@builder.io/qwik-city';
 import { iTransaction } from '~/components/transaction/transaction';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
-import { getTransactions } from '~/routes/transactions/index';
+import { getTransactions } from '~/routes/[ip]/transactions/index';
 
-import Transaction from '../../../components/transaction/transaction';
+import Transaction from '~/components/transaction/transaction';
+import { Loading } from '~/components/loading/loading';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
@@ -30,13 +26,15 @@ export default component$(() => {
 	return (
 		<div>
 			<h1>Transaction Lookup</h1>
+
 			<Resource
 				value={transactionsResource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+					<>
+						<Loading path="transaction" />
+					</>
 				)}
+				onRejected={(reason) => <div>Error: {reason.errorMsg}</div>}
 				onResolved={(transaction) => {
 					if (!transaction) {
 						return <p>No transaction found.</p>;

@@ -5,6 +5,7 @@ import {
 	useResource$,
 } from '@builder.io/qwik';
 import { DocumentHead, Link } from '@builder.io/qwik-city';
+import { Loading } from '~/components/loading/loading';
 import { iTransaction } from '~/components/transaction/transaction';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
@@ -31,9 +32,7 @@ export default component$(() => {
 			<Resource
 				value={blocksResource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+				<><Loading path="blocks" /></>
 				)}
 				onRejected={(error) => <>Error: {error.message}</>}
 				onResolved={(blocks) => (

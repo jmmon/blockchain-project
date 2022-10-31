@@ -11,6 +11,7 @@ import {
 	useEndpoint,
 	Link,
 } from '@builder.io/qwik-city';
+import { Loading } from '~/components/loading/loading';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
@@ -37,9 +38,10 @@ export default component$(() => {
 			<Resource
 				value={resource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+					<>
+						<Loading path="blocks" />
+					</>
+
 				)}
 				onRejected={(response) => {
 					console.log('Error:', response.message)

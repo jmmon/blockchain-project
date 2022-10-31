@@ -1,15 +1,11 @@
-import {
-	component$,
-	Resource,
-	useContext,
-	useResource$,
-} from '@builder.io/qwik';
+import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import { DocumentHead } from '@builder.io/qwik-city';
-import Transaction from '../../../components/transaction/transaction';
+import Transaction from '~/components/transaction/transaction';
 import { SessionContext } from '~/libs/context';
 import constants from '~/libs/constants';
-import { getTransactions } from '~/routes/transactions/index';
+import { getTransactions } from '~/routes/[ip]/transactions/index';
 import { iTransaction } from '~/components/transaction/transaction';
+import { Loading } from '~/components/loading/loading';
 
 export default component$(() => {
 	const session = useContext(SessionContext);
@@ -27,10 +23,13 @@ export default component$(() => {
 			<h1>Pending Transactions</h1>
 			<Resource
 				value={pendingTransactionsResource}
-				onPending={() => <p>Loading...</p>}
+				onPending={() => (
+					<>
+						<Loading path="transaction" />
+					</>
+				)}
 				onResolved={(transactions) => {
-					if (transactions.length === 0)
-						return <p>No pending transactions found.</p>;
+					if (transactions.length === 0) return <p>No pending transactions found.</p>;
 
 					const totalTransactions = transactions.length;
 					return (

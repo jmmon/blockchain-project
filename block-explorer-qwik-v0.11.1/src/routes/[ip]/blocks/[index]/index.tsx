@@ -7,7 +7,8 @@ import {
 import { DocumentHead, useLocation } from '@builder.io/qwik-city';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
-import Block from '../../../components/block/block';
+import Block from '~/components/block/block';
+import { Loading } from '~/components/loading/loading';
 
 export interface iBlock {
 	index: number;
@@ -42,9 +43,7 @@ export default component$(() => {
 			<Resource
 				value={blockResource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+					<><Loading path="block" /></>
 				)}
 				onRejected={(error) => <>Error: {error.errorMsg}</>}
 				onResolved={(block) => <Block block={block} />}

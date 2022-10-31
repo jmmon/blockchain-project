@@ -6,9 +6,9 @@ import {
 	useEndpoint,
 	useLocation,
 } from '@builder.io/qwik-city';
+import { Loading } from '~/components/loading/loading';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
-
 
 export interface iAllBalances {
 	[key: string]: number;
@@ -17,7 +17,7 @@ export interface iAllBalances {
 export default component$(() => {
 	const session = useContext(SessionContext);
 	const location = useLocation();
-	console.log({location})
+	console.log({ location });
 
 	const resource = useResource$<iAllBalances>(({ track, cleanup }) => {
 		track(() => session.port);
@@ -36,7 +36,11 @@ export default component$(() => {
 			<p>fetch all (confirmed, non-zero) address balances</p>
 			<Resource
 				value={resource}
-				onPending={() => <p>Loading...</p>}
+				onPending={() => (
+					<>
+						<Loading path="blocks" />
+					</>
+				)}
 				onResolved={(balances) => {
 					if (!balances) {
 						return <p>Should never show</p>;
@@ -48,7 +52,10 @@ export default component$(() => {
 							<ol>
 								{Object.keys(balances).map((address) => (
 									<li class="ml-4">
-										<Link href={`/${session.port}/addresses/${address}`} >{address}</Link>: {balances[address]}
+										<Link href={`/${session.port}/addresses/${address}`}>
+											{address}
+										</Link>
+										: {balances[address]}
 									</li>
 								))}
 							</ol>

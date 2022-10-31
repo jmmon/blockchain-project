@@ -30,6 +30,7 @@ export default component$(
 	}) => {
 		const { pathname } = useLocation();
 		const session = useContext(SessionContext);
+		console.log('transaction runs');
 
 		const store = useStore({
 			txDataHash: '',
@@ -37,18 +38,18 @@ export default component$(
 
 		// to
 		useServerMount$(async () => {
-			console.log({before: transaction.transactionDataHash});
+			// console.log({before: transaction.transactionDataHash});
 			store.txDataHash = await fromBuffer(transaction.transactionDataHash)
-			console.log({after: store.txDataHash});
+			// console.log({after: store.txDataHash});
 		})
 
 		const paths = pathname.split('/');
-		console.log({ paths });
+		// console.log({ paths });
 		const isTransactionsPath =
 			// typeof +paths[1] === 'number' &&
 			paths[2] === 'transactions' &&
 			paths[3] !== 'pending' &&
-			paths[4] !== 'confirmed';
+			paths[3] !== 'confirmed';
 
 		let last = true;
 		if (totalTransactions) {

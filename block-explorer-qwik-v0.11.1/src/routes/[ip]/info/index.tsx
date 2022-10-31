@@ -1,5 +1,6 @@
 import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
 import { DocumentHead, Link, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
+import { Loading } from '~/components/loading/loading';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
@@ -48,9 +49,9 @@ export default component$(() => {
 			<Resource
 				value={resource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+					<>
+						<Loading path="info" />
+					</>
 				)}
 				onResolved={(info) => {
 					if (!info) {
@@ -105,8 +106,8 @@ export default component$(() => {
 														>
 															{key}:{' {'}
 															<span class="extra">
-																<br />. . .<br />{'}'}
-																
+																<br />. . .<br />
+																{'}'}
 															</span>
 														</summary>{' '}
 														{RenderObject(info[key])} {'}'}

@@ -5,6 +5,7 @@ import { SessionContext } from '~/libs/context';
 import Transaction from '~/components/transaction/transaction';
 import type { iTransaction } from '~/components/transaction/transaction';
 import Styles from './styles.css';
+import { Loading } from '~/components/loading/loading';
 
 export default component$(() => {
 	useStylesScoped$(Styles);
@@ -28,9 +29,9 @@ export default component$(() => {
 			<Resource
 				value={resource}
 				onPending={() => (
-					<div style="width: 100vw; height: 100vh; background-color: #ff8888; font-size: 80px;">
-						Loading...
-					</div>
+					<>
+						<Loading path="blocks" />
+					</>
 				)}
 				onResolved={(data) => {
 					const { address, transactions } = data;

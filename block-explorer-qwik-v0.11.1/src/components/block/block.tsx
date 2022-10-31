@@ -1,8 +1,10 @@
-import { component$, useStylesScoped$ } from '@builder.io/qwik';
+import { component$, useContext, useStylesScoped$ } from '@builder.io/qwik';
 import { Link } from '@builder.io/qwik-city';
+import { SessionContext } from '~/libs/context';
 import Transaction from '../transaction/transaction';
 
 export default component$(({ block }: { block: IBlock }) => {
+	const session = useContext(SessionContext);
 	return (
 		<ul>
 			{'{'}
