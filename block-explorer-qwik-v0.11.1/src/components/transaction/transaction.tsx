@@ -30,7 +30,6 @@ export default component$(
 	}) => {
 		const { pathname } = useLocation();
 		const session = useContext(SessionContext);
-		console.log('transaction runs');
 
 		const store = useStore({
 			txDataHash: '',
@@ -57,12 +56,12 @@ export default component$(
 		}
 
 		return (
-			<ul class="ml-2">
-				{`${typeof index === 'number' ? `${index}: ` : ''}{`}
+			<ul>
+{/* 				{`${typeof index === 'number' ? `${index}: ` : ''}{`} */}
 				{Object.keys(transaction).map((txKey) => {
 					if (txKey === 'from' || txKey === 'to') {
 						return (
-							<li class="ml-4">
+							<li>
 								<Link href={`/${session.port}/addresses/${transaction[txKey]}`}>
 									{txKey}: {transaction[txKey]}
 								</Link>
@@ -72,7 +71,7 @@ export default component$(
 					}
 					if (txKey === 'minedInBlockIndex') {
 						return (
-							<li class="ml-4">
+							<li>
 								<a href={`/${session.port}/blocks/${transaction[txKey]}`}>
 									{txKey}: {transaction[txKey]}
 								</a>
@@ -86,7 +85,7 @@ export default component$(
 							? '#'
 							: `/${session.port}/transactions/${store.txDataHash}`;
 						return (
-							<li class="ml-4">
+							<li>
 								<a href={path}>
 									{txKey}: {store.txDataHash}
 								</a>
@@ -96,7 +95,7 @@ export default component$(
 					}
 					if (txKey === 'transferSuccessful') {
 						return (
-							<li class="ml-4">
+							<li>
 								{txKey}: {transaction[txKey] ? 'true' : 'false'}
 								,
 							</li>
@@ -104,13 +103,13 @@ export default component$(
 					}
 					if (txKey === 'senderSignature') {
 						return (
-							<li class="ml-4">
+							<li>
 								{`${txKey}: [`}
-								<ul class="ml-4">
-									<li class="ml-4">
+								<ul>
+									<li>
 										a: {transaction[txKey][0]},
 									</li>
-									<li class="ml-4">
+									<li>
 										b: {transaction[txKey][1]},
 									</li>
 								</ul>
@@ -119,12 +118,12 @@ export default component$(
 						);
 					}
 					return (
-						<li class="ml-4">
+						<li>
 							{txKey}: {transaction[txKey]},
 						</li>
 					);
 				})}
-				{`}${last ? '' : ','}`}
+{/* 				{`}${last ? '' : ','}`} */}
 			</ul>
 		);
 	}

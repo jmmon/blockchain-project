@@ -61,10 +61,10 @@ export default component$(() => {
 					return (
 						<>
 							<h4>Blockchain Difficulty:</h4>
-							<p class="ml-4">{info['currentDifficulty']}</p>
-							<div class="mt-4">
+							<p>{info['currentDifficulty']}</p>
+							<div>
 								<h5>All Blockchain Info:</h5>
-								<ul class="ml-2">
+								<ul>
 									{'{'}
 									{Object.keys(info).map((key) => {
 										const data = (
@@ -73,7 +73,7 @@ export default component$(() => {
 											</>
 										);
 										return (
-											<li class="ml-4">
+											<li>
 												{key === 'blocksCount' ? (
 													<Link href={`/${session.port}/blocks`}>
 														{data}

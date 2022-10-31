@@ -11,7 +11,7 @@ export default component$(({ block }: { block: IBlock }) => {
 			{Object.keys(block).map((key) => {
 				if (key === 'index') {
 					return (
-						<li class="ml-2">
+						<li>
 							<a href={`#`}>
 								{key}: {block[key]}
 							</a>
@@ -22,7 +22,7 @@ export default component$(({ block }: { block: IBlock }) => {
 
 				if (key === 'minedBy') {
 					return (
-						<li class="ml-2">
+						<li>
 							<Link href={`/${session.port}/addresses/${block[key]}`}>
 								{key}: {block[key]}
 							</Link>
@@ -34,40 +34,52 @@ export default component$(({ block }: { block: IBlock }) => {
 				if (key === 'transactions') {
 					const transactions = block[key];
 					const totalTransactions = transactions.length;
+
 					return (
-						<li class="ml-2">
-							<details>
+						<li>
+							<details style="margin-left: 1rem;">
 								<summary
 									style={{
 										cursor: 'pointer',
 										listStyle: 'none',
 									}}
 								>
-									Transactions: {'['}
-									<span class="extra"><br />.{" "}.{" "}.<br/>{']'}</span>
-								</summary>
-
-								<ul class="ml-2">
-									{transactions.map((transaction, index) => (
-										<li>
+									Transactions:{' ['}
+									<span class="extra">
+										<br />. . .<br />
+										],
+									</span>
+								</summary>{' '}
+								{transactions.map((transaction, index) => {
+									const isLast = index == transactions.length - 1;
+									return (
+										<details
+											open
+											style="margin-left: 1rem;"
+										>
+											<summary>
+												{index}:{' {'}
+												<span class="extra">
+													<br />. . .<br />
+													{isLast ? '}' : '},'}
+												</span>
+											</summary>{' '}
 											<Transaction
 												transaction={transaction}
-												index={index}
-												totalTransactions={
-													totalTransactions
-												}
+												totalTransactions={transactions.length}
 											/>
-										</li>
-									))}
-								</ul>
+											{isLast ? '}' : '},'}
+										</details>
+									);
+								})}
+								],
 							</details>
-							{'],'}
 						</li>
 					);
 				}
 
 				return (
-					<li class="ml-2">
+					<li>
 						{key}: {block[key]},
 					</li>
 				);

@@ -32,19 +32,31 @@ export default component$(() => {
 					if (transactions.length === 0) return <p>No pending transactions found.</p>;
 
 					const totalTransactions = transactions.length;
-					return (
-						<>
-							{transactions.map((transaction, index) => {
-								return (
-									<Transaction
-										transaction={transaction}
-										index={index}
-										totalTransactions={totalTransactions}
-									/>
-								);
-							})}
-						</>
-					);
+
+					return transactions.map((transaction, index) => {
+						const isLast = index == transactions.length - 1;
+						return (
+							<details>
+								<summary
+									style={{
+										cursor: 'pointer',
+										listStyle: 'none',
+									}}
+								>
+									{index}:{' {'}
+									<span class="extra">
+										<br />. . .<br />
+										{isLast ? '}' : '},'}
+									</span>
+								</summary>{' '}
+								<Transaction
+									transaction={transaction}
+									totalTransactions={transactions.length}
+								/>
+								{isLast ? '}' : '},'}
+							</details>
+						);
+					});
 				}}
 			/>
 		</div>

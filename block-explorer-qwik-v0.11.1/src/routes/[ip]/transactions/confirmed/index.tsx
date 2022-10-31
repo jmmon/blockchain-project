@@ -34,13 +34,30 @@ export default component$(() => {
 				onResolved={(transactions) => {
 					if (!transactions) return <p>No confirmed transactions found.</p>;
 
-					return transactions.map((transaction, index) => (
-						<Transaction
-							transaction={transaction}
-							index={index}
-							totalTransactions={transactions.length}
-						/>
-					));
+					return transactions.map((transaction, index) => {
+						const isLast = index == transactions.length - 1;
+						return (
+							<details>
+								<summary
+									style={{
+										cursor: 'pointer',
+										listStyle: 'none',
+									}}
+								>
+									{index}:{' {'}
+									<span class="extra">
+										<br />. . .<br />
+										{isLast ? '}' : '},'}
+									</span>
+								</summary>{' '}
+								<Transaction
+									transaction={transaction}
+									totalTransactions={transactions.length}
+								/>
+								{isLast ? '}' : '},'}
+							</details>
+						);
+					});
 				}}
 			/>
 		</div>

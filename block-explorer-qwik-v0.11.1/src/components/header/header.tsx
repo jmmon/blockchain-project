@@ -32,40 +32,7 @@ export default component$(() => {
 					<section class="logo">
 						<Link href={`/`}>Qwik City 🏙</Link>
 
-						{/* <label>
-							<input
-								type="checkbox"
-								checked
-								onChange$={(e) => (session.searchForPeers = e.target.checked)}
-							/>
-							Search for nodes?
-						</label>
-						<select
-							// onChange$={(ev) => {
-							// 	console.log('changing select');
-							// 	// session.port = +ev.target.value;
-
-							// }}
-							value={session.port}
-						>
-							<option value={constants.defaultPort}>
-								<Link href={`http://localhost:${constants.defaultPort}/peers`}>Default ({constants.defaultPort})</Link>
-							</option>
-							{session.peers.length >= 1 &&
-								session.peers.map((peer) => {
-									console.log('mapping peers:', {peer});
-									const url = peer[1];
-									const port = url.split(':')[2];
-									console.log({ url, port });
-									return (
-										<option value={port}>
-											<a href={url}>{port}</a>
-										</option>
-									);
-								})}
-						</select> */}
-
-						<SearchBar />
+{/* 						<SearchBar /> */}
 					</section>
 					<nav>
 						<Link

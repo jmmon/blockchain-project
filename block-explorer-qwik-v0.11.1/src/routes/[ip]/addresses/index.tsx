@@ -53,7 +53,7 @@ export default component$(() => {
 									const converted = convert.toCoins(balance);
 /* 									console.log({balance, converted: {converted}}); */
 									return (
-									<li class="ml-4">
+									<li>
 										<Link href={`/${session.port}/addresses/${address}`}>
 											{address}
 										</Link>

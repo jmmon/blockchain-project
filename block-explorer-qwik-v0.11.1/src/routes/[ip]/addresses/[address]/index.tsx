@@ -57,11 +57,11 @@ export default component$(() => {
 					return (
 						<>
 							<h4>Pending balance:</h4>
-							<div class="ml-4">{balances.pendingBalance}</div>
+							<div>{balances.pendingBalance}</div>
 							<h4>Confirmed balance:</h4>
-							<div class="ml-4">{balances.confirmedBalance}</div>
+							<div>{balances.confirmedBalance}</div>
 							<h4>Safe balance:</h4>
-							<div class="ml-4">{balances.safeBalance}</div>
+							<div>{balances.safeBalance}</div>
 						</>
 					);
 				}}

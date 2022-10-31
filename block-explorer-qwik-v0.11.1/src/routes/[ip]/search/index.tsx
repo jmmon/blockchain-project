@@ -67,7 +67,7 @@ export const onGet: RequestHandler<iEndpoint> = async ({ request, response, url,
 	Could fetch blocks, and then filter the blocks here to build up results lists
 	Or just skip it all! call it good...
 */
-	const length = query.length;
+	const length = query?.length;
 	const isHex = hexCheck(query);
 	const isNumber = typeof +query === 'number';
 

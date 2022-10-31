@@ -47,7 +47,7 @@ export default component$(() => {
 					return (
 						<>
 							<h4>Peers:</h4>
-							<ol class="ml-2">
+							<ol>
 								[
 								{peers.map(([id, url]) => {
 									// get url
