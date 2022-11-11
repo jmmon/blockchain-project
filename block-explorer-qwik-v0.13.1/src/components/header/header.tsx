@@ -1,34 +1,67 @@
-import { component$, useStylesScoped$ } from '@builder.io/qwik';
-import { QwikLogo } from '../icons/qwik';
+import {
+	$,
+	component$,
+	Resource,
+	useClientEffect$,
+	useContext,
+	useMount$,
+	useRef,
+	useResource$,
+	useServerMount$,
+	useStyles$,
+	useWatch$,
+} from '@builder.io/qwik';
+import { Link, useLocation } from '@builder.io/qwik-city';
+import { json } from 'stream/consumers';
+import constants from '~/libs/constants';
+import { SessionContext, iPeers } from '~/libs/context';
+import peers from '~/routes/[ip]/info/peers';
+import SearchBar from '../searchBar/searchBar';
 import styles from './header.css?inline';
 
 export default component$(() => {
-  useStylesScoped$(styles);
+	const session = useContext(SessionContext);
+	useStyles$(styles);
 
-  return (
-    <header>
-      <div class="logo">
-        <a href="https://qwik.builder.io/" target="_blank">
-          <QwikLogo />
-        </a>
-      </div>
-      <ul>
-        <li>
-          <a href="https://qwik.builder.io/docs/components/overview/" target="_blank">
-            Docs
-          </a>
-        </li>
-        <li>
-          <a href="https://qwik.builder.io/examples/introduction/hello-world/" target="_blank">
-            Examples
-          </a>
-        </li>
-        <li>
-          <a href="https://qwik.builder.io/tutorial/welcome/overview/" target="_blank">
-            Tutorials
-          </a>
-        </li>
-      </ul>
-    </header>
-  );
+	const { pathname } = useLocation();
+
+	return (
+		<>
+			<header>
+				<div class="header-inner">
+					<section class="logo">
+
+						<Link href={`/${session.port ?? constants.defaultPort}/`}>Home</Link>
+{/* 						<SearchBar /> */}
+					<nav>
+						<Link
+							href={`/${session.port ?? constants.defaultPort}/info`}
+							class={{ active: pathname.startsWith(`/${session.port}/info`) }}
+						>
+							Blockchain Info
+						</Link>
+						<Link
+							href={`/${session.port ?? constants.defaultPort}/addresses`}
+							class={{ active: pathname.startsWith(`/${session.port}/addresses`) }}
+						>
+							Addresses
+						</Link>
+						<Link
+							href={`/${session.port ?? constants.defaultPort}/transactions`}
+							class={{ active: pathname.startsWith(`/${session.port}/transactions`) }}
+						>
+							Transactions
+						</Link>
+						<Link
+							href={`/${session.port ?? constants.defaultPort}/blocks`}
+							class={{ active: pathname.startsWith(`/${session.port}/blocks`) }}
+						>
+							Blocks
+						</Link>
+					</nav>
+					</section>
+				</div>
+			</header>
+		</>
+	);
 });

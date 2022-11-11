@@ -1,34 +1,37 @@
 header {
-  display: flex;
-  background: white;
-  border-bottom: 10px solid var(--qwik-dark-purple);
+  background-color: #0093ee;
 }
 
-header .logo a {
-  display: inline-block;
-  padding: 10px 10px 7px 20px;
+header .header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  padding: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+	color: white;
 }
 
-header ul {
-  margin: 0;
-  padding: 3px 10px 0 0;
-  list-style: none;
-  flex: 1;
-  text-align: right;
+.full-screen header .header-inner {
+  max-width: 100%;
 }
 
-header li {
-  display: inline-block;
-  margin: 0;
-  padding: 0;
-}
-
-header li a {
-  display: inline-block;
-  padding: 15px 10px;
+header a, header Link {
+  color: white;
   text-decoration: none;
+  padding: 4px 8px;
+  margin-right: 5px;
+  border-radius: 4px;
 }
 
-header li a:hover {
-  text-decoration: underline;
+header a:hover {
+  background-color: #ffffff50;
+}
+
+header .active {
+  background-color: #ffffff30;
+}
+
+section.logo {
+	display: flex;
+	justify-content: space-between;
 }
