@@ -12,7 +12,7 @@ const CONSTANTS = {
 };
 const CONFIG = {
 	coinbase: { microcoinsPerCoin: 1000000 },
-}
+};
 
 const generatePathFromObject = ({ account = 0, change = null, index = null }) =>
 	`m/${purpose}'/${coinType}'/${account}'${
@@ -48,8 +48,7 @@ const removeSpaces = ({ from, to, value, fee, dateCreated, data, senderPubKey })
 	return escapedTxData;
 };
 
-const hashTransaction = (tx) =>
-	Buffer.from(crypto.createHash('sha256').update(removeSpaces(tx)).digest());
+const hashTransaction = (tx) => crypto.createHash('sha256').update(removeSpaces(tx)).digest("hex");
 
 // used to derive our address from our compressed public key
 const addressFromCompressedPubKey = (compressedPubKey) =>

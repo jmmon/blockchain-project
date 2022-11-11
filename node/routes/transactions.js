@@ -5,9 +5,7 @@ const router = express.Router();
 //return pending transactions, (in mempool)
 router.get('/pending', (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	return res
-		.status(200)
-		.send(JSON.stringify(blockchain.getPendingTransactions()));
+	return res.status(200).send(JSON.stringify(blockchain.getPendingTransactions()));
 });
 
 // works:
@@ -15,25 +13,22 @@ router.get('/pending', (req, res) => {
 //	crawl blocks and build list to return
 router.get('/confirmed', (req, res) => {
 	const blockchain = req.app.get('blockchain');
-	return res
-		.status(200)
-		.send(JSON.stringify(blockchain.getConfirmedTransactions()));
+	return res.status(200).send(JSON.stringify(blockchain.getConfirmedTransactions()));
 });
 
 // works ??
 router.get('/:tranHash', (req, res) => {
 	const blockchain = req.app.get('blockchain');
 	const { tranHash: transactionDataHash } = req.params;
+	console.log(`transaction hash lookup received...`, transactionDataHash);
 
-	const foundTransaction =
-		blockchain.getTransactionByHash(transactionDataHash);
+	const foundTransaction = blockchain.getTransactionByHash(transactionDataHash);
+	console.log(`transaction found?`, { foundTransaction });
 
 	if (foundTransaction) {
 		return res.status(200).send(JSON.stringify(foundTransaction));
 	} else {
-		return res
-			.status(400)
-			.send(JSON.stringify({ errorMsg: 'Transaction not found' }));
+		return res.status(400).send(JSON.stringify({ errorMsg: 'Transaction not found' }));
 	}
 });
 
@@ -78,17 +73,13 @@ router.post('/send', async (req, res) => {
 
 	if (!valid) {
 		console.log({ errors });
-		return res
-			.status(400)
-			.send(JSON.stringify({ errorMsg: errors.join('\n') }));
+		return res.status(400).send(JSON.stringify({ errorMsg: errors.join('\n') }));
 	}
 
 	// add transaction to pending, send the response
 	blockchain.addPendingTransaction(validatedTransaction);
 
-	res.status(200).send(
-		JSON.stringify(buffToHex(validatedTransaction.transactionDataHash))
-	);
+	res.status(200).send(JSON.stringify(buffToHex(validatedTransaction.transactionDataHash)));
 
 	// propagate the transaction to other nodes
 	console.log(
@@ -96,11 +87,7 @@ router.post('/send', async (req, res) => {
 			? `transaction came from node ${sendingNodeUrl}`
 			: `transaction did not come from a node`
 	);
-	blockchain.propagateTransaction(
-		signedTransaction,
-		blockchain.peers,
-		sendingNodeUrl
-	);
+	blockchain.propagateTransaction(signedTransaction, blockchain.peers, sendingNodeUrl);
 });
 
 const buffToHex = (input) => {
@@ -111,5 +98,5 @@ const buffToHex = (input) => {
 		.match(/[a-fA-F0-9]{2}/g)
 		.reverse()
 		.join('');
-}
+};
 module.exports = router;

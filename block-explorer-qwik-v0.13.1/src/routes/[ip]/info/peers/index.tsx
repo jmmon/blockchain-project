@@ -45,29 +45,23 @@ export default component$(() => {
 					}
 
 					return (
-						<>
-							<h4>Peers:</h4>
-							<ol>
-								[
-								{peers.map(([id, url]) => {
-									// get url
-									const port = url.split(':')[2];
-									console.log({ url, port });
-									return (
-										// change port in URL; [ip] layout will intercept and save the port to session 
-										<li>
-											<a 
-											href={`/${port}`}
-											>
-												{id}: {url}
-											</a>
-
-										</li>
-									);
-								})}
-								]
-							</ol>
-						</>
+						<ol>
+							[
+							{peers.map(([id, url]) => {
+								// get url
+								const port = url.split(':')[2];
+								console.log({ url, port });
+								return (
+									// change port in URL; [ip] layout will intercept and save the port to session
+									<li>
+										<Link href={`/${port}`}>
+											{id}: {url}
+										</Link>
+									</li>
+								);
+							})}
+							]
+						</ol>
 					);
 				}}
 			/>

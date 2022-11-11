@@ -32,4 +32,17 @@ const trimAndSha256Hash = (obj) => Buffer.from(SHA256(removeSpaces(obj)));
 const isValidProof = (_hash, difficulty = 0) => {
 	return _hash.slice(0, difficulty) === '0'.repeat(difficulty);
 };
-module.exports = { SHA256, trimAndSha256Hash, isValidProof };
+
+
+const fromBuffer = (input) => {
+	const data = Buffer.from(input);
+	return Array.prototype.map
+		.call(new Uint8Array(data), (x) => ('00' + x.toString(16)).slice(-2))
+		.join('')
+		.match(/[a-fA-F0-9]{2}/g)
+		.reverse()
+		.join('');
+}
+
+
+module.exports = { SHA256, trimAndSha256Hash, isValidProof, fromBuffer };

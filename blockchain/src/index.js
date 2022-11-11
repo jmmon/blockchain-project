@@ -12,7 +12,7 @@ const hashTransaction = (...args) =>
 		hashTransaction(...args)
 	);
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const { CONFIG, txBaseFields, blockBaseFields } = require('./constants');
+const { CONFIG, txBaseFields, blockBaseFields, hexPattern } = require('./constants');
 const Transaction = require('./Transaction');
 const Block = require('./Block');
 const { validateFields, basicTxValidation, validateBlockValues } = require('../../libs/validation');
@@ -392,6 +392,10 @@ class Blockchain {
 	// transaction
 	getTransactionByHash(transactionDataHash) {
 		// //search pending transactions
+		// const isHex = hexPattern.match(transactionDataHash);
+		// if (!isHex) {
+		// 	transactionDataHash = 
+		// }
 		const pendingFound = this.searchPendingTransactionsForTransactionHash(transactionDataHash);
 		if (pendingFound !== false) {
 			return pendingFound;

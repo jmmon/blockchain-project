@@ -1,7 +1,6 @@
-import { component$, useContext, useServerMount$, useStore } from '@builder.io/qwik';
+import { component$, useContext} from '@builder.io/qwik';
 import { Link, useLocation } from '@builder.io/qwik-city';
 import { SessionContext } from '~/libs/context';
-import fromBuffer from '~/libs/fromBuffer';
 
 export interface iTransaction {
 	from: string;
@@ -30,18 +29,6 @@ export default component$(
 	}) => {
 		const { pathname } = useLocation();
 		const session = useContext(SessionContext);
-
-		const store = useStore({
-			txDataHash: '',
-		});
-
-		// to
-		useServerMount$(async () => {
-			// console.log({before: transaction.transactionDataHash});
-			store.txDataHash = await fromBuffer(transaction.transactionDataHash)
-			// console.log({after: store.txDataHash});
-		})
-
 		const paths = pathname.split('/');
 		// console.log({ paths });
 		const isTransactionsPath =
@@ -83,11 +70,11 @@ export default component$(
 						// if we're in /transactions/{hash}, link to the same page
 						const path = isTransactionsPath
 							? '#'
-							: `/${session.port}/transactions/${store.txDataHash}`;
+							: `/${session.port}/transactions/${transaction.transactionDataHash}`;
 						return (
 							<li>
 								<Link href={path}>
-									{txKey}: {store.txDataHash}
+									{txKey}: {transaction.transactionDataHash}
 								</Link>
 								,
 							</li>

@@ -50,9 +50,6 @@ export default component$(() => {
 					<Link href={`/${session.port}/addresses`}>Balances of Addresses</Link>
 				</li>
 				<li>
-					<Link href={`/${session.port}/addresses`}>Balances of Addresses</Link>
-				</li>
-				<li>
 					Along with looking at a specific transaction, a specific block, a specific
 					address's balances, and a specific address's transactions!
 				</li>
