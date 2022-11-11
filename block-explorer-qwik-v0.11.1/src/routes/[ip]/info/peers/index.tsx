@@ -1,5 +1,5 @@
 import { component$, Resource, useContext, useResource$ } from '@builder.io/qwik';
-import { DocumentHead, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
+import { DocumentHead, Link, RequestHandler, useEndpoint } from '@builder.io/qwik-city';
 import { Loading } from '~/components/loading/loading';
 import constants from '~/libs/constants';
 import { iPeer, SessionContext } from '~/libs/context';
@@ -54,10 +54,14 @@ export default component$(() => {
 									const port = url.split(':')[2];
 									console.log({ url, port });
 									return (
+										// change port in URL; [ip] layout will intercept and save the port to session 
 										<li>
-											<a href={`/${port}/info/peers`}>
+											<a 
+											href={`/${port}`}
+											>
 												{id}: {url}
 											</a>
+
 										</li>
 									);
 								})}

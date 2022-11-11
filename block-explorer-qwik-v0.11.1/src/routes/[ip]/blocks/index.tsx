@@ -39,7 +39,7 @@ export default component$(() => {
 					<ul>
 						{blocks.map((block, index) => (
 							<li>
-								<a href={`/${session.port}/blocks/${index}`}>Block #{index}</a>
+								<Link href={`/${session.port}/blocks/${index}`}>Block #{index}</Link>
 							</li>
 						))}
 					</ul>

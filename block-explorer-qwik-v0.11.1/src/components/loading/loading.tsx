@@ -4,7 +4,7 @@ export const Loading = component$(({path}) => {
 	useStylesScoped$(`
 	.loading {
 		font-size: 3rem;
-		background-color:red;
+		color: #aaa;
 
 	}
 	`);

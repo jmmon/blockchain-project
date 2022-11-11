@@ -20,24 +20,8 @@ export default component$(() => {
 	});
 
 	useContextProvider(SessionContext, session);
-	const location = useLocation();
-	console.log('layout', { location });
 
 
-	useWatch$(({ track }) => {
-		// track(() => session.port);
-		track(() => location.pathname);
-		const port = location.pathname.split('/')[1];
-		console.log({port});
-		if (typeof port === 'number') {
-			console.log({ port });
-			session.port = port;
-
-			console.log('Port changed');
-		}
-	});
-
-	console.log({ session });
 	return (
 		<>
 			<main>
@@ -51,9 +35,11 @@ export default component$(() => {
 					href="https://www.builder.io/"
 					target="_blank"
 				>
-					Made with ♡ by Builder.io
+					Qwik: Made with ♡ by Builder.io
 				</a>
 			</footer>
 		</>
 	);
 });
+
+

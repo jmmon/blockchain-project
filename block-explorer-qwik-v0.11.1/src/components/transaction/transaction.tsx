@@ -72,9 +72,9 @@ export default component$(
 					if (txKey === 'minedInBlockIndex') {
 						return (
 							<li>
-								<a href={`/${session.port}/blocks/${transaction[txKey]}`}>
+								<Link href={`/${session.port}/blocks/${transaction[txKey]}`}>
 									{txKey}: {transaction[txKey]}
-								</a>
+								</Link>
 								,
 							</li>
 						);
@@ -86,9 +86,9 @@ export default component$(
 							: `/${session.port}/transactions/${store.txDataHash}`;
 						return (
 							<li>
-								<a href={path}>
+								<Link href={path}>
 									{txKey}: {store.txDataHash}
-								</a>
+								</Link>
 								,
 							</li>
 						);

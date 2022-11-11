@@ -8,13 +8,14 @@ header .header-inner {
   padding: 10px;
   max-width: 1200px;
   margin: 0 auto;
+	color: white;
 }
 
 .full-screen header .header-inner {
   max-width: 100%;
 }
 
-header a {
+header a, header Link {
   color: white;
   text-decoration: none;
   padding: 4px 8px;
@@ -30,17 +31,7 @@ header .active {
   background-color: #ffffff30;
 }
 
-.theme-toggle {
-  background: transparent;
-  width: 30px;
-  border: none;
-  cursor: pointer;
-}
-
-.theme-light .theme-toggle::before {
-  content: '☽';
-}
-
-.theme-dark .theme-toggle::before {
-  content: '☀';
+section.logo {
+	display: flex;
+	justify-content: space-between;
 }

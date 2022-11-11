@@ -74,10 +74,10 @@ li {
   color: var(--qwik-light-blue);
 } */
 
-a,
+/* a,
 a:visited {
   color: var(--qwik-dark-blue);
-}
+} */
 
 a:hover {
   text-decoration: none;

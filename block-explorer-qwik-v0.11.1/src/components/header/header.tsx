@@ -30,10 +30,9 @@ export default component$(() => {
 			<header>
 				<div class="header-inner">
 					<section class="logo">
-						<Link href={`/`}>Qwik City 🏙</Link>
 
+						<Link href={`/${session.port ?? constants.defaultPort}/`}>Home</Link>
 {/* 						<SearchBar /> */}
-					</section>
 					<nav>
 						<Link
 							href={`/${session.port ?? constants.defaultPort}/info`}
@@ -53,13 +52,14 @@ export default component$(() => {
 						>
 							Transactions
 						</Link>
-						<a
+						<Link
 							href={`/${session.port ?? constants.defaultPort}/blocks`}
 							class={{ active: pathname.startsWith(`/${session.port}/blocks`) }}
 						>
 							Blocks
-						</a>
+						</Link>
 					</nav>
+					</section>
 				</div>
 			</header>
 		</>

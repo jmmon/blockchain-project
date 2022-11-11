@@ -18,8 +18,8 @@ export default component$(() => {
 		<div>
 			<h1>Transactions</h1>
 			<div class="tx-container">
-				<a href={ `/${session.port}/transactions/pending` } >Pending Transactions</a>
-				<a href={ `/${session.port}/transactions/confirmed` } >Confirmed Transactions</a>
+				<Link href={ `/${session.port}/transactions/pending` } >Pending Transactions</Link>
+				<Link href={ `/${session.port}/transactions/confirmed` } >Confirmed Transactions</Link>
 			</div>
 		</div>
 	);

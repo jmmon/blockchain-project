@@ -66,9 +66,9 @@ export default component$(() => {
 					);
 				}}
 			/>
-			<a href={`/${session.port}/addresses/${params.address}/transactions`}>
+			<Link href={`/${session.port}/addresses/${params.address}/transactions`}>
 				View Transactions...
-			</a>
+			</Link>
 		</div>
 	);
 });

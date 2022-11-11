@@ -79,23 +79,23 @@ export default component$(() => {
 														{data}
 													</Link>
 												) : key === 'chainId' ? (
-													<a href={`/${session.port}/blocks/0`}>{data}</a>
+													<Link href={`/${session.port}/blocks/0`}>{data}</Link>
 												) : key === 'peers' ? (
 													<Link href={`/${session.port}/info/peers`}>
 														{data}
 													</Link>
 												) : key === 'pendingTransactions' ? (
-													<a
+													<Link
 														href={`/${session.port}/transactions/pending`}
 													>
 														{data}
-													</a>
+													</Link>
 												) : key === 'confirmedTransactions' ? (
-													<a
+													<Link
 														href={`/${session.port}/transactions/confirmed`}
 													>
 														{data}
-													</a>
+													</Link>
 												) : key === 'config' ? (
 													<details>
 														<summary

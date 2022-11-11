@@ -6,6 +6,7 @@ const CONFIG = require('./constants.js');
 
 // npm start --- (-p/--port) 5556
 const argv = require('minimist')(process.argv.slice(2));
+console.log({argv});
 const PORT = argv.p ?? argv.port ?? CONFIG.defaultServerPort;
 const HOST = CONFIG.defaultServerHost;
 // const WALLET_INDEX = argv.w ?? argv.i ?? argv.wallet ?? argv.index ?? 0;
