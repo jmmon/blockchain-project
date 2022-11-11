@@ -21,10 +21,10 @@ Example body:
 Start mining on a node in the network:
 - `cd miner-threads` and `npm start` (default target node is 5555) or
 - `npm start --- -p 5556` or `-port 5556` to change the target node
-- `-c 4` or `-cores 4` to change thread count to be used by miner
+- `-c 4` or `-cores 4` to change thread count (service worker count) to be used by miner
 - `-w 0` or `-wallet 0` or `-i 0` or `-index 0` (takes 0 - 4) to select a pre-configured account for the miner to receive rewards
 
-e.g. `npm start --- p 5557 -c 2 -w 4` to mine on node 5557 with 2 cores and receive rewards to wallet[4].
+e.g. `npm start --- p 5557 -c 4 -w 4` to mine on node 5557 with 2 cores and receive rewards to wallet[4].
 
 Nodes that are connected as peers should propagate mined blocks to other peers.
 
