@@ -48,6 +48,9 @@ Peer Connections / Syncing:
 // Validate transaction
 // Add to pending transactions
 // Send tx to peer nodes thru REST API (/transactions/send ?)
+
+
+// If received from a node, if the node is not a peer we need to add it!
 router.post('/send', async (req, res) => {
 	console.log('transaction received...');
 	const blockchain = req.app.get('blockchain');
@@ -87,6 +90,13 @@ router.post('/send', async (req, res) => {
 			? `transaction came from node ${sendingNodeUrl}`
 			: `transaction did not come from a node`
 	);
+
+	const peerData = blockchain.peers.get(sendingNodeUrl);
+	console.log({peers: blockchain.peers, peerData});
+	if (!peerData) {
+		// add the peer
+		blockchain.connectAndSyncPeer(sendingNodeUrl, sendingNodeUrl);
+	}
 	blockchain.propagateTransaction(signedTransaction, blockchain.peers, sendingNodeUrl);
 });
 

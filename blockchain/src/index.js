@@ -394,7 +394,7 @@ class Blockchain {
 		// //search pending transactions
 		// const isHex = hexPattern.match(transactionDataHash);
 		// if (!isHex) {
-		// 	transactionDataHash = 
+		// 	transactionDataHash =
 		// }
 		const pendingFound = this.searchPendingTransactionsForTransactionHash(transactionDataHash);
 		if (pendingFound !== false) {
@@ -478,17 +478,26 @@ class Blockchain {
 	isDifferentChain(theirId) {
 		return this.config.chainId !== theirId;
 	}
-	// connect peer if not connected
-	async connectAndSyncPeer(peerUrl, cameFromNode) {
-		console.log('fn connectAndSyncPeer', { connectingTo: peerUrl });
-		// STEP 1: try to fetch info from target node
-		const response = await fetch(`${peerUrl}/info`);
-		if (response.status !== 200) {
-			console.log(`-- fetch peer info`);
-			return {
-				status: 400,
-				errorMsg: `Network error: Could not get peer info`,
-			};
+	async connectPeer(peerUrl, cameFromNode) {
+		console.log('fn connectPeer:', {peerUrl, cameFromNode});
+
+		let response;
+		try {
+			response = await fetch(`${peerUrl}/info`);
+			if (response.status !== 200) {
+				console.log(`-- fetch peer info`);
+				return {
+					status: 400,
+					errorMsg: `Network error: Could not get peer info`,
+					peerInfo: null,
+				};
+			}
+		} catch(error) {
+				return {
+					status: 404,
+					errorMsg: `Network error: Could not get peer info`,
+					peerInfo: null,
+				};
 		}
 
 		const peerInfo = await response.json();
@@ -504,15 +513,18 @@ class Blockchain {
 				errorMsg: `Chain ID does not match!`,
 				thisChainId: this.config.chainId,
 				peerChainId: peerInfo.chainId,
+				peerInfo,
 			};
 		}
 
 		// STEP 3: skip if already a peer. Otherwise, add peer, and if request came from a node, do not tell it to friend us back (because the node should already have us added)
-		if (this.peers.get(peerNodeId)) {
+		const peerData = this.peers.get(peerNodeId);
+		if (peerData) {
 			console.log(`-- check nodeId`, {
 				status: 409,
 				errorMsg: `Already connected to peer ${peerUrl}`,
 			});
+
 		} else {
 			// same chain, node added
 			this.peers.set(peerNodeId, peerUrl);
@@ -522,6 +534,60 @@ class Blockchain {
 				this.tellPeerToFriendUsBack(peerUrl);
 			}
 		}
+
+		return {status: 200, peerInfo};
+	}
+	// connect peer if not connected
+	async connectAndSyncPeer(peerUrl, cameFromNode) {
+		console.log('fn connectAndSyncPeer', { connectingTo: peerUrl });
+
+		const response = await this.connectPeer(peerUrl, cameFromNode);
+		if (response.status !== 200) {
+			return response;
+		}
+		
+		const {peerInfo} = response;
+		// // STEP 1: try to fetch info from target node
+		// const response = await fetch(`${peerUrl}/info`);
+		// if (response.status !== 200) {
+		// 	console.log(`-- fetch peer info`);
+		// 	return {
+		// 		status: 400,
+		// 		errorMsg: `Network error: Could not get peer info`,
+		// 	};
+		// }
+
+		// const peerInfo = await response.json();
+		// const peerNodeId = peerInfo.nodeId;
+		// console.log(`-- fetched info from peer node:`, { peerInfo });
+
+		// // STEP 2: validate the node is the same chain
+		// if (this.isDifferentChain(peerInfo.chainId)) {
+		// 	console.log('-- Other node is not on same chain');
+
+		// 	return {
+		// 		status: 400,
+		// 		errorMsg: `Chain ID does not match!`,
+		// 		thisChainId: this.config.chainId,
+		// 		peerChainId: peerInfo.chainId,
+		// 	};
+		// }
+
+		// // STEP 3: skip if already a peer. Otherwise, add peer, and if request came from a node, do not tell it to friend us back (because the node should already have us added)
+		// if (this.peers.get(peerNodeId)) {
+		// 	console.log(`-- check nodeId`, {
+		// 		status: 409,
+		// 		errorMsg: `Already connected to peer ${peerUrl}`,
+		// 	});
+		// } else {
+		// 	// same chain, node added
+		// 	this.peers.set(peerNodeId, peerUrl);
+		// 	console.log(`-- added peer:`, { peerUrl });
+		// 	// Send connect request to the new peer to ensure bi-directional connection
+		// 	if (!cameFromNode) {
+		// 		this.tellPeerToFriendUsBack(peerUrl);
+		// 	}
+		// }
 
 		//synchronize chain AND pending transactions
 
@@ -722,6 +788,7 @@ class Blockchain {
 		}
 
 		console.log(`fn propagateBlock: Attempting propagation to ${peers.size} peers...`);
+		console.log({ peers, skipPeer });
 
 		// prepare data to be sent
 		const data = {
@@ -735,7 +802,9 @@ class Blockchain {
 		for (const [peerId, peerUrl] of peerEntries) {
 			if (skipPeer !== null && skipPeer === peerUrl) {
 				console.log(`-- Skipping sender:`, { peerId, peerUrl });
-				return;
+				continue;
+			} else {
+				console.log('-- Propagating block to peer:', { peerId, peerUrl });
 			}
 
 			this.propagateInfo(
@@ -818,6 +887,15 @@ class Blockchain {
 	// this saves us from having to re-execute the entire matching chain when a block is received.
 	async handleIncomingBlock({ blocksCount, cumulativeDifficulty, nodeUrl }) {
 		// if their chain is longer or better, continue
+
+		const peerData = this.peers.get(nodeUrl);
+		console.log({peers: this.peers, peerData});
+		if (!peerData) {
+			// add the peer
+			this.connectPeer(nodeUrl, nodeUrl);
+			// blockchain.connectAndSyncPeer(sendingNodeUrl, sendingNodeUrl);
+		}
+
 		if (!this.isTheirChainLonger(blocksCount) && !this.isTheirChainBetter(cumulativeDifficulty))
 			return;
 
@@ -836,6 +914,7 @@ class Blockchain {
 		);
 	}
 
+
 	highestMatchingBlock(theirChain) {
 		// finds best matching and validated block. At worst, should be genesis block.
 		let ourBlock = this.lastBlock();
@@ -844,7 +923,7 @@ class Blockchain {
 		console.log(`fn highestMatchingBlock: starting at ${currentIndex}`);
 
 		// start at our last block, walk backwards until the blockHash matches
-		while (ourBlock.blockHash !== theirBlock.blockHash) {
+		while (ourBlock.blockHash !== theirBlock?.blockHash) {
 			currentIndex--;
 			ourBlock = this.chain[currentIndex];
 			theirBlock = theirChain[currentIndex];
@@ -1263,21 +1342,24 @@ class Blockchain {
 		const [pending, confirmed, safe] = allTransactions.reduce(
 			([pending, confirmed, safe], tx) => {
 				const { to, from, minedInBlockIndex, transferSuccessful, value, fee } = tx;
+				const isInBlock = typeof minedInBlockIndex !== 'undefined';
+				const isSafe =
+					this.transactionConfirmations(tx) >=
+						this.config.transactions.safeConfirmCount &&
+					isInBlock &&
+					transferSuccessful;
+				const isConfirmed = isInBlock && transferSuccessful;
 				if (from === address) {
 					const amount = +value + +fee;
 					pending -= amount;
-					confirmed -= amount;
-					safe -= amount;
+					confirmed -= isConfirmed ? amount : 0;
+					safe -= isSafe ? amount : 0;
 				}
 				if (to === address) {
-					const isSafe =
-						this.transactionConfirmations(tx) >=
-						this.config.transactions.safeConfirmCount;
-					const isInBlock = typeof minedInBlockIndex !== 'undefined';
 					const amount = +value;
 					pending += amount;
-					confirmed += isInBlock && transferSuccessful ? amount : 0;
-					safe += isInBlock && transferSuccessful && isSafe ? amount : 0;
+					confirmed += isConfirmed ? amount : 0;
+					safe += isSafe ? amount : 0;
 				}
 				return [pending, confirmed, safe];
 			},
@@ -1341,7 +1423,7 @@ class Blockchain {
 
 		// move last item to front (the all 0's address)
 		sorted.unshift(sorted.pop());
-		console.log({sorted});
+		console.log({ sorted });
 
 		return Object.fromEntries(sorted);
 	}
