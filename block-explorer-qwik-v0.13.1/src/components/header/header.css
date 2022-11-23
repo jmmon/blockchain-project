@@ -3,8 +3,9 @@ header {
 }
 
 header .header-inner {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
+  display: flex;
+	flex-direction: column;
+  /* grid-template-columns: 1fr auto auto; */
   padding: 10px;
   max-width: 1200px;
   margin: 0 auto;
@@ -34,4 +35,11 @@ header .active {
 section.logo {
 	display: flex;
 	justify-content: space-between;
+	/* border: 1px solid pink; */
+}
+
+div.port {
+	font-size: 0.6rem;
+	color: #ddd;
+	padding-left: 20px;
 }

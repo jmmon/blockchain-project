@@ -16,8 +16,9 @@ export default component$(() => {
 		cleanup(() => controller.abort());
 
 		const urlString = `${constants.host}${session.port}/transactions/pending`;
-		return getTransactions(urlString, controller);
+		return getTransactions(urlString, controller) as Array<iTransaction>;
 	});
+
 	return (
 		<div>
 			<h1>Pending Transactions</h1>
@@ -28,6 +29,7 @@ export default component$(() => {
 						<Loading path="transaction" />
 					</>
 				)}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(transactions) => {
 					if (transactions.length === 0) return <p>No pending transactions found.</p>;
 

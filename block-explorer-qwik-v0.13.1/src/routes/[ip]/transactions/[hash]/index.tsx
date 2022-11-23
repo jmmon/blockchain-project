@@ -20,7 +20,7 @@ export default component$(() => {
 
 		const urlString = `${constants.host}${session.port}/transactions/${params.hash}`;
 
-		return getTransactions(urlString, controller);
+		return getTransactions(urlString, controller) as iTransaction;
 	});
 
 	return (
@@ -34,7 +34,7 @@ export default component$(() => {
 						<Loading path="transaction" />
 					</>
 				)}
-				onRejected={(reason) => <div>Error: {reason.errorMsg}</div>}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(transaction) => {
 					if (!transaction) {
 						return <p>No transaction found.</p>;
@@ -53,5 +53,5 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Find Transaction By Hash',
+	title: 'Transaction Hash Lookup',
 };

@@ -5,6 +5,7 @@ import { SessionContext } from '~/libs/context';
 export default component$(() => {
 	const session = useContext(SessionContext);
 	console.log('[ip] index:', {session})
+
 	useStylesScoped$(`
 	ul.dots>li {
 		list-style-type: "-";
@@ -15,6 +16,7 @@ export default component$(() => {
 		color: var(--qwik-light-blue);
 	}
 	`);
+
 	return (
 		<div>
 			<h1>Welcome to My Block Explorer!</h1>
@@ -59,5 +61,5 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Welcome to My Block Explorer',
+	title: 'Welcome',
 };

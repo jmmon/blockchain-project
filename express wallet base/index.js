@@ -6,6 +6,7 @@ const favicon = require('serve-favicon');
 const ejs = require('ejs');
 const URL = require('url').URL;
 const convert = require('../libs/conversion');
+const { CONFIG } = require( '../blockchain/src/constants' );
 
 const app = express();
 const PORT = 3003;
@@ -343,6 +344,34 @@ const authChecker = (req, res, next) => {
 			const testCoins = +convert.toCoins(+micros).amount;
 			console.log({original: amount, units, micros, reverted: testCoins});
 
+			// fetch balance to see if the transaction will work
+			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
+			console.log('fetched balances:', { balances });
+
+			// check if we can spend unconfirmed funds, according to the blockchain config
+			const info = await fetch(`${nodeUrl}/info`).then((res) => res.json());
+			console.log('fetched chain config for transactions:', {transactions: info.config.transactions});
+			const spendingBalance = info.config.transactions.spendUnconfirmedFunds
+				? balances.pendingBalance
+				: balances.confirmedBalance;
+
+			// calculate value + fee
+			const totalSendingValue = microcoins + info.config.transactions.minFee;
+			console.log('-- balances available:', {balances, spendingBalance}, '-- want to send this much:', totalSendingValue );
+
+			console.log('Have enough funds to send transaction?', spendingBalance >= totalSendingValue);
+
+			// balance check
+			if (spendingBalance < totalSendingValue) {
+				drawView(res, active, {
+					wallet,
+					active,
+					error: `Your account does not have enough funds! Available funds: ${convert.toCoins(spendingBalance).amount} coins (${spendingBalance} microcoins)`,
+					transactionInfo: txInputsInfo,
+				});
+				return;
+			}
+
 			// decrypt and sign errors
 			const { data, error } = await decryptAndSign(wallet, recipient, microcoins, password);
 			console.log('decryptAndSign:', { data, error });
@@ -355,29 +384,8 @@ const authChecker = (req, res, next) => {
 				});
 				return;
 			}
-			const totalValue = microcoins + data.fee;
 
-			// fetch balance to see if the transaction will work
-			const balances = await fetchAddressBalance(nodeUrl, wallet.address);
-			console.log('fetched data json:', { balances });
-
-			// check if we can spend unconfirmed funds, according to the blockchain config
-			const info = await fetch(`${nodeUrl}/info`).then((res) => res.json());
-			const spendingBalance = info.config.transactions.spendUnconfirmedFunds
-				? balances.pendingBalance
-				: balances.confirmedBalance;
-
-			// balance check
-			if (spendingBalance < totalValue) {
-				drawView(res, active, {
-					wallet,
-					active,
-					error: `Your account does not have enough funds! Available funds: ${convert.toCoins(spendingBalance).amount} coins (${spendingBalance} microcoins)`,
-					transactionInfo: txInputsInfo,
-				});
-				return;
-			}
-
+			// prepare signed transaction info for displaying
 			const transactionInfo = {
 				hash: data.transactionDataHash ?? undefined,
 				signedTransaction: data,
@@ -396,6 +404,7 @@ const authChecker = (req, res, next) => {
 					signedTransaction: data,
 				});
 			});
+
 		} else {
 			// Send the transaction, redraw with success message
 			const signedTransaction = req.session.signedTransaction;

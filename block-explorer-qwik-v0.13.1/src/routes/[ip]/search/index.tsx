@@ -1,5 +1,5 @@
 import { component$, Resource } from '@builder.io/qwik';
-import { useEndpoint, useLocation } from '@builder.io/qwik-city';
+import { RequestHandler, useEndpoint, useLocation } from '@builder.io/qwik-city';
 
 interface iEndpoint {
 	result: {
@@ -21,7 +21,7 @@ export default component$(() => {
 			<Resource
 				value={searchResults}
 				onPending={() => <div>Loading...</div>}
-				onRejected={() => <div>Error</div>}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(results) => {
 					console.log({ results });
 					return (

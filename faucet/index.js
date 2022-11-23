@@ -136,6 +136,7 @@ Extracted Blockchain Address a78fb34736836feb9cd2114e1215f9e3f0c1987d
 			);
 
 			// TESTING VERIFY SIGNATURE
+			console.log({signedTransaction})
 
 			const result_verifySig = verifySignature(
 				signedTransaction.data.transactionDataHash,

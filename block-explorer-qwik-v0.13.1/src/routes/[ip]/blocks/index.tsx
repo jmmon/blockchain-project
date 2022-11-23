@@ -34,7 +34,7 @@ export default component$(() => {
 				onPending={() => (
 				<><Loading path="blocks" /></>
 				)}
-				onRejected={(error) => <>Error: {error.message}</>}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(blocks) => (
 					<ul>
 						{blocks.map((block, index) => (

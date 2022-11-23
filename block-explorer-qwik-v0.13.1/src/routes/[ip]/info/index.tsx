@@ -4,6 +4,21 @@ import { Loading } from '~/components/loading/loading';
 import constants from '~/libs/constants';
 import { SessionContext } from '~/libs/context';
 
+interface iInfo {
+	about: string;
+	nodeId: string;
+	chainId: string;
+	nodeUrl: string;
+	peers: number;
+	currentDifficulty: number;
+	blocksCount: number;
+	cumulativeDifficulty: number;
+	confirmedTransactions: number;
+	pendingTransactions: number;
+	config: object;
+}
+
+
 export const RenderObject = component$((obj) => {
 	const keysArr = Object.keys(obj);
 	return (
@@ -29,7 +44,7 @@ export const RenderObject = component$((obj) => {
 
 export default component$(() => {
 	const session = useContext(SessionContext);
-	const resource = useResource$(({ track, cleanup }) => {
+	const resource = useResource$<iInfo>(({ track, cleanup }) => {
 		track(() => session.port);
 
 		const controller = new AbortController();
@@ -53,6 +68,7 @@ export default component$(() => {
 						<Loading path="info" />
 					</>
 				)}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(info) => {
 					if (!info) {
 						return <p>No transaction found.</p>;
@@ -130,10 +146,10 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Blockchain Info',
+	title: 'Node Info',
 };
 
-export async function getInfo(urlString: String, controller?: AbortController): Promise<Object> {
+export async function getInfo(urlString: String, controller?: AbortController): Promise<iInfo> {
 	console.log('Fetching info...');
 	const response = await fetch(urlString, { signal: controller?.signal });
 	const responseJson = await response.json();

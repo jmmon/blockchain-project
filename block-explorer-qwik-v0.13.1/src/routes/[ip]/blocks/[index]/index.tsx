@@ -45,7 +45,7 @@ export default component$(() => {
 				onPending={() => (
 					<><Loading path="block" /></>
 				)}
-				onRejected={(error) => <>Error: {error.errorMsg}</>}
+				onRejected={(error) => <p>Error: {error.errorMsg}</p>}
 				onResolved={(block) => <Block block={block} />}
 			/>
 		</div>
@@ -67,5 +67,5 @@ export async function getBlock(
 }
 
 export const head: DocumentHead = {
-	title: 'A Block',
+	title: 'Block Hash Lookup',
 };

@@ -2,7 +2,8 @@ const fs = require('fs');
 
 const payoutRecord = 'payoutRecord/'; //  TODO: set wallets directory
 const filePath = `${payoutRecord}payoutRecord.json`;
-const TIME_BETWEEN_TRANSACTIONS_SECONDS = 4;
+// const TIME_BETWEEN_TRANSACTIONS_SECONDS = 4;
+const TIME_BETWEEN_TRANSACTIONS_SECONDS = 3600; // 1 hour
 
 const db = {
 	init() {

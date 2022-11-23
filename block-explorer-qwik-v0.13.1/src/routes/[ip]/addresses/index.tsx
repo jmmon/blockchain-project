@@ -41,6 +41,7 @@ export default component$(() => {
 						<Loading path="blocks" />
 					</>
 				)}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(balances) => {
 					if (!balances) {
 						return <p>Should never show</p>;
@@ -71,7 +72,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Address Balances',
+	title: 'Addresses',
 };
 
 export async function getAllBalances(

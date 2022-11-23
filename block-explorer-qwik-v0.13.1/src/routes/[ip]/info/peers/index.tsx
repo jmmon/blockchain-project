@@ -26,15 +26,7 @@ export default component$(() => {
 						<Loading path="info" />
 					</>
 				)}
-				onRejected={(error) => {
-					console.log('onRejected', { error });
-					if (typeof peers === 'string') {
-						return <p>Error: {peers}</p>;
-					}
-					if (peers.length === 0) {
-						return <p>No peers found.</p>;
-					}
-				}}
+				onRejected={(error) => (<p>Error: {error.message}</p>)}
 				onResolved={(peers) => {
 					console.log({ peers });
 					if (typeof peers === 'string') {
@@ -70,13 +62,13 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'Peers Map',
+	title: 'Node Peers',
 };
 
 // onGet NEVER runs on client. If I want to run on client, do useResource$ (in our component) and fetch inside
 
 export async function getPeers(
-	urlString: String,
+	urlString: URL,
 	controller?: AbortController
 ): Promise<Array<iPeer>> {
 	console.log('fetching peers...', { urlString });

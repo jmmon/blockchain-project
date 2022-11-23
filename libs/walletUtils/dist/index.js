@@ -139,9 +139,11 @@ const signTransaction = (privateKey, txDataHashBuffer) => {
 		const splitSignature = (signature) => {
 			return [signature.toString('hex').slice(0, 64), signature.toString('hex').slice(64)];
 		};
-
+		console.log({txDataHashBuffer})
+		const hashArr = Uint8Array.from(Buffer.from(txDataHashBuffer, 'hex'));
+		console.log({hashArr});
 		const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
-		const signature = Buffer.from(ecc.sign(Buffer.from(txDataHashBuffer), privateKeyArray));
+		const signature = Buffer.from(ecc.sign(hashArr, privateKeyArray));
 		const [r, s] = splitSignature(signature);
 
 		return { data: [r, s], error: null };
@@ -193,6 +195,7 @@ const decryptAndSign = async (walletOrKeys, recipient, value, password = '') => 
 	// attempt signing
 	const signResponse = signTransaction(privateKey, txDataHashBuffer);
 	if (signResponse.error) {
+		console.log('-- signResponse error');
 		return { data: null, error: signResponse.error };
 	}
 

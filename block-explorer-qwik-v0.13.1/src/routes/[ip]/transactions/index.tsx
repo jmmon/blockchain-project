@@ -12,7 +12,8 @@ export default component$(() => {
 		margin-left: 1rem;
 		margin-top: 1.5rem;
 	}
-	`)
+	`);
+
 	const session = useContext(SessionContext);
 	return (
 		<div>
@@ -30,7 +31,7 @@ export const head: DocumentHead = {
 };
 
 export async function getTransactions(
-	urlString: String,
+	urlString: URL,
 	controller?: AbortController
 ): Promise<iTransaction|Array<iTransaction>> {
 	console.log(`Fetching transactions from ${urlString}...`);

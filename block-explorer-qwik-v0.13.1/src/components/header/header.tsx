@@ -28,36 +28,39 @@ export default component$(() => {
 		<>
 			<header>
 				<div class="header-inner">
+					<div class="port">Connected to Node on Port {session.port}</div>
 					<section class="logo">
-
 						<Link href={`/${session.port ?? constants.defaultPort}/`}>Home</Link>
-{/* 						<SearchBar /> */}
-					<nav>
-						<Link
-							href={`/${session.port ?? constants.defaultPort}/info`}
-							class={{ active: pathname.startsWith(`/${session.port}/info`) }}
-						>
-							Blockchain Info
-						</Link>
-						<Link
-							href={`/${session.port ?? constants.defaultPort}/addresses`}
-							class={{ active: pathname.startsWith(`/${session.port}/addresses`) }}
-						>
-							Addresses
-						</Link>
-						<Link
-							href={`/${session.port ?? constants.defaultPort}/transactions`}
-							class={{ active: pathname.startsWith(`/${session.port}/transactions`) }}
-						>
-							Transactions
-						</Link>
-						<Link
-							href={`/${session.port ?? constants.defaultPort}/blocks`}
-							class={{ active: pathname.startsWith(`/${session.port}/blocks`) }}
-						>
-							Blocks
-						</Link>
-					</nav>
+						<nav>
+							<Link
+								href={`/${session.port ?? constants.defaultPort}/info`}
+								class={{ active: pathname.startsWith(`/${session.port}/info`) }}
+							>
+								Blockchain Info
+							</Link>
+							<Link
+								href={`/${session.port ?? constants.defaultPort}/addresses`}
+								class={{
+									active: pathname.startsWith(`/${session.port}/addresses`),
+								}}
+							>
+								Addresses
+							</Link>
+							<Link
+								href={`/${session.port ?? constants.defaultPort}/transactions`}
+								class={{
+									active: pathname.startsWith(`/${session.port}/transactions`),
+								}}
+							>
+								Transactions
+							</Link>
+							<Link
+								href={`/${session.port ?? constants.defaultPort}/blocks`}
+								class={{ active: pathname.startsWith(`/${session.port}/blocks`) }}
+							>
+								Blocks
+							</Link>
+						</nav>
 					</section>
 				</div>
 			</header>

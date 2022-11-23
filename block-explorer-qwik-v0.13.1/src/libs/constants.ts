@@ -6,6 +6,7 @@ export default {
 export const CONFIG = {
 	coinbase: { microcoinsPerCoin: 1000000 },
 };
+
 export const convert = {
 	toCoins: (micros) => ({
 		amount: (+micros / CONFIG.coinbase.microcoinsPerCoin).toFixed(

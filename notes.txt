@@ -64,3 +64,16 @@ explorer:
 blockchain/node:
 	segregate logic: node, transaction, block, blockchain
 
+
+
+
+TODO: After graded:
+	Wallet:
+		Make sure wallet sending a transaction does not allow sending if wallet does not have enough balance (including already pending transactions!!!)
+			Expected wallet to block transaction when balance would go negative (even if txns are pending)
+			Actually was able to send multiple transactions totalling more than my wallet balance (inside one block)
+ 
+	Blockchain:
+		When building a block candidate, make sure that all transactions are valid! Calculate balances as each transaction is prepared so that any invalid transaction will be skipped. (What happens to it? Should be deleted I guess? Otherwise it gets stuck in pendingTransactions and would probably continue to be propagated and attempted... so needs to be removed from pending and also should notify other peers to remove it...)
+			OR: better than removing the pending after-the-fact:
+				Make sure when receiving transactions that the balances make sense!!! Don't add to pending if it would require the sender to end with a negative balance (after previous pending transactions are actuated, be sure the next pending tx does not send to a negative balance)

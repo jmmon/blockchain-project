@@ -1,11 +1,11 @@
 const CONFIG = {
 	// blockchain
 	difficulty: {
-		dynamic: false,
+		dynamic: true,
 		starting: 4,
 		// if dynamic, uses below settings
 		limit: 7,
-		targetBlockSeconds: 4,
+		targetBlockSeconds: 15,
 		averageOverBlocks: 96,
 		adjustmentRatio: 3,
 	},

@@ -74,7 +74,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'An Address',
+	title: 'Address Lookup',
 };
 
 export async function getBalance(

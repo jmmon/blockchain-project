@@ -33,6 +33,7 @@ export default component$(() => {
 						<Loading path="blocks" />
 					</>
 				)}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(data) => {
 					const { address, transactions } = data;
 					const totalTransactions = transactions.length;
@@ -69,7 +70,7 @@ export default component$(() => {
 });
 
 export const head: DocumentHead = {
-	title: 'transactions of this address',
+	title: 'Address Transactions',
 };
 
 export async function getAddressTransactions(

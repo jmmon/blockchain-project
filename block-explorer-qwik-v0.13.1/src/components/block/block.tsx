@@ -3,7 +3,18 @@ import { Link } from '@builder.io/qwik-city';
 import { SessionContext } from '~/libs/context';
 import Transaction from '../transaction/transaction';
 
-export default component$(({ block }: { block: IBlock }) => {
+export interface iBlock {
+	index: number;
+	transactions: Array<iTransaction>;
+	difficulty: number;
+	minedBy: string;
+	blockDataHash: string;
+	nonce: number;
+	dateCreated: string;
+	blockHash: string;
+}
+
+export default component$(({ block }: { block: iBlock }) => {
 	const session = useContext(SessionContext);
 	return (
 		<ul>

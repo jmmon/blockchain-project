@@ -1,6 +1,6 @@
 import { component$, useStylesScoped$ } from "@builder.io/qwik";
 
-export const Loading = component$(({path}) => {
+export const Loading = component$(({path}: {path: string;}) => {
 	useStylesScoped$(`
 	.loading {
 		font-size: 3rem;

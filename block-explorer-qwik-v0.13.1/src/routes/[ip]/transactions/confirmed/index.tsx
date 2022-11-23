@@ -18,7 +18,7 @@ export default component$(() => {
 			cleanup(() => controller.abort());
 
 			const urlString = `${constants.host}${session.port}/transactions/confirmed`;
-			return getTransactions(urlString, controller);
+			return getTransactions(urlString, controller) as Array<iTransaction>;
 		}
 	);
 	return (
@@ -31,6 +31,7 @@ export default component$(() => {
 						<Loading path="transaction" />
 					</>
 				)}
+				onRejected={(error) => <p>Error: {error.message}</p>}
 				onResolved={(transactions) => {
 					if (!transactions) return <p>No confirmed transactions found.</p>;
 
